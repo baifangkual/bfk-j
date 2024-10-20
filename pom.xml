@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cn.bfk</groupId>
+    <artifactId>bfk-j</artifactId>
+    <version>0.0.1</version>
+    <packaging>pom</packaging>
+
+    <name>bfk-j</name>
+    <description>bfk-java-root-project-pom</description>
+
+    <url>https://github.com/baifangkual/bfk-j</url>
+    <scm>
+        <url>https://github.com/baifangkual/bfk-j</url>
+    </scm>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <name>bfk</name>
+            <email>baifangkuai@live.com</email>
+        </developer>
+    </developers>
+
+    <modules>
+        <module>mod-common</module>
+        <module>mod-test</module>
+    </modules>
+
+    <properties>
+        <!-- ##### properties setting ##### -->
+        <java.version>17</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <reset.resource.delimiter>@</reset.resource.delimiter>
+        <!-- ##### dep package reversion init ##### -->
+        <reversion.maven-compiler-plugin>3.11.0</reversion.maven-compiler-plugin>
+        <reversion.maven-resources-plugin>3.3.1</reversion.maven-resources-plugin>
+        <reversion.maven-assembly-plugin>3.6.0</reversion.maven-assembly-plugin>
+        <reversion.maven-shade-plugin>3.5.3</reversion.maven-shade-plugin>
+        <reversion.lombok>1.18.32</reversion.lombok>
+        <!-- boot 与 cloud 版本有兼容性对应关系 -->
+        <reversion.spring-boot-dependencies>3.2.7</reversion.spring-boot-dependencies>
+        <reversion.spring-cloud-dependencies>2023.0.3</reversion.spring-cloud-dependencies>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${reversion.spring-boot-dependencies}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${reversion.spring-cloud-dependencies}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${reversion.lombok}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- spring boot 单体可执行jar打包插件 -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <!-- spring-boot-dependencies中定义了该版本，与dependencies版本相同 -->
+                    <version>${reversion.spring-boot-dependencies}</version>
+                    <executions>
+                        <execution>
+                            <id>repackage</id>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <!-- lombok即使下级模块pom中设置了optional-true还是会打包进单体可执行jar，需在此手动排除,
+                         其他依赖项若scope为provided或optional为true则不会打包进单体可执行jar，
+                         部分spring的jar该插件有专有设置，也不会打包进单体可执行jar-->
+                        <excludes>
+                            <exclude>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </exclude>
+                        </excludes>
+                        <!-- 默认打包行为会把打包jar默认名字顶掉，遂在此设置单体可执行jar的打包名称，设置为fatjar后缀 -->
+                        <finalName>${artifactId}-${version}-fatjar</finalName>
+                        <!-- 该插件在下级模块打包时还需配置 mainClass属性 -->
+                    </configuration>
+                </plugin>
+                <!-- maven编译插件 开启 parameters -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${reversion.maven-compiler-plugin}</version>
+                    <configuration>
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+                <!-- maven resources插件，设置properties编码为project.build.sourceEncoding值-UTF8 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>${reversion.maven-resources-plugin}</version>
+                    <configuration>
+                        <propertiesEncoding>${project.build.sourceEncoding}</propertiesEncoding>
+                        <!-- 因为springboot单体可执行jar打包会使用默认占位符，遂该处关闭默认占位符配置并配置其他占位符 -->
+                        <useDefaultDelimiters>false</useDefaultDelimiters>
+                        <delimiters>
+                            <delimiter>${reset.resource.delimiter}</delimiter>
+                        </delimiters>
+                    </configuration>
+                </plugin>
+                <!-- 非spring体系的另一种打包单体可执行jar的插件 下级模块需补充配置才可正确打包：mainClass属性 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>${reversion.maven-shade-plugin}</version>
+                    <configuration>
+                        <keepDependenciesWithProvidedScope>true</keepDependenciesWithProvidedScope>
+                        <createDependencyReducedPom>true</createDependencyReducedPom>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <excludes>
+                                    <exclude>META-INF/*.SF</exclude>
+                                    <exclude>META-INF/*.DSA</exclude>
+                                    <exclude>META-INF/*.RSA</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-maven-plugin</artifactId>
+                            <version>${reversion.spring-boot-dependencies}</version>
+                        </dependency>
+                    </dependencies>
+                    <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>shade</goal>
+                            </goals>
+                            <configuration>
+                                <transformers>
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                        <resource>META-INF/spring.handlers</resource>
+                                    </transformer>
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                        <resource>META-INF/spring.schemas</resource>
+                                    </transformer>
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                        <resource>
+                                            META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
+                                        </resource>
+                                    </transformer>
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                        <resource>
+                                            META-INF/spring/org.springframework.boot.actuate.autoconfigure.web.ManagementContextConfiguration.imports
+                                        </resource>
+                                    </transformer>
+                                    <transformer
+                                            implementation="org.springframework.boot.maven.PropertiesMergingResourceTransformer">
+                                        <resource>META-INF/spring.factories</resource>
+                                    </transformer>
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                    <!-- 该插件在下级模块打包时还需追加配置transformer：
+                                    org.apache.maven.plugins.shade.resource.ManifestResourceTransformer
+                                    并且transformer标签内还需有子标签配置 mainClass属性 -->
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    </transformer>
+                                </transformers>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- 仅定义该版本信息 该插件详细信息或下级模块使用该插件时完善，或该处完善 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>${reversion.maven-assembly-plugin}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+
+</project>
