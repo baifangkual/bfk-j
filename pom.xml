@@ -31,6 +31,7 @@
     <modules>
         <module>mod-common</module>
         <module>mod-test</module>
+        <module>mod-core</module>
     </modules>
 
     <properties>
@@ -104,6 +105,7 @@
                             </exclude>
                         </excludes>
                         <!-- 默认打包行为会把打包jar默认名字顶掉，遂在此设置单体可执行jar的打包名称，设置为fatjar后缀 -->
+                        <!-- 经测试，在引用artifactId和version等值时，不携带project前缀会在maven高版本编译时发出告警，遂该处添加了project前缀 -->
                         <finalName>${artifactId}-${version}-fatjar</finalName>
                         <!-- 该插件在下级模块打包时还需配置 mainClass属性 -->
                     </configuration>
@@ -138,19 +140,29 @@
                     <version>${reversion.maven-shade-plugin}</version>
                     <configuration>
                         <keepDependenciesWithProvidedScope>true</keepDependenciesWithProvidedScope>
-                        <createDependencyReducedPom>true</createDependencyReducedPom>
+                        <!-- 要求不在项目根路径生成dependencyReduced-pom文件 -->
+                        <createDependencyReducedPom>false</createDependencyReducedPom>
+                        <finalName>${project.artifactId}-${project.version}-uberjar</finalName>
                         <filters>
                             <filter>
+                                <!-- 对所有依赖应用过滤项 -->
                                 <artifact>*:*</artifact>
                                 <excludes>
+                                    <!-- 排除jar校验签名 -->
                                     <exclude>META-INF/*.SF</exclude>
                                     <exclude>META-INF/*.DSA</exclude>
                                     <exclude>META-INF/*.RSA</exclude>
+                                    <!-- 排除jdk9的模块机制声明，因为可能会影响反射 -->
+                                    <exclude>module-info.class</exclude>
+                                    <!-- 排除GraalVM在Native-image时所使用的aot.factories -->
+                                    <exclude>META-INF/spring/aot.factories</exclude>
                                 </excludes>
                             </filter>
                         </filters>
                     </configuration>
                     <dependencies>
+                        <!-- 这里可能与下面Transformer中的org.springframework.boot.maven.PropertiesMergingResourceTransformer有关，
+                        在该处声明的这个插件中有PropertiesMergingResourceTransformer这个实现-->
                         <dependency>
                             <groupId>org.springframework.boot</groupId>
                             <artifactId>spring-boot-maven-plugin</artifactId>
@@ -164,7 +176,26 @@
                                 <goal>shade</goal>
                             </goals>
                             <configuration>
+                                <!-- 该shade插件可用的transformer在
+                                https://maven.apache.org/plugins/maven-shade-plugin/examples/resource-transformers.html
+                                 中有说明，分别发挥不同的作用，按需要导入-->
                                 <transformers>
+                                    <!-- 该Transformer是向jar中添加MANIFEST.MF文件的，该文件描述jar的基本信息，包括主启动类（如果有）等的信息。
+                                    该插件在下级模块打包时还需追加配置transformer：
+                                    org.apache.maven.plugins.shade.resource.ManifestResourceTransformer
+                                    并且transformer标签内还需有子标签配置 mainClass属性 -->
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    </transformer>
+                                    <!-- 负责java spi机制同名文件合并的 -->
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                    <!-- 负责将开源声明文件LICENSE、license.txt等文件内容合并的 -->
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                                    <!-- 负责将通告声明文件NOTICE、notice.txt等文件内容合并的 -->
+                                    <transformer
+                                            implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer"/>
                                     <transformer
                                             implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                         <resource>META-INF/spring.handlers</resource>
@@ -188,14 +219,6 @@
                                     <transformer
                                             implementation="org.springframework.boot.maven.PropertiesMergingResourceTransformer">
                                         <resource>META-INF/spring.factories</resource>
-                                    </transformer>
-                                    <transformer
-                                            implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                    <!-- 该插件在下级模块打包时还需追加配置transformer：
-                                    org.apache.maven.plugins.shade.resource.ManifestResourceTransformer
-                                    并且transformer标签内还需有子标签配置 mainClass属性 -->
-                                    <transformer
-                                            implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     </transformer>
                                 </transformers>
                             </configuration>
