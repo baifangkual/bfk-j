@@ -1,0 +1,28 @@
+package cn.bfk.j.mod.core.panic;
+
+import cn.bfk.j.mod.core.exception.PanicException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+/**
+ * @author baifangkual
+ * create time 2025/5/3
+ */
+public class ErrTest {
+
+    @Test
+    public void test01() {
+        boolean tr = true;
+        Assertions.assertThrows(PanicException.class, () -> {
+            Err.panicIf(tr, IllegalAccessException::new, "tr is true!");
+        });
+    }
+
+    @Test
+    public void test02() {
+        boolean tr = true;
+        Assertions.assertThrows(IllegalAccessException.class, () -> {
+            Err.realIf(tr, IllegalAccessException::new, "tr is true!");
+        });
+    }
+}

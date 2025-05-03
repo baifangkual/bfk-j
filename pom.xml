@@ -29,9 +29,9 @@
     </developers>
 
     <modules>
+        <module>mod-core</module>
         <module>mod-common</module>
         <module>mod-test</module>
-        <module>mod-core</module>
     </modules>
 
     <properties>
@@ -73,6 +73,8 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${reversion.lombok}</version>
+                <scope>provided</scope>
+                <optional>true</optional>
             </dependency>
         </dependencies>
     </dependencyManagement>

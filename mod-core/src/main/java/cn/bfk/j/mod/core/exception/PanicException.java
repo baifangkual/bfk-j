@@ -16,7 +16,7 @@ import java.io.Serializable;
  * 对该类调用{@link #toString()}或{@link #printStackTrace()}等，将显示实际异常原因的异常信息，该类型仅会添加{@link #PANIC_PREFIX}至
  * 异常信息说明及栈回溯前等<br>
  */
-public final class Panic extends RuntimeException implements Serializable {
+public final class PanicException extends RuntimeException implements Serializable {
 
     /**
      * jdk序列化标记字段，异疑事，吾亦试，疑久忆旧罢已龄
@@ -39,24 +39,24 @@ public final class Panic extends RuntimeException implements Serializable {
     private final Throwable selfPanicRealCause;
 
     /**
-     * 将实际异常包装为{@link Panic} 运行时异常<br>
-     * 20241118-该方法的方法签名不应为“from”,因为该方法的行为算是将其他异常进行包装，其他异常仍在该{@link Panic}内部持有引用，
+     * 将实际异常包装为{@link PanicException} 运行时异常<br>
+     * 20241118-该方法的方法签名不应为“from”,因为该方法的行为算是将其他异常进行包装，其他异常仍在该{@link PanicException}内部持有引用，
      * 并且外显仍为原有的其他异常，遂该方法不为从一种类型转话为另一种类型，方法的释义类似于“包装、代理”等，遂方法签名设定为"wrap“
      *
      * @param realCause 实际异常实例
      * @return PanicException instance
      */
-    public static Panic wrap(Throwable realCause) {
+    public static PanicException wrap(Throwable realCause) {
         if (realCause == null) {
-            throw new NullPointerException("realCause is null, panic not found realCause!");
+            throw new NullPointerException("realCause is null, panicException not found realCause!");
         }
-        return new Panic(realCause);
+        return new PanicException(realCause);
     }
 
     /**
      * 将该类型构造使用私有作用域，使该类型唯一构造方式使用{@link #wrap(Throwable)} 方法
      */
-    private Panic(Throwable selfPanicRealCause) {
+    private PanicException(Throwable selfPanicRealCause) {
         // 调用父的构造，writableStackTrace 为 false，即当前RuntimeE的子类构造时不调用 fillInStackTrace
         // 并且，该的 enableSuppression 也为 false，又因为 addSuppressed 和 getSuppressed 均为 final 方法，
         // 即外界不能向该异常添加次级异常，也从该类型获取不到次级异常
