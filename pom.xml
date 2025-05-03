@@ -3,16 +3,17 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>cn.bfk</groupId>
+    <groupId>io.github.baifangkual</groupId>
     <artifactId>bfk-j</artifactId>
     <version>0.0.1</version>
     <packaging>pom</packaging>
 
     <name>bfk-j</name>
-    <description>bfk-java-root-project-pom</description>
-
+    <description>bfk java root project</description>
     <url>https://github.com/baifangkual/bfk-j</url>
     <scm>
+        <connection>scm:git:git://github.com/baifangkual/bfk-j.git</connection>
+        <developerConnection>scm:git:ssh://github.com/baifangkual/bfk-j.git</developerConnection>
         <url>https://github.com/baifangkual/bfk-j</url>
     </scm>
     <licenses>
@@ -25,6 +26,7 @@
         <developer>
             <name>bfk</name>
             <email>baifangkuai@live.com</email>
+            <organizationUrl>https://github.com/baifangkual</organizationUrl>
         </developer>
     </developers>
 
@@ -43,11 +45,18 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <reset.resource.delimiter>@</reset.resource.delimiter>
         <!-- ##### dep package reversion init ##### -->
+        <reversion.central-publishing-maven-plugin>0.7.0</reversion.central-publishing-maven-plugin>
+        <reversion.maven-gpg-plugin>3.0.1</reversion.maven-gpg-plugin>
+        <reversion.maven-source-plugin>2.2.1</reversion.maven-source-plugin>
+        <reversion.maven-javadoc-plugin>3.3.2</reversion.maven-javadoc-plugin>
         <reversion.maven-compiler-plugin>3.11.0</reversion.maven-compiler-plugin>
         <reversion.maven-resources-plugin>3.3.1</reversion.maven-resources-plugin>
         <reversion.maven-assembly-plugin>3.6.0</reversion.maven-assembly-plugin>
         <reversion.maven-shade-plugin>3.5.3</reversion.maven-shade-plugin>
         <reversion.lombok>1.18.32</reversion.lombok>
+        <reversion.slf4j-api>2.0.13</reversion.slf4j-api>
+        <reversion.slf4j-simple>2.0.13</reversion.slf4j-simple>
+        <reversion.jupiter-api>5.10.2</reversion.jupiter-api>
         <!-- boot 与 cloud 版本有兼容性对应关系 -->
         <reversion.spring-boot-dependencies>3.2.7</reversion.spring-boot-dependencies>
         <reversion.spring-cloud-dependencies>2023.0.3</reversion.spring-cloud-dependencies>
@@ -82,6 +91,69 @@
     <build>
         <pluginManagement>
             <plugins>
+                <!-- central-publish 插件配置 -->
+                <plugin>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>${reversion.central-publishing-maven-plugin}</version>
+                    <extensions>true</extensions>
+                    <configuration>
+                        <!-- 这里的serverId是之前在本地settings.xml中配置的<server><id>标签值 -->
+                        <publishingServerId>central</publishingServerId>
+                    </configuration>
+                </plugin>
+                <!-- GPG签名配置 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>${reversion.maven-gpg-plugin}</version>
+                    <configuration>
+                        <!-- win端需要配置：gpg可执行文件位置 -->
+                        <executable>C:\Users\baifangkual\bfkApplication\gpg\GnuPG\bin\gpg.exe</executable>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>sign-artifacts</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>sign</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- source.jar 构建 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>${reversion.maven-source-plugin}</version>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- javadoc.jar 构建 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>${reversion.maven-javadoc-plugin}</version>
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <charset>UTF-8</charset><!-- utf-8读取文件 -->
+                        <encoding>UTF-8</encoding><!-- utf-8进行编码代码 -->
+                        <docencoding>UTF-8</docencoding><!-- utf-8进行编码文档 -->
+                    </configuration>
+                </plugin>
                 <!-- spring boot 单体可执行jar打包插件 -->
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
@@ -108,7 +180,7 @@
                         </excludes>
                         <!-- 默认打包行为会把打包jar默认名字顶掉，遂在此设置单体可执行jar的打包名称，设置为fatjar后缀 -->
                         <!-- 经测试，在引用artifactId和version等值时，不携带project前缀会在maven高版本编译时发出告警，遂该处添加了project前缀 -->
-                        <finalName>${artifactId}-${version}-fatjar</finalName>
+                        <finalName>${project.artifactId}-${project.version}-fatjar</finalName>
                         <!-- 该插件在下级模块打包时还需配置 mainClass属性 -->
                     </configuration>
                 </plugin>

@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>cn.bfk</groupId>
+        <groupId>io.github.baifangkual</groupId>
         <artifactId>mod-test</artifactId>
         <version>0.0.1</version>
     </parent>
