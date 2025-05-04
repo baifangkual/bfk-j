@@ -32,8 +32,6 @@
 
     <modules>
         <module>mod-core</module>
-        <module>mod-common</module>
-        <module>mod-test</module>
     </modules>
 
     <properties>
