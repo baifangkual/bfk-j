@@ -6,12 +6,12 @@
     <parent>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>bfk-j</artifactId>
-        <version>0.0.1</version>
+        <version>0.0.2</version>
     </parent>
 
     <name>mod-core</name>
     <artifactId>mod-core</artifactId>
-    <description>bfk-j 核心模块</description>
+    <description>bfk-j mod-core 核心模块及工具类</description>
     <url>https://github.com/baifangkual/bfk-j</url>
     <scm>
         <connection>scm:git:git://github.com/baifangkual/bfk-j.git</connection>
@@ -44,6 +44,8 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${reversion.lombok}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
         </dependency>
         <!-- ============= test scope ============= -->
         <dependency>

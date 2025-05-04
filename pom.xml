@@ -5,7 +5,7 @@
 
     <groupId>io.github.baifangkual</groupId>
     <artifactId>bfk-j</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <packaging>pom</packaging>
 
     <name>bfk-j</name>
@@ -57,25 +57,25 @@
         <reversion.jupiter-api>5.10.2</reversion.jupiter-api>
         <!-- boot 与 cloud 版本有兼容性对应关系 -->
         <reversion.spring-boot-dependencies>3.2.7</reversion.spring-boot-dependencies>
-        <reversion.spring-cloud-dependencies>2023.0.3</reversion.spring-cloud-dependencies>
+        <!--        <reversion.spring-cloud-dependencies>2023.0.3</reversion.spring-cloud-dependencies>-->
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${reversion.spring-boot-dependencies}</version>
-                <scope>import</scope>
-                <type>pom</type>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${reversion.spring-cloud-dependencies}</version>
-                <scope>import</scope>
-                <type>pom</type>
-            </dependency>
+            <!--            <dependency>-->
+            <!--                <groupId>org.springframework.boot</groupId>-->
+            <!--                <artifactId>spring-boot-dependencies</artifactId>-->
+            <!--                <version>${reversion.spring-boot-dependencies}</version>-->
+            <!--                <scope>import</scope>-->
+            <!--                <type>pom</type>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>org.springframework.cloud</groupId>-->
+            <!--                <artifactId>spring-cloud-dependencies</artifactId>-->
+            <!--                <version>${reversion.spring-cloud-dependencies}</version>-->
+            <!--                <scope>import</scope>-->
+            <!--                <type>pom</type>-->
+            <!--            </dependency>-->
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
@@ -87,6 +87,28 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <!-- central-publish 插件配置 -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+            </plugin>
+            <!-- GPG签名配置 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+            </plugin>
+            <!-- source.jar 构建 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+            </plugin>
+            <!-- javadoc.jar 构建 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <!-- central-publish 插件配置 -->
@@ -107,12 +129,12 @@
                     <version>${reversion.maven-gpg-plugin}</version>
                     <configuration>
                         <!-- win端需要配置：gpg可执行文件位置 -->
-                        <executable>C:\Users\baifangkual\bfkApplication\gpg\GnuPG\bin\gpg.exe</executable>
+<!--                        <executable>C:\Users\baifangkual\bfkApplication\gpg\GnuPG\bin\gpg.exe</executable>-->
                     </configuration>
                     <executions>
                         <execution>
                             <id>sign-artifacts</id>
-                            <phase>verify</phase>
+                            <phase>install</phase>
                             <goals>
                                 <goal>sign</goal>
                             </goals>
@@ -306,6 +328,5 @@
             </plugins>
         </pluginManagement>
     </build>
-
 
 </project>
