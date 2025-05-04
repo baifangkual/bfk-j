@@ -4,11 +4,13 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * @author baifangkual
- * create time 2024/11/18
- * <p>
  * 明确表达 “null”, 仅可通过方法{@link #ref()} 获取该类型的唯一实例
+ *
+ * @author baifangkual
+ * @since 2024/11/18
+ * @deprecated 尚无该类型使用环境，且无法纳入java.Void体系，后续或考虑删除或优化该
  */
+@Deprecated
 public final class None implements Serializable {
 
     @Serial

@@ -6,17 +6,19 @@ import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
- * @author baifangkual
- * create time 2024/6/18
  * <b>结果容器对象（Result）</b>
  * 一个容器对象 不可变对象 线程安全<br>
  * 标识可能操作失败的逻辑的结果，若操作成功，则some必不为null并且 err为null，
  * 若操作失败，则some必定为null并且err必不为null，
  * 其中Err为操作失败情况下载荷的数据类型<br>
  * 该类型的引用应当永远不为null，该类型的引用应当始终指向一个{@link R}, 该类型应当表达可能出错的操作逻辑结果
+ *
+ * @author baifangkual
+ * @since 2024/6/18
  */
 public class R<Ok, Err> implements Serializable {
 
@@ -175,6 +177,17 @@ public class R<Ok, Err> implements Serializable {
                 throw new IllegalStateException("state Err, some: " + some + ", err: " + err);
             }
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof R<?, ?> r)) return false;
+        return Objects.equals(err, r.err) && Objects.equals(some, r.some);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(err, some);
     }
 
     /**
