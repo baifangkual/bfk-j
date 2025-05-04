@@ -39,12 +39,10 @@ public final class PanicException extends RuntimeException implements Serializab
     private final Throwable selfPanicRealCause;
 
     /**
-     * 将实际异常包装为{@link PanicException} 运行时异常<br>
-     * 20241118-该方法的方法签名不应为“from”,因为该方法的行为算是将其他异常进行包装，其他异常仍在该{@link PanicException}内部持有引用，
-     * 并且外显仍为原有的其他异常，遂该方法不为从一种类型转话为另一种类型，方法的释义类似于“包装、代理”等，遂方法签名设定为"wrap“
+     * 将实际异常包装为{@link PanicException} 运行时异常
      *
      * @param realCause 实际异常实例
-     * @return PanicException instance
+     * @return PanicException实例，该实例为运行时异常
      */
     public static PanicException wrap(Throwable realCause) {
         if (realCause == null) {
@@ -55,6 +53,8 @@ public final class PanicException extends RuntimeException implements Serializab
 
     /**
      * 将该类型构造使用私有作用域，使该类型唯一构造方式使用{@link #wrap(Throwable)} 方法
+     *
+     * @param selfPanicRealCause 实际的异常
      */
     private PanicException(Throwable selfPanicRealCause) {
         // 调用父的构造，writableStackTrace 为 false，即当前RuntimeE的子类构造时不调用 fillInStackTrace
@@ -66,11 +66,18 @@ public final class PanicException extends RuntimeException implements Serializab
 
     /**
      * 实际的异常cause
+     *
+     * @return 返回实际的异常
      */
     private Throwable selfPanicRealCause() {
         return this.selfPanicRealCause;
     }
 
+    /**
+     * 委托至实际异常的信息
+     *
+     * @return 实际异常携带的信息
+     */
     @Override
     public String getMessage() {
         return selfPanicRealCause().getMessage();
@@ -78,6 +85,8 @@ public final class PanicException extends RuntimeException implements Serializab
 
     /**
      * 将自身的cause委托至{@link #selfPanicRealCause()}的cause
+     *
+     * @return 实际异常的cause
      */
     @Override
     public Throwable getCause() {
@@ -85,19 +94,36 @@ public final class PanicException extends RuntimeException implements Serializab
         return selfPanicRealCause().getCause();
     }
 
-
+    /**
+     * 将自身的LocalizedMessage委托至实际异常的LocalizeMessage
+     *
+     * @return 实际异常的LocalizedMessage
+     */
     @Override
     public String getLocalizedMessage() {
         return selfPanicRealCause().getLocalizedMessage();
     }
 
+    /**
+     * 修改实际异常的cause实例
+     *
+     * @param cause the cause (which is saved for later retrieval by the
+     *              {@link #getCause()} method).  (A {@code null} value is
+     *              permitted, and indicates that the cause is nonexistent or
+     *              unknown.)
+     * @return 返回实际的异常 {@link #selfPanicRealCause()} 引用的异常实例
+     */
     @Override
     public Throwable initCause(Throwable cause) {
         // 因为 selfPanicRealCause 的 initCause 有 synchronized，遂该处重写的方法可无需要求 synchronized
         return selfPanicRealCause().initCause(cause);
     }
 
-
+    /**
+     * 返回实际异常的toString信息（添加前缀{@link #PANIC_PREFIX})
+     *
+     * @return 实际异常的toString信息
+     */
     @Override
     public String toString() {
         return PANIC_PREFIX + selfPanicRealCause().toString();
@@ -105,12 +131,23 @@ public final class PanicException extends RuntimeException implements Serializab
 
     /**
      * 将自身的栈追踪委托至实际异常的栈追踪
+     *
+     * @return 实际异常的栈追踪
      */
     @Override
     public StackTraceElement[] getStackTrace() {
         return selfPanicRealCause().getStackTrace();
     }
 
+    /**
+     * 向实际异常设置栈追踪
+     *
+     * @param stackTrace the stack trace elements to be associated with
+     *                   this {@code Throwable}.  The specified array is copied by this
+     *                   call; changes in the specified array after the method invocation
+     *                   returns will have no affect on this {@code Throwable}'s stack
+     *                   trace.
+     */
     @Override
     public void setStackTrace(StackTraceElement[] stackTrace) {
         selfPanicRealCause().setStackTrace(stackTrace);

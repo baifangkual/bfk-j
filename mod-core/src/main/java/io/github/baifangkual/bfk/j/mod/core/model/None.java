@@ -22,6 +22,11 @@ public final class None implements Serializable {
     private None() {
     }
 
+    /**
+     * 返回{@link None}类型的唯一实例的引用
+     *
+     * @return {@link None}类型实例
+     */
     public static None ref() {
         return INSTANCE;
     }

@@ -18,13 +18,24 @@ import io.github.baifangkual.bfk.j.mod.core.immutable.Const;
  * </pre>
  */
 public final class STF {
-
+    /**
+     * 不允许实例化
+     */
     private STF() {
         throw new UnsupportedOperationException("Utility class");
     }
 
+    /**
+     * 反斜杠（\)
+     */
     private static final char C_BACKSLASH = Const.Char.BACKSLASH;
+    /**
+     * 花括号（{}）
+     */
     private static final String PLACEHOLDER = Const.String.DELIM_EMPTY;
+    /**
+     * 长度
+     */
     private static final int PLACEHOLDER_LENGTH = PLACEHOLDER.length();
 
     /**
@@ -50,7 +61,7 @@ public final class STF {
      * 转义\： fmt("this is \\\\{} for {}", "a", "b") =》 this is \a for b<br>
      *
      * @param template 字符串模板
-     * @param args       参数列表
+     * @param args     参数列表
      * @return nullable string
      */
     public static String f(String template, Object... args) {
