@@ -1,21 +1,25 @@
 package io.github.baifangkual.bfk.j.mod.core.function;
 
 import io.github.baifangkual.bfk.j.mod.core.exception.PanicException;
+import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToUnSafe;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
-import io.github.baifangkual.bfk.j.mod.core.trait.fn.ToFnUnSafe;
 
+import java.io.Serializable;
 import java.util.function.Consumer;
 
 /**
- * @author baifangkual
- * create time 2025/5/3
  * <b>函数式接口</b><br>
  * 相较于{@link Consumer} 表示可能抛出异常的操作<br>
+ * 表示函数，一个入参零个出参
+ *
+ * @author baifangkual
  * @see Consumer
+ * @since 2025/5/3 v0.0.4
  */
 @FunctionalInterface
-public interface Csm<P> extends Consumer<P>,
-        ToFnUnSafe<Consumer<P>> {
+public interface FnAcc<P> extends Consumer<P>,
+        FnMutToUnSafe<Consumer<P>>,
+        Serializable {
     /**
      * 表示一入参无出参且可能发生异常的函数
      *
@@ -31,11 +35,7 @@ public interface Csm<P> extends Consumer<P>,
      */
     @Override
     default void accept(P p) {
-        try {
-            this.unsafeAccept(p);
-        } catch (Exception e) {
-            throw PanicException.wrap(e);
-        }
+        toUnsafe().accept(p);
     }
 
     /**
@@ -49,7 +49,7 @@ public interface Csm<P> extends Consumer<P>,
             try {
                 this.unsafeAccept(p);
             } catch (Exception e) {
-                throw PanicException.wrap(e);
+                Err.throwPanic(e);
             }
         };
     }

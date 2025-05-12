@@ -4,23 +4,26 @@ package io.github.baifangkual.bfk.j.mod.core.function;
 import io.github.baifangkual.bfk.j.mod.core.exception.PanicException;
 import io.github.baifangkual.bfk.j.mod.core.model.R;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
-import io.github.baifangkual.bfk.j.mod.core.trait.fn.ToFnSafe;
-import io.github.baifangkual.bfk.j.mod.core.trait.fn.ToFnUnSafe;
+import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToSafe;
+import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToUnSafe;
 
+import java.io.Serializable;
 import java.util.function.BiFunction;
 
 /**
- * @author baifangkual
- * create time 2024/7/15
- * <p>
  * <b>函数式接口</b><br>
  * 相较于{@link BiFunction} 表示可能抛出异常的操作<br>
+ * 表示函数，两个入参一个出参
+ *
+ * @author baifangkual
  * @see BiFunction
+ * @since 2024/7/15 v0.0.3
  */
 @FunctionalInterface
 public interface BiFn<P1, P2, Result> extends BiFunction<P1, P2, R<Result, Exception>>,
-        ToFnSafe<BiFunction<P1, P2, R<Result, Exception>>>,
-        ToFnUnSafe<BiFunction<P1, P2, Result>> {
+        FnMutToSafe<BiFunction<P1, P2, R<Result, Exception>>>,
+        FnMutToUnSafe<BiFunction<P1, P2, Result>>,
+        Serializable {
     /**
      * 表示两入参一出参且可能发生异常的函数
      *

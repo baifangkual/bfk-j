@@ -2,17 +2,14 @@ package io.github.baifangkual.bfk.j.mod.core.panic;
 
 import io.github.baifangkual.bfk.j.mod.core.exception.PanicException;
 import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
-import io.github.baifangkual.bfk.j.mod.core.function.Run;
-import io.github.baifangkual.bfk.j.mod.core.function.Sup;
+import io.github.baifangkual.bfk.j.mod.core.function.FnGet;
+import io.github.baifangkual.bfk.j.mod.core.function.FnRun;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * @author baifangkual
- * create time 2024/4/15
- * <p>
- * <b>异常校验工具类</b>
+ * <b>异常校验工具类</b><br>
  * 利用java泛型擦除屏蔽预检异常声明,为使栈展开不繁琐，该类里方法不应定位为互相调用，应确保该线程安全<br>
  * 该类中方法签名中 realxxx 表示直接返回相应的异常（运行时或预检异常），panicxxx 表示返回以{@link PanicException}类型包装的相应异常<br>
  * 使用说明：
@@ -33,6 +30,8 @@ import java.util.function.Supplier;
  *     }
  * </pre>
  * 或可参考各方法上更为详细的说明及示例<br>
+ *
+ * @author baifangkual
  * @see #realIf(boolean, String)
  * @see #realIf(boolean, Supplier)
  * @see #realIf(boolean, Function, String)
@@ -43,10 +42,11 @@ import java.util.function.Supplier;
  * @see #panicIf(boolean, Function, String)
  * @see #panicIf(boolean, Function, String, Object...)
  * @see #panicIf(boolean, Function, String, Supplier)
- * @see #runOrThrowReal(Run)
- * @see #runOrThrowReal(Sup)
- * @see #runOrThrowPanic(Run)
- * @see #runOrThrowPanic(Sup)
+ * @see #runOrThrowReal(FnRun)
+ * @see #getOrThrowReal(FnGet)
+ * @see #runOrThrowPanic(FnRun)
+ * @see #getOrThrowPanic(FnGet)
+ * @since 2024/4/15 v0.0.3
  */
 public final class Err {
     /**
@@ -79,11 +79,11 @@ public final class Err {
     /**
      * 当expression为真时，抛出{@link RuntimeException}并携带信息
      *
-     * @param expression 布尔表达式
-     * @param msg        携带的信息
+     * @param expr 布尔表达式
+     * @param msg  携带的信息
      */
-    public static void realIf(boolean expression, String msg) {
-        if (expression) {
+    public static void realIf(boolean expr, String msg) {
+        if (expr) {
             throwReal(new RuntimeException(msg));
         }
     }
@@ -91,11 +91,11 @@ public final class Err {
     /**
      * 当expression为真时，抛出指定直接异常，包括运行时和预检异常
      *
-     * @param expression 布尔表达式
-     * @param trSup      异常生产者函数
+     * @param expr  布尔表达式
+     * @param trSup 异常生产者函数
      */
-    public static void realIf(boolean expression, Supplier<? extends Exception> trSup) {
-        if (expression) {
+    public static void realIf(boolean expr, Supplier<? extends Exception> trSup) {
+        if (expr) {
             throwReal(trSup.get());
         }
     }
@@ -103,13 +103,13 @@ public final class Err {
     /**
      * 当expression为真时，抛出指定直接异常，包括运行时和预检异常
      *
-     * @param expression 布尔表达式
-     * @param trFn       异常生产函数
-     * @param msg        异常携带信息
+     * @param expr 布尔表达式
+     * @param trFn 异常生产函数
+     * @param msg  异常携带信息
      */
-    public static void realIf(boolean expression, Function<? super String, ? extends Exception> trFn,
+    public static void realIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                               String msg) {
-        if (expression) {
+        if (expr) {
             throwReal(trFn.apply(msg));
         }
     }
@@ -117,14 +117,14 @@ public final class Err {
     /**
      * 当expression为真时，抛出指定直接异常，包括运行时和预检异常
      *
-     * @param expression 布尔表达式
-     * @param trFn       异常生产函数
-     * @param msgTemp    异常信息模板（形如：“err: msg:{}”)
-     * @param msgArgs    填充异常信息模板的参数列表（按顺序填充异常信息模板中的"{}")
+     * @param expr    布尔表达式
+     * @param trFn    异常生产函数
+     * @param msgTemp 异常信息模板（形如：“err: msg:{}”)
+     * @param msgArgs 填充异常信息模板的参数列表（按顺序填充异常信息模板中的"{}")
      */
-    public static void realIf(boolean expression, Function<? super String, ? extends Exception> trFn,
+    public static void realIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                               String msgTemp, Object... msgArgs) {
-        if (expression) {
+        if (expr) {
             throwReal(trFn.apply(STF.f(msgTemp, msgArgs)));
         }
     }
@@ -132,7 +132,7 @@ public final class Err {
     /**
      * 根据给定的表达式布尔值结果选择是否抛出异常，屏蔽java预检异常与运行时异常的方法声明
      *
-     * @param expression 表达式，true 抛出异常，false 不抛出异常
+     * @param expr       表达式，true 抛出异常，false 不抛出异常
      * @param trFn       函数，异常对象的构造方法的方法引用，要求该异常对象的构造方法能够接受一个str类型或其父类型的参数，返回一个异常实例
      * @param msgTemp    异常对象的消息的模板，参数使用 "{}" 表示
      * @param msgArgsSup 函数，能够提供填充异常对象的消息模板的参数，
@@ -141,9 +141,9 @@ public final class Err {
      *                   当调用该方法的作用域中没有直接对应的msgTemplate中所需参数的值且构造该值需要复杂的流程或大对象时，
      *                   该方法将优化此场景，即仅当确定要抛出异常时才会执行参数的构造
      */
-    public static void realIf(boolean expression, Function<? super String, ? extends Exception> trFn,
+    public static void realIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                               String msgTemp, Supplier<? extends Object[]> msgArgsSup) {
-        if (expression) {
+        if (expr) {
             throwReal(trFn.apply(STF.f(msgTemp, msgArgsSup.get())));
         }
     }
@@ -151,11 +151,11 @@ public final class Err {
     /**
      * 当expression为真时，抛出{@link PanicException}并携带信息
      *
-     * @param expression 布尔表达式
-     * @param msg        携带的信息
+     * @param expr 布尔表达式
+     * @param msg  携带的信息
      */
-    public static void panicIf(boolean expression, String msg) {
-        if (expression) {
+    public static void panicIf(boolean expr, String msg) {
+        if (expr) {
             throwPanic(new RuntimeException(msg));
         }
     }
@@ -163,11 +163,11 @@ public final class Err {
     /**
      * 当expression为真时，抛出{@link PanicException}并携带信息
      *
-     * @param expression 布尔表达式
-     * @param trSup      异常提供函数，提供的异常将被包装为{@link PanicException}类型
+     * @param expr  布尔表达式
+     * @param trSup 异常提供函数，提供的异常将被包装为{@link PanicException}类型
      */
-    public static void panicIf(boolean expression, Supplier<? extends Exception> trSup) {
-        if (expression) {
+    public static void panicIf(boolean expr, Supplier<? extends Exception> trSup) {
+        if (expr) {
             throwPanic(trSup.get());
         }
     }
@@ -175,13 +175,13 @@ public final class Err {
     /**
      * 当expression为真时，抛出{@link PanicException}并携带信息
      *
-     * @param expression 布尔表达式
-     * @param trFn       异常提供函数，提供的异常将被包装为{@link PanicException}类型
-     * @param msg        异常携带信息
+     * @param expr 布尔表达式
+     * @param trFn 异常提供函数，提供的异常将被包装为{@link PanicException}类型
+     * @param msg  异常携带信息
      */
-    public static void panicIf(boolean expression, Function<? super String, ? extends Exception> trFn,
+    public static void panicIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                                String msg) {
-        if (expression) {
+        if (expr) {
             throwPanic(trFn.apply(msg));
         }
     }
@@ -189,14 +189,14 @@ public final class Err {
     /**
      * 当expression为真时，抛出{@link PanicException}并携带信息
      *
-     * @param expression 布尔表达式
-     * @param trFn       异常提供函数，提供的异常将被包装为{@link PanicException}类型
-     * @param msgTemp    异常信息模板（形如：“err: msg:{}”)
-     * @param msgArgs    填充异常信息模板的参数列表（按顺序填充异常信息模板中的"{}")
+     * @param expr    布尔表达式
+     * @param trFn    异常提供函数，提供的异常将被包装为{@link PanicException}类型
+     * @param msgTemp 异常信息模板（形如：“err: msg:{}”)
+     * @param msgArgs 填充异常信息模板的参数列表（按顺序填充异常信息模板中的"{}")
      */
-    public static void panicIf(boolean expression, Function<? super String, ? extends Exception> trFn,
+    public static void panicIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                                String msgTemp, Object... msgArgs) {
-        if (expression) {
+        if (expr) {
             throwPanic(trFn.apply(STF.f(msgTemp, msgArgs)));
         }
     }
@@ -204,7 +204,7 @@ public final class Err {
     /**
      * 根据给定的表达式布尔值结果选择是否抛出异常，屏蔽java预检异常与运行时异常的方法声明，抛出{@link PanicException}并携带信息
      *
-     * @param expression 表达式，true 抛出异常，false 不抛出异常
+     * @param expr       表达式，true 抛出异常，false 不抛出异常
      * @param trFn       函数，异常对象的构造方法的方法引用，要求该异常对象的构造方法能够接受一个str类型或其父类型的参数，返回一个异常实例
      * @param msgTemp    异常对象的消息的模板，参数使用 "{}" 表示
      * @param msgArgsSup 函数，能够提供填充异常对象的消息模板的参数，
@@ -213,9 +213,9 @@ public final class Err {
      *                   当调用该方法的作用域中没有直接对应的msgTemplate中所需参数的值且构造该值需要复杂的流程或大对象时，
      *                   该方法将优化此场景，即仅当确定要抛出异常时才会执行参数的构造
      */
-    public static void panicIf(boolean expression, Function<? super String, ? extends Exception> trFn,
+    public static void panicIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                                String msgTemp, Supplier<? extends Object[]> msgArgsSup) {
-        if (expression) {
+        if (expr) {
             throwPanic(trFn.apply(STF.f(msgTemp, msgArgsSup.get())));
         }
     }
@@ -231,20 +231,14 @@ public final class Err {
      *             throw e;
      *         }
      *         // 上述语句同下，区别是不会因为 e 为预检异常而需要向当前方法作用域内显式声明throws
-     *         byte[] bytes = Err.runOrThrowReal(() -> Files.readAllBytes(Path.of("/xxx")));
+     *         byte[] bytes = Err.getOrThrowReal(() -> Files.readAllBytes(Path.of("/xxx")));
      *     }
      * </pre>
      *
-     * @param sup 可执行语句,可能异常，异常时直接抛出，对预检和运行时异常皆可
+     * @param fnGet 可执行语句,可能异常，异常时直接抛出，对预检和运行时异常皆可
      */
-    public static <R> R runOrThrowReal(Sup<? extends R> sup) {
-        try {
-            return sup.unsafeGet();
-        } catch (Exception e) {
-            throwReal(e);
-        }
-        // 不会执行到此处，仅为编译通过
-        throw new RuntimeException();
+    public static <R> R getOrThrowReal(FnGet<? extends R> fnGet) {
+        return FnGet.getOrThrowReal(fnGet);
     }
 
     /**
@@ -261,14 +255,10 @@ public final class Err {
      *     }
      * </pre>
      *
-     * @param run 可执行语句,可能异常，异常时直接抛出，对预检和运行时异常皆可
+     * @param fnRun 可执行语句,可能异常，异常时直接抛出，对预检和运行时异常皆可
      */
-    public static void runOrThrowReal(Run run) {
-        try {
-            run.unsafeRun();
-        } catch (Exception e) {
-            throwReal(e);
-        }
+    public static void runOrThrowReal(FnRun fnRun) {
+        FnRun.runOrThrowReal(fnRun);
     }
 
 
@@ -282,20 +272,14 @@ public final class Err {
      *             throw e;
      *         }
      *         // 上述语句同下，区别是不会因为 e 为预检异常而需要向当前方法作用域内显式声明throws
-     *         byte[] bytes = Err.runOrThrowPanic(() -> Files.readAllBytes(Path.of("/xxx")));
+     *         byte[] bytes = Err.getOrThrowPanic(() -> Files.readAllBytes(Path.of("/xxx")));
      *     }
      * </pre>
      *
-     * @param sup 可执行语句,可能异常，异常时直接抛出，对预检和运行时异常皆可
+     * @param fnGet 可执行语句,可能异常，预检和运行时异常皆可
      */
-    public static <R> R runOrThrowPanic(Sup<? extends R> sup) {
-        try {
-            return sup.unsafeGet();
-        } catch (Exception e) {
-            throwPanic(e);
-        }
-        // 不会执行到此处，仅为编译通过
-        throw new RuntimeException();
+    public static <R> R getOrThrowPanic(FnGet<? extends R> fnGet) {
+        return FnGet.getOrThrowPanic(fnGet);
     }
 
     /**
@@ -312,14 +296,10 @@ public final class Err {
      *     }
      * </pre>
      *
-     * @param run 可执行语句,可能异常，异常时直接抛出，对预检和运行时异常皆可
+     * @param fnRun 可执行语句,可能异常，预检和运行时异常皆可
      */
-    public static void runOrThrowPanic(Run run) {
-        try {
-            run.unsafeRun();
-        } catch (Exception e) {
-            throwPanic(e);
-        }
+    public static void runOrThrowPanic(FnRun fnRun) {
+        FnRun.runOrThrowPanic(fnRun);
     }
 
 

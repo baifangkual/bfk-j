@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * @author baifangkual
- * create time 2025/5/3
+ * @since 2025/5/3
  */
 public class ErrTest {
 
@@ -25,4 +25,5 @@ public class ErrTest {
             Err.realIf(tr, IllegalAccessException::new, "tr is true!");
         });
     }
+
 }

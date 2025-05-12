@@ -3,25 +3,27 @@ package io.github.baifangkual.bfk.j.mod.core.function;
 import io.github.baifangkual.bfk.j.mod.core.exception.PanicException;
 import io.github.baifangkual.bfk.j.mod.core.model.R;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
-import io.github.baifangkual.bfk.j.mod.core.trait.fn.ToFnSafe;
-import io.github.baifangkual.bfk.j.mod.core.trait.fn.ToFnUnSafe;
+import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToSafe;
+import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToUnSafe;
 
+import java.io.Serializable;
 import java.util.function.Function;
 
 /**
- * @author baifangkual
- * create time 2024/7/15
- * <p>
  * <b>函数式接口</b><br>
  * 相较于{@link Function}，表示可能抛出异常的操作<br>
  * 表示函数,一个入参一个出参，表示的函数可能带有预检异常或运行时异常声明，可以引用throwable方法<br>
  * {@code Fn<Path, byte[]> fn = Files::readAllBytes;}
+ *
+ * @author baifangkual
  * @see Function
+ * @since 2024/7/15 v0.0.3
  */
 @FunctionalInterface
 public interface Fn<P, Result> extends Function<P, R<Result, Exception>>,
-        ToFnSafe<Function<P, R<Result, Exception>>>,
-        ToFnUnSafe<Function<P, Result>> {
+        FnMutToSafe<Function<P, R<Result, Exception>>>,
+        FnMutToUnSafe<Function<P, Result>>,
+        Serializable {
     /**
      * 表示一个入参一个出参的函数，函数执行过程中允许抛出异常，包括运行时异常和预检异常
      *

@@ -10,7 +10,7 @@ import java.util.function.Function;
 
 /**
  * @author baifangkual
- * create time 2025/5/3
+ * @since 2025/5/3
  */
 @SuppressWarnings("ConstantValue")
 public class FnTest {
@@ -20,24 +20,28 @@ public class FnTest {
     public void test01() {
         Fn<String, String> fn = (s) -> "fnMod: " + s;
         R<String, Exception> abc = fn.apply("abc");
-        System.out.println(abc);
+//        System.out.println(abc);
+        Assertions.assertEquals(R.ofOk("fnMod: abc"), abc);
         Function<String, R<String, Exception>> safe = fn.toSafe();
         R<String, Exception> def = safe.apply("def");
-        System.out.println(def);
-
+//        System.out.println(def);
+        Assertions.assertEquals(R.ofOk("fnMod: def"), def);
     }
 
     @Test
     public void test02() {
+
+        final Exception e = new ClassCastException("message");
         Fn<String, String> fn = (s) -> {
             if (true) {
-                throw new ClassCastException("message");
+                throw e;
             }
             return s;
         };
 
         R<String, Exception> abc = fn.apply("abc");
-        System.out.println(abc);
+//        System.out.println(abc);
+        Assertions.assertEquals(R.ofErr(e), abc);
     }
 
     @Test
@@ -91,7 +95,7 @@ public class FnTest {
             return s;
         };
         Optional<String> optional = fn.toSafe().apply("abc").toOptional();
-        System.out.println(optional);
+        Assertions.assertEquals(Optional.empty(), optional);
     }
 
 }
