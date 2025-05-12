@@ -2,6 +2,7 @@ package io.github.baifangkual.bfk.j.mod.core.conf;
 
 import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 
+import java.io.Serial;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -13,6 +14,10 @@ import java.util.Optional;
  * @since 2024/6/15 v0.0.3
  */
 public class CfgOptionValueNotFoundException extends NoSuchElementException {
+
+    @Serial
+    private static final long serialVersionUID = 1919810L;
+
     CfgOptionValueNotFoundException(String errMsg) {
         super(errMsg);
     }

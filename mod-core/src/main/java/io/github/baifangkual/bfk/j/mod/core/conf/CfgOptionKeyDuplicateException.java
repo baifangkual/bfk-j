@@ -2,6 +2,8 @@ package io.github.baifangkual.bfk.j.mod.core.conf;
 
 import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 
+import java.io.Serial;
+
 /**
  * 表示在一个配置类实例中设置{@link Cfg.Option#key()}重复的配置项
  *
@@ -9,6 +11,10 @@ import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
  * @since 2025/5/10
  */
 class CfgOptionKeyDuplicateException extends IllegalArgumentException {
+
+    @Serial
+    private static final long serialVersionUID = 1919810L;
+
     CfgOptionKeyDuplicateException(String optionKey) {
         super(buildErrMsgByOptionKey(optionKey));
     }
