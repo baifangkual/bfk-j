@@ -14,10 +14,14 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 投骰子，随机数工具
+ * <b>投骰子</b><br>
+ * 随机数工具类，可生成雪花id、随机数等
  *
  * @author baifangkual
- * @since 2024/12/11
+ * @see #fixedLengthNumber(int)
+ * @see #nextId()
+ * @see #nextFixedLengthNumberId(int)
+ * @since 2024/12/11 v0.0.3
  */
 public final class Roll {
     private Roll() {
@@ -25,11 +29,13 @@ public final class Roll {
     }
 
     /**
-     * 给定一个值表示长度(位数)，返回一个数字，该数字取随机数，该数字的位数为给定的长度值, 返回的数字字符串一定为正整数<br>
-     * 需注意，该方法返回的数字字符串可能在长度过大时无法用整型表达，即不能转为整型<br>
-     * 需注意，该方法返回的数字仅表示固定位数的随机数，不能保证在两次调用一定获取到不同的值，遂该方法的返回值不能作为唯一索引<br>
-     * 该方法返回的数字一定不以 0 开头<br>
-     * 如 {@code “54321”.length() == String.valueOf(fixedLengthNumber(5)).length()}
+     * 给定一个值表示长度(位数)，返回一个数字<br>
+     * 该数字取随机数，该数字的位数为给定的长度值, 返回的数字字符串一定为正整数，一定不以 0 开头<br>
+     * exp: {@code “54321”.length() == fixedLengthNumber(5).length()}
+     *
+     * @throws IllegalArgumentException 当给定的参数值小于1时
+     * @apiNote 该方法返回的数字字符串可能在长度过大时无法用整型表达，即不能转为整型<br>
+     * 另外，该方法返回的数字仅表示固定位数的随机数，不能保证在两次调用一定获取到不同的值，遂该方法的返回值不能作为唯一索引<br>
      */
     public static String fixedLengthNumber(int length) {
         Err.realIf(length < 1, IllegalArgumentException::new, "Length must be max 0");
@@ -56,7 +62,16 @@ public final class Roll {
     private static final IdGenerator ID_GEN = new IdGenerator();
 
     /**
+     * 返回一个雪花id<br>
      * 生成64位长正整数雪花id，该方法可保证在不发生时间回溯的情况下在同一台设备获取到的id一定不重复
+     *
+     * @return 雪花id
+     * @throws IllegalStateException 当时间发生至少两次连续回溯,
+     *                               或时间发生一次大于{@link IdGenerator#MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY}ms的回溯时
+     * @throws RuntimeException      当线程收到中断信号时
+     * @apiNote 该方法依赖的底层方法在高并发情况下会频繁进行系统调用
+     * @see #nextFixedLengthNumberId(int)
+     * @see IdGenerator#nextId()
      */
     public static long nextId() {
         return ID_GEN.nextId();
@@ -64,14 +79,15 @@ public final class Roll {
 
     /**
      * 给定一个数字，表示所需要的id的字符长度，返回一个id值，该id值字符长度为要求的长度<br>
-     * 该id值的唯一性保证与雪花id同理，即保证在不发生时间回溯的情况下在同一台设备获取到的id一定不重复，
-     * 另外，当给定的length值过小时，该方法将抛出异常，因为为确保唯一性，生成的id字符长度至少要大于当前雪花id的字符长度，
-     * 建议给定的值大于64位有符号数表达的最大值的字符长度数(19)
-     * 需注意，该方法返回的数字字符串可能在长度过大时无法用整型表达，即不能转为整型<br>
      *
      * @param length 要求的字符长度
      * @return 返回仅数字字符的字符串，字符串字符数一定等于要求的长度
      * @throws IllegalArgumentException 当给定的参数小于一个64位雪花id表达的字符串的长度时
+     * @apiNote 该id值的唯一性保证与雪花id同理，即保证在不发生时间回溯的情况下在同一台设备获取到的id一定不重复，
+     * 另外，当给定的length值过小时，该方法将抛出异常，因为为确保唯一性，生成的id字符长度至少要大于当前雪花id的字符长度，
+     * 建议给定的值大于64位有符号数表达的最大值的字符长度数(19)<br>
+     * 需注意，该方法返回的数字字符串可能在长度过大时无法用整型表达，即不能转为整型
+     * @see #nextId()
      */
     public static String nextFixedLengthNumberId(int length) {
         String sfId = String.valueOf(nextId());
@@ -91,7 +107,7 @@ public final class Roll {
      * 其中41位为时间偏移量，8位为man标识，4位为home标识，10位为同毫秒细分的序列号<br>
      * 该实例构造可自定man+home 12位的标识，因为该12位标识为自定量，遂生成的id序列中携带了自定量信息<br>
      * 该工具类对时间回溯没有太大抗性，当两次通过{@link #nextId()}获取id的间隔中发生多次
-     * 或单次大于{@link #MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY}值的时间回溯时，该方法将抛出运行时异常<br>
+     * 或单次大于{@value #MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY}值的时间回溯时，该方法将抛出运行时异常<br>
      * 该算法及代码参考：
      * <ul>
      *     <li><a href="https://zh.wikipedia.org/wiki/%E9%9B%AA%E8%8A%B1%E7%AE%97%E6%B3%95">雪花算法</a></li>
@@ -99,9 +115,9 @@ public final class Roll {
      * </ul>
      *
      * @author baifangkual
-     * @since 2024/12/12
+     * @since 2024/12/12 v0.0.3
      */
-    public static final class IdGenerator {
+    private static final class IdGenerator {
 
         // DEFINITION ==================================
         /**
@@ -158,9 +174,9 @@ public final class Roll {
         }
 
         /**
-         * 明确指定 区分 man 和 home 的构造参数, man应当占{@link #MAN_ID_BITS}位，home应当占{@link #HOME_ID_BITS}位
+         * 明确指定 区分 man 和 home 的构造参数, man应当占{@value  #MAN_ID_BITS}位，home应当占{@value  #HOME_ID_BITS}位
          *
-         * @param man  区分方式02，man！what can i say？
+         * @param man  区分方式02，man！what can I say？
          * @param home 区分方式01，which home？
          */
         public IdGenerator(long man, long home) {
@@ -175,7 +191,17 @@ public final class Roll {
         }
 
         /**
-         * 生成下一个雪花id，该方法可保证在不发生时间回溯的情况下在同一台设备获取到的id一定不重复
+         * 生成下一个雪花id<br>
+         * 该方法线程安全，且保证在不发生时间回溯的情况下在同一台设备获取到的id一定不重复<br>
+         * 在同一毫秒内最多可生成{@value #MAX_SEQUENCE_VALUE}个雪花Id，
+         * 若一个毫秒内请求数大于{@value #MAX_SEQUENCE_VALUE}则从第{@value #MAX_SEQUENCE_VALUE}+1个请求开始，
+         * 请求所在的线程将会忙自旋到下一毫秒再从该方法返回雪花id
+         *
+         * @return 雪花id
+         * @throws IllegalStateException 当时间发生至少两次连续回溯,
+         *                               或时间发生一次大于{@value #MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY}ms的回溯时
+         * @throws RuntimeException      当线程收到中断信号时
+         * @apiNote 该方法依赖的底层方法在高并发情况下会频繁进行系统调用
          */
         public long nextId() {
             LOCK.lock();
@@ -205,7 +231,7 @@ public final class Roll {
                         }
                     } else {
                         // 大的回溯，直接他妈异常，玩你妈
-                        throw new RuntimeException(String.format("Clock moved backwards.  Refusing to generate id for %d milliseconds", offset));
+                        throw new IllegalStateException(String.format("Clock moved backwards.  Refusing to generate id for %d milliseconds", offset));
                     }
                 }
 
@@ -238,6 +264,9 @@ public final class Roll {
 
         /**
          * 通过mac地址后10位构建 home id
+         *
+         * @return homeId
+         * @throws IllegalStateException 获取网卡地址出现异常时
          */
         private static long createHomeId() {
             long id = 0L;
@@ -255,13 +284,15 @@ public final class Roll {
                     }
                 }
             } catch (Exception e) {
-                throw new IllegalStateException("fail getDataCenterId, err: " + e.getMessage(), e);
+                throw new IllegalStateException(e.getMessage(), e);
             }
             return id;
         }
 
         /**
          * 通过进程号和电脑名构建 man id
+         *
+         * @return ManID
          */
         private static long createManId() {
             // 获取 pid+电脑名
@@ -271,7 +302,11 @@ public final class Roll {
 
 
         /**
-         * 方法内忙自旋到至少下一毫秒再返回
+         * 自旋方法<br>
+         * 方法内当前线程会忙自旋到至少下一毫秒再返回
+         *
+         * @return 新时间
+         * @see #systemTimeGen()
          */
         private long loop2NextMillis(long lastTimestamp) {
             long timestamp = systemTimeGen();
@@ -282,7 +317,11 @@ public final class Roll {
         }
 
         /**
-         * 获取系统时间，注意，该方法在高并发情况下使用并不好，高并发情况下或应使用ScheduledExecutorService缓存时间戳值
+         * 获取系统时间<br>
+         *
+         * @return 系统时间
+         * @apiNote 该方法在高并发情况下会频繁进行系统调用，
+         * 遂该方法在高并发情况下使用并不好，高并发情况下或应使用ScheduledExecutorService缓存时间戳值
          */
         private long systemTimeGen() {
             /*

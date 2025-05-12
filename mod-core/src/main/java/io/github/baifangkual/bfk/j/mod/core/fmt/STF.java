@@ -2,20 +2,25 @@ package io.github.baifangkual.bfk.j.mod.core.fmt;
 
 import io.github.baifangkual.bfk.j.mod.core.immutable.Const;
 
+import java.util.Objects;
+
 /**
- * @author baifangkual
- * create time 2024/6/19
- * <p>
- * 格式化字符串工具类，该类主要逻辑复制自 hutool-core包下 cn.hutool.core.text.StrFormatter 类
- * 主要复制了 {@code formatWith(String strPattern, String placeHolder, Object... argArray)} 方法以供使用，
- * 复制该工具方法而不添加hutool-core依赖目的是为了减小该模块的外部引用和大小，使该模块作为其他模块引用的依赖时，较为干净<br>
- * 使用:
+ * <b>格式化字符串工具类</b><br>
+ * string formater util class
  * <pre>
  *  {@code
  *  String str = STF.f("a,b,{},d,e,\\{},\\\\g", "c");
  *  Assert.eq("a,b,c,d,e,{},\\g", str);
+ *  Assert.throwE(NullPointException.class, ()-> STF.f(null, "c"));
  *  }
  * </pre>
+ * 该类主要逻辑复制自 hutool-core 包下
+ * {@code cn.hutool.core.text.StrFormatter.formatWith(String strPattern, String placeHolder, Object... argArray)} 方法，
+ * 复制该工具方法而不添加hutool-core依赖目的是为了减小该模块的外部引用和大小，使该模块作为其他模块引用的依赖时，较为干净
+ *
+ * @author baifangkual
+ * @see #f(String, Object...)
+ * @since 2024/6/19 v0.0.3
  */
 public final class STF {
     /**
@@ -39,72 +44,79 @@ public final class STF {
     private static final int PLACEHOLDER_LENGTH = PLACEHOLDER.length();
 
     /**
-     * 安全使用 nullable 对象的 toString 方法，该方法已经被简化，
-     * 原方法请参考hutool-core库下 {@code cn.hutool.core.util.StrUtil#utf8Str(java.lang.Object)}
+     * 安全使用 nullable 对象的 toString 方法<br>
+     * 该方法已经被简化，原方法请参考hutool-core库下 {@code cn.hutool.core.util.StrUtil#utf8Str(java.lang.Object)}
      *
-     * @param obj nullable obj
+     * @param nullableObj nullable obj
      * @return string or null(Void.class)
      */
-    private static String safeToString(Object obj) {
-        if (obj == null) return null; //交由StringBuilder处理null
+    private static String nullableSafeToString(Object nullableObj) {
+        if (nullableObj == null) return null;
         // 原本在这方法内应有多个instanceof 判断 但这些场景较少，为了性能考量，该直接使用toString
-        return obj.toString();
+        return nullableObj.toString();
     }
 
     /**
+     * 格式化字符串<br>
+     * 此方法只是简单将指定占位符 按照顺序替换为参数, 如果想输出占位符使用 {@code \\}转义即可，
+     * 如果想输出占位符之前的 {@code \} ,使用双转义符 {@code \\\\} 即可<br>
+     * <pre>
+     *     {@code
+     *     STF.f("this is {} for {}", "a", "b");
+     *     // result: this is a for b
+     *     STF.f("this is \\{} for {}", "a", "b");
+     *     // result: this is {} for a
+     *     STF.f("this is \\\\{} for {}", "a", "b");
+     *     // result: this is \a for b
+     *     }
+     * </pre>
      * 该方法大部分逻辑复制自 {@code cn.hutool.core.text.StrFormatter#formatWith(String, String, Object...)}
-     * 格式化字符串, 此方法只是简单将指定占位符 按照顺序替换为参数,
-     * 如果想输出占位符使用 \\转义即可，如果想输出占位符之前的 \ 使用双转义符 \\\\ 即可,
-     * 例：<br>
-     * 通常使用：fmt("this is {} for {}", "a", "b") =》 this is a for b<br>
-     * 转义{}： fmt("this is \\{} for {}", "a", "b") =》 this is {} for a<br>
-     * 转义\： fmt("this is \\\\{} for {}", "a", "b") =》 this is \a for b<br>
      *
-     * @param template 字符串模板
-     * @param args     参数列表
-     * @return nullable string
+     * @param temp 字符串模板
+     * @param args 参数列表
+     * @return format string
+     * @throws NullPointerException 给定的字符串模板为空时
      */
-    public static String f(String template, Object... args) {
-
-        if (template == null || template.isBlank()
-            || args == null || args.length == 0) return template;
-        final int strPatternLength = template.length();
+    public static String f(String temp, Object... args) {
+        Objects.requireNonNull(temp, "string template is null");
+        if (temp.isBlank() || args == null || args.length == 0) return temp;
+        final int strPatternLength = temp.length();
         // 初始化定义好的长度以获得更好的性能
         final StringBuilder sb = new StringBuilder(strPatternLength + 50);
         int handledPosition = 0;// 记录已经处理到的位置
         int delimIndex;// 占位符所在位置
         for (int argIndex = 0; argIndex < args.length; argIndex++) {
-            delimIndex = template.indexOf(PLACEHOLDER, handledPosition);
+            delimIndex = temp.indexOf(PLACEHOLDER, handledPosition);
             if (delimIndex == -1) {// 剩余部分无占位符
                 if (handledPosition == 0) { // 不带占位符的模板直接返回
-                    return template;
+                    return temp;
                 }
                 // 字符串模板剩余部分不再包含占位符，加入剩余部分后返回结果
-                sb.append(template, handledPosition, strPatternLength);
+                sb.append(temp, handledPosition, strPatternLength);
                 return sb.toString();
             }
             // 转义符
-            if (delimIndex > 0 && template.charAt(delimIndex - 1) == C_BACKSLASH) {// 转义符
-                if (delimIndex > 1 && template.charAt(delimIndex - 2) == C_BACKSLASH) {// 双转义符
+            if (delimIndex > 0 && temp.charAt(delimIndex - 1) == C_BACKSLASH) {// 转义符
+                if (delimIndex > 1 && temp.charAt(delimIndex - 2) == C_BACKSLASH) {// 双转义符
                     // 转义符之前还有一个转义符，占位符依旧有效
-                    sb.append(template, handledPosition, delimIndex - 1);
-                    sb.append(safeToString(args[argIndex]));
+                    sb.append(temp, handledPosition, delimIndex - 1);
+                    sb.append(nullableSafeToString(args[argIndex]));
                     handledPosition = delimIndex + PLACEHOLDER_LENGTH;
                 } else {
                     // 占位符被转义
                     argIndex--;
-                    sb.append(template, handledPosition, delimIndex - 1);
+                    sb.append(temp, handledPosition, delimIndex - 1);
                     sb.append(PLACEHOLDER.charAt(0));
                     handledPosition = delimIndex + 1;
                 }
             } else {// 正常占位符
-                sb.append(template, handledPosition, delimIndex);
-                sb.append(safeToString(args[argIndex]));
+                sb.append(temp, handledPosition, delimIndex);
+                sb.append(nullableSafeToString(args[argIndex]));
                 handledPosition = delimIndex + PLACEHOLDER_LENGTH;
             }
         }
         // 加入最后一个占位符后所有的字符
-        sb.append(template, handledPosition, strPatternLength);
+        sb.append(temp, handledPosition, strPatternLength);
         return sb.toString();
     }
 

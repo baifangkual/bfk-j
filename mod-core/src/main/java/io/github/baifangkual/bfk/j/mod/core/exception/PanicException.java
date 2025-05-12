@@ -4,17 +4,18 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * @author baifangkual
- * create time 2024/11/15
- * <p>
+ * <b>恐慌异常</b><br>
  * 表示程序恐慌异常，必须对引发恐慌的实际异常原因进行包装，
  * 除了将预检异常转化为运行时异常，其他行为不应发生改变，遂该类的其他行为都应将委托至实际的异常原因<br>
  * 该类的构造中要求给定一个{@link Throwable}，也即导致恐慌的实际异常原因，因该类型的表意，
  * 即导致Panic发生的异常实体一定不为垂悬引用，遂该Panic的构造中，{@link #wrap(Throwable)}要求给定的{@link Throwable}一定不为null，
  * 否则该类的构造将直接抛出{@link NullPointerException}<br>
  * 该类的出现时是为了将java异常体系中细分的预检/运行时异常进行统一<br>
- * 对该类调用{@link #toString()}或{@link #printStackTrace()}等，将显示实际异常原因的异常信息，该类型仅会添加{@link #PANIC_PREFIX}至
- * 异常信息说明及栈回溯前等<br>
+ * 对该类调用{@link #toString()}或{@link #printStackTrace()}等，将显示实际异常原因的异常信息，该类型仅会添加{@value #PANIC_PREFIX}至
+ * 异常信息说明及栈回溯前
+ *
+ * @author baifangkual
+ * @since 2024/11/15 v0.0.3
  */
 public final class PanicException extends RuntimeException implements Serializable {
 
@@ -120,7 +121,7 @@ public final class PanicException extends RuntimeException implements Serializab
     }
 
     /**
-     * 返回实际异常的toString信息（添加前缀{@link #PANIC_PREFIX})
+     * 返回实际异常的toString信息（添加前缀{@value #PANIC_PREFIX})
      *
      * @return 实际异常的toString信息
      */
@@ -153,9 +154,16 @@ public final class PanicException extends RuntimeException implements Serializab
         selfPanicRealCause().setStackTrace(stackTrace);
     }
 
+    /**
+     * 填充执行堆栈跟踪。此方法在此对象中 Throwable 记录有关当前线程的堆栈帧的当前状态的信息
+     * 如果 this Throwable 的堆栈跟踪 不可写，则调用此方法无效
+     *
+     * @return this
+     */
     @Override
     public Throwable fillInStackTrace() {
         // 因为 selfPanicRealCause 的 fillInStackTrace 有 synchronized，遂该处重写的方法可无需要求 synchronized
-        return selfPanicRealCause().fillInStackTrace();
+        selfPanicRealCause().fillInStackTrace();
+        return this;
     }
 }

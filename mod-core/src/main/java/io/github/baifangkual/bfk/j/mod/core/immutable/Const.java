@@ -1,16 +1,16 @@
 package io.github.baifangkual.bfk.j.mod.core.immutable;
 
 /**
- * @author baifangkual
- * create time 2024/11/15
- * <p>
  * 常量引用存放地<br>
- * 该类中部分常量定义来自于hutool包下相关常量定义<br>
  * 存放到该类中的常量的命名规则：
  * <ul>
  *     <li>根据其值的实际内容命名，而不应该根据其用途命名，因为一个常量值的用途可能有多个</li>
  *     <li>该类下所定义的常量应根据其类型做划分，类型名称全程都应该为{@code Const.xxx}</li>
  * </ul>
+ * 该类中部分常量定义来自于hutool包下相关常量定义<br>
+ *
+ * @author baifangkual
+ * @since 2024/11/15 v0.0.3
  */
 public final class Const {
 

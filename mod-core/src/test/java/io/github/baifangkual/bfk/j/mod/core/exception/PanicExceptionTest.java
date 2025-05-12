@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * @author baifangkual
- * create time 2024/11/15
+ * @since 2024/11/15
  */
 @Slf4j
 public class PanicExceptionTest {
