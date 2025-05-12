@@ -35,17 +35,17 @@
     </modules>
 
     <properties>
-        <!-- ##### properties setting ##### -->
+        <!-- properties setting -->
         <java.version>17</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <reset.resource.delimiter>@</reset.resource.delimiter>
-        <!-- ##### dep package reversion init ##### -->
+        <!-- dep package reversion init -->
         <reversion.central-publishing-maven-plugin>0.7.0</reversion.central-publishing-maven-plugin>
         <reversion.maven-gpg-plugin>3.0.1</reversion.maven-gpg-plugin>
-        <reversion.maven-source-plugin>2.2.1</reversion.maven-source-plugin>
+        <reversion.maven-source-plugin>3.3.1</reversion.maven-source-plugin>
         <reversion.maven-javadoc-plugin>3.3.2</reversion.maven-javadoc-plugin>
         <reversion.maven-compiler-plugin>3.11.0</reversion.maven-compiler-plugin>
         <reversion.maven-resources-plugin>3.3.1</reversion.maven-resources-plugin>
@@ -57,7 +57,7 @@
         <reversion.jupiter-api>5.10.2</reversion.jupiter-api>
         <!-- boot 与 cloud 版本有兼容性对应关系 -->
         <reversion.spring-boot-dependencies>3.2.7</reversion.spring-boot-dependencies>
-        <!--        <reversion.spring-cloud-dependencies>2023.0.3</reversion.spring-cloud-dependencies>-->
+        <!-- <reversion.spring-cloud-dependencies>2023.0.3</reversion.spring-cloud-dependencies> -->
     </properties>
 
     <dependencyManagement>
@@ -89,11 +89,13 @@
     <build>
         <plugins>
             <!-- central-publish 插件配置 -->
+            <!-- 若不需推送至中央仓库，则不配置该插件 -->
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>
             </plugin>
             <!-- GPG签名配置 -->
+            <!-- 若不需签名，则不配置该插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
@@ -123,6 +125,7 @@
                     </configuration>
                 </plugin>
                 <!-- GPG签名配置 -->
+                <!-- 若需成功签名，则maven的settings.xml中关于该插件还有些配置 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
@@ -130,6 +133,7 @@
                     <executions>
                         <execution>
                             <id>sign-artifacts</id>
+                            <!-- 在install阶段进行签名 -->
                             <phase>install</phase>
                             <goals>
                                 <goal>sign</goal>
@@ -165,6 +169,13 @@
                         </execution>
                     </executions>
                     <configuration>
+                        <failOnError>false</failOnError>
+                        <additionalJOptions>
+                            <!-- 禁止编译期javadoc生成告警及错误信息 -->
+                            <additionalJOption>-Xdoclint:none</additionalJOption>
+                            <!-- 解决javadoc在终端的输出乱码问题 -->
+                            <additionalJOption>-J-Dfile.encoding=utf-8</additionalJOption>
+                        </additionalJOptions>
                         <charset>UTF-8</charset><!-- utf-8读取文件 -->
                         <encoding>UTF-8</encoding><!-- utf-8进行编码代码 -->
                         <docencoding>UTF-8</docencoding><!-- utf-8进行编码文档 -->
