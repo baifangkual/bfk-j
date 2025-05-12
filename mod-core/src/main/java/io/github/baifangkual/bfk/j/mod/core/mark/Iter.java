@@ -1,0 +1,260 @@
+package io.github.baifangkual.bfk.j.mod.core.mark;
+
+import java.util.*;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+/**
+ * <b>可迭代标记接口</b><br>
+ * 类型实现该标记的{@link #iterator()}方法后，便可拥有系列方法行为，可
+ *
+ * @author baifangkual
+ * @since 2025/5/12 v0.0.4
+ */
+public interface Iter<T> extends Iterable<T> {
+
+    /**
+     * 迭代器<br>
+     * 多次调用该方法返回的迭代器并非同一个迭代器
+     *
+     * @return 迭代器
+     */
+    @Override
+    Iterator<T> iterator();
+
+    /**
+     * 执行Map提供者函数，并对每个被迭代元素执行KeyFn，收集为Map<br>
+     * 该方法并未对每个被迭代元素执行KeyFn后是否为null做校验，当被迭代元素执行KeyFn后为null时，
+     * 抛出异常与否取决于Map是否允许存储null键
+     *
+     * @param fn    Map提供者函数
+     * @param keyFn Map.key转换函数
+     * @param <K>   Map.key类型
+     * @return Map
+     * @throws NullPointerException 当给定的fn为空时，或给定的KeyFn为空时，或迭代器为空时，或给定的fn执行后返回的Map为空时
+     * @apiNote 因为该方法将元素收集到Map中，遂函数fn生成的Map必须是可写的
+     * @see #toHashMap(Function)
+     */
+    default <K> Map<K, T> toMap(Supplier<? extends Map<K, T>> fn,
+                                Function<? super T, ? extends K> keyFn) {
+        Objects.requireNonNull(fn, "fn is null");
+        Objects.requireNonNull(keyFn, "keyFn is null");
+        Iterator<T> it = iterator();
+        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
+        Map<K, T> map = fn.get();
+        Objects.requireNonNull(map, "fn.get() returned a null Map");
+        while (it.hasNext()) {
+            T t = it.next();
+            K key = keyFn.apply(t);
+            map.put(key, t);
+        }
+        return map;
+    }
+
+    /**
+     * 对每个被迭代元素执行KeyFn，收集为Map<br>
+     * 该方法返回的Map为HashMap
+     *
+     * @param keyFn Map.key转换函数
+     * @param <K>   Map.key类型
+     * @return HashMap
+     * @throws NullPointerException 当给定的KeyFn为空时，或迭代器为空时
+     * @see #toMap(Supplier, Function)
+     */
+    default <K> Map<K, T> toHashMap(Function<? super T, ? extends K> keyFn) {
+        return toMap(HashMap::new, keyFn);
+    }
+
+
+    /**
+     * 使用{@link Set}集合收集该类型当中的所有元素<br>
+     * 返回的{@link Set}为不可变集合
+     *
+     * @return Set(Immutable)
+     * @throws NullPointerException 当该类型返回的迭代器为空时
+     */
+    default Set<T> toImmutableSet() {
+        Iterator<T> it = iterator();
+        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
+        Set<T> list = new HashSet<>();
+        while (it.hasNext()) {
+            T t = it.next();
+            list.add(t);
+        }
+        return Collections.unmodifiableSet(list);
+    }
+
+    /**
+     * 执行给定的集合提供者函数获取函数返回的{@link Set}，并收集该类型当中的所有元素<br>
+     * 返回的{@link Set}为给定的集合提供者函数返回的{@link Set}
+     *
+     * @param fn 集合提供者函数
+     * @return Set
+     * @throws NullPointerException 当给定的函数为空时，或该类型返回的迭代器为空时，或给定函数返回的Set为空时
+     * @apiNote 因为该方法将元素收集到函数生成的集合中，遂函数生成的集合必须是可写的
+     */
+    default Set<T> toSet(Supplier<? extends Set<T>> fn) {
+        Objects.requireNonNull(fn, "fn is null");
+        Iterator<T> it = iterator();
+        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
+        Set<T> set = fn.get();
+        Objects.requireNonNull(set, "fn.get() returned a null Set");
+        while (it.hasNext()) {
+            T t = it.next();
+            set.add(t);
+        }
+        return set;
+    }
+
+
+    /**
+     * 执行给定的集合提供者函数获取函数返回的{@link List}，并收集该类型当中的所有元素<br>
+     * 返回的{@link List}为给定的集合提供者函数返回的{@link List}
+     *
+     * @param fn 集合提供者函数
+     * @return List
+     * @throws NullPointerException 当给定的函数为空时，或该类型返回的迭代器为空时，或给定函数返回的List为空时
+     * @apiNote 因为该方法将元素收集到函数生成的集合中，遂函数生成的集合必须是可写的
+     */
+    default List<T> toList(Supplier<? extends List<T>> fn) {
+        Objects.requireNonNull(fn, "fn is null");
+        Iterator<T> it = iterator();
+        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
+        List<T> list = fn.get();
+        Objects.requireNonNull(list, "fn.get() returned a null list");
+        while (it.hasNext()) {
+            T t = it.next();
+            list.add(t);
+        }
+        return list;
+    }
+
+    /**
+     * 使用{@link List}集合收集该类型当中的所有元素<br>
+     * 返回的{@link List}为不可变集合
+     *
+     * @return List(Immutable)
+     * @throws NullPointerException 当该类型返回的迭代器为空时
+     */
+    default List<T> toImmutableList() {
+        Iterator<T> it = iterator();
+        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
+        List<T> list = new ArrayList<>();
+        while (it.hasNext()) {
+            T t = it.next();
+            list.add(t);
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    /**
+     * 返回{@link Stream}<br>
+     * 该方法返回的流实际是委托给{@link ArrayList}返回的流，
+     * 并非默认{@link Iterable#spliterator()}构造的流，遂不会差性能
+     *
+     * @return Stream
+     */
+    default Stream<T> toStream() {
+        return toList(ArrayList::new).stream();
+    }
+
+    /**
+     * 返回并行{@link Stream}<br>
+     * 该方法返回的流实际是委托给{@link ArrayList}返回的流，
+     * 并非默认{@link Iterable#spliterator()}构造的流，遂不会差性能
+     *
+     * @return ParallelStream
+     */
+    default Stream<T> toParallelStream() {
+        return toList(ArrayList::new).parallelStream();
+    }
+
+    // static fn ----------------------------------------------------------
+
+    /**
+     * 给定一个可迭代对象，将其转为{@link Stream}<br>
+     * 该方法入参的可迭代对象当为集合类型时，将使用集合类型的{@link Collection#stream()}系列方法，
+     * 因为集合类型的系列方法时经过特化的，若非集合类型，则使用默认的{@link Iterable#spliterator()}，
+     * 性能将取决于{@link Spliterator}实现
+     *
+     * @param it       可迭代对象
+     * @param parallel 是否并行
+     * @param <T>      元素类型
+     * @return Stream | ParallelStream
+     * @throws NullPointerException 当给定的可迭代对象为空时
+     */
+    static <T> Stream<T> toStream(Iterable<T> it, boolean parallel) {
+        Objects.requireNonNull(it, "it(Iterable) is null");
+        if (it instanceof Collection<T> coll) {
+            if (parallel) {
+                return coll.parallelStream();
+            } else {
+                return coll.stream();
+            }
+        }
+        return StreamSupport.stream(it.spliterator(), parallel);
+    }
+
+    /**
+     * 给定一个可迭代对象，将其转为{@link Stream}<br>
+     * 该方法入参的可迭代对象当为集合类型时，将使用集合类型的{@link Collection#stream()}系列方法，
+     * 因为集合类型的系列方法时经过特化的，若非集合类型，则使用默认的{@link Iterable#spliterator()}，
+     * 性能将取决于{@link Spliterator}实现
+     *
+     * @param it  可迭代对象
+     * @param <T> 元素类型
+     * @return Stream
+     * @throws NullPointerException 当给定的可迭代对象为空时
+     */
+    static <T> Stream<T> toStream(Iterable<T> it) {
+        return toStream(it, false);
+    }
+
+    /**
+     * 给定一个迭代器，将其转为{@link Stream}<br>
+     * 该方法将使用{@link Spliterators#spliteratorUnknownSize(Iterator, int)}生成{@link Spliterator}来生成{@link Stream}，
+     * 默认实现返回的 {@link Spliterator} 的拆分能力较差，未调整大小，并且不报告任何自身特征
+     *
+     * @param it       迭代器
+     * @param parallel 是否并行
+     * @param <T>      元素类型
+     * @return Stream | ParallelStream
+     * @throws NullPointerException 当给定的迭代器为空时
+     */
+    static <T> Stream<T> toStream(Iterator<T> it, boolean parallel) {
+        Objects.requireNonNull(it, "it(Iterator) is null");
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(it, 0), parallel);
+    }
+
+    /**
+     * 给定一个迭代器，将其转为{@link Stream}
+     * 该方法将使用{@link Spliterators#spliteratorUnknownSize(Iterator, int)}生成{@link Spliterator}来生成{@link Stream}，
+     * 默认实现返回的 {@link Spliterator} 的拆分能力较差，未调整大小，并且不报告任何自身特征
+     *
+     * @param it  迭代器
+     * @param <T> 元素类型
+     * @return Stream
+     * @throws NullPointerException 当给定的迭代器为空时
+     */
+    static <T> Stream<T> toStream(Iterator<T> it) {
+        return toStream(it, false);
+    }
+
+
+    // static fn ----------------------------------------------------------
+
+    /**
+     * 返回用于遍历和分区源元素的对象{@link Spliterator}<br>
+     * 该方法默认委托给{@link Iterable#spliterator()}，该被委托的方法是低效的，
+     * 实现类中元素若较多，应重写该方法，或委托至经过特化的java.List
+     *
+     * @return {@link Spliterator}
+     * @see Iterable#spliterator()
+     */
+    @Override
+    default Spliterator<T> spliterator() {
+        return Iterable.super.spliterator();
+    }
+}
