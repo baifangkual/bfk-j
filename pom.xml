@@ -5,7 +5,7 @@
 
     <groupId>io.github.baifangkual</groupId>
     <artifactId>bfk-j</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.4</version>
     <packaging>pom</packaging>
 
     <name>bfk-j</name>
@@ -127,10 +127,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
                     <version>${reversion.maven-gpg-plugin}</version>
-                    <configuration>
-                        <!-- win端需要配置：gpg可执行文件位置 -->
-<!--                        <executable>C:\Users\baifangkual\bfkApplication\gpg\GnuPG\bin\gpg.exe</executable>-->
-                    </configuration>
                     <executions>
                         <execution>
                             <id>sign-artifacts</id>
