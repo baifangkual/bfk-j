@@ -1,6 +1,6 @@
 # bfk-j 项目说明
 
-自用项目，存放部分可重用的java代码
+自用，存放部分可重用的java代码
 ，将部分工作过程中一些java代码存放到该项目的部分公共模块中,
 可供后续使用。部分测试代码也将在该项目下测试
 
@@ -20,6 +20,15 @@
   * mod-vfs 包含虚拟文件系统相关代码
     * mod-vfs-api 包含虚拟文件系统api接口等相关代码
 
+## 使用
+该项目下代码以库形式发布在[中央仓库](https://central.sonatype.com/namespace/io.github.baifangkual)
+```xml
 
+<dependency>
+    <groupId>io.github.baifangkual</groupId>
+    <artifactId>mod-core</artifactId>
+    <version>${reversion.mod-core}</version>
+</dependency>
+```
 ---
-最后编辑于 2050510 bfk
+最后编辑于 20250512 bfk
