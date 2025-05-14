@@ -44,7 +44,7 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${reversion.lombok}</version>
-            <scope>provided</scope>
+            <scope>test</scope>
             <optional>true</optional>
         </dependency>
         <!-- ============= test scope ============= -->

@@ -16,12 +16,16 @@
 ## 模块简述
 
 * bfk-j 最顶层的模块、父模块，控制各模块间依赖及版本等
-  * mod-core 包含最常用的、核心的可复用代码，涵盖配置类、容器对象、工具类等
-  * mod-vfs 包含虚拟文件系统相关代码
-    * mod-vfs-api 包含虚拟文件系统api接口等相关代码
+    * mod-core 包含最常用的、核心的可复用代码，涵盖配置类、容器对象、工具类等
+    * mod-vfs 包含虚拟文件系统相关代码
+        * mod-vfs-api 包含虚拟文件系统api接口等相关代码
 
 ## 使用
+
 该项目下代码以库形式发布在[中央仓库](https://central.sonatype.com/namespace/io.github.baifangkual)
+
+最低兼容java17
+
 ```xml
 
 <dependency>
@@ -30,5 +34,6 @@
     <version>${reversion.mod-core}</version>
 </dependency>
 ```
+
 ---
 最后编辑于 20250512 bfk
