@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.github.baifangkual</groupId>
-        <artifactId>bfk-j</artifactId>
+        <artifactId>mod-vfs</artifactId>
         <version>0.0.5</version>
     </parent>
 
-    <name>mod-core</name>
-    <artifactId>mod-core</artifactId>
-    <description>bfk-j mod-core 核心模块</description>
+    <artifactId>mod-vfs-api</artifactId>
+    <name>mod-vfs-api</name>
+    <description>bfk-j mod-vfs-api 虚拟文件系统模块-接口</description>
     <url>https://github.com/baifangkual/bfk-j</url>
     <scm>
         <connection>scm:git:git://github.com/baifangkual/bfk-j.git</connection>
@@ -36,35 +36,18 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>${reversion.lombok}</version>
-            <scope>test</scope>
-            <optional>true</optional>
+            <groupId>io.github.baifangkual</groupId>
+            <artifactId>mod-core</artifactId>
+            <version>${project.version}</version>
         </dependency>
-        <!-- ============= test scope ============= -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${reversion.slf4j-api}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>${reversion.slf4j-simple}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>${reversion.jupiter-api}</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -92,5 +75,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

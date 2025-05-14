@@ -5,7 +5,7 @@
 
     <groupId>io.github.baifangkual</groupId>
     <artifactId>bfk-j</artifactId>
-    <version>0.0.4</version>
+    <version>0.0.5</version>
     <packaging>pom</packaging>
 
     <name>bfk-j</name>
@@ -32,6 +32,7 @@
 
     <modules>
         <module>mod-core</module>
+        <module>mod-vfs</module>
     </modules>
 
     <properties>
@@ -83,6 +84,16 @@
                 <scope>provided</scope>
                 <optional>true</optional>
             </dependency>
+            <dependency>
+                <groupId>io.github.baifangkual</groupId>
+                <artifactId>mod-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${reversion.slf4j-api}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -99,16 +110,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-            </plugin>
-            <!-- source.jar 构建 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-            </plugin>
-            <!-- javadoc.jar 构建 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
             </plugin>
         </plugins>
         <pluginManagement>

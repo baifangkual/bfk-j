@@ -9,9 +9,11 @@
         <version>0.0.5</version>
     </parent>
 
-    <name>mod-core</name>
-    <artifactId>mod-core</artifactId>
-    <description>bfk-j mod-core 核心模块</description>
+    <artifactId>mod-vfs</artifactId>
+    <name>mod-vfs</name>
+    <packaging>pom</packaging>
+
+    <description>bfk-j mod-vfs 虚拟文件系统模块</description>
     <url>https://github.com/baifangkual/bfk-j</url>
     <scm>
         <connection>scm:git:git://github.com/baifangkual/bfk-j.git</connection>
@@ -36,61 +38,26 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>${reversion.lombok}</version>
-            <scope>test</scope>
-            <optional>true</optional>
-        </dependency>
-        <!-- ============= test scope ============= -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${reversion.slf4j-api}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>${reversion.slf4j-simple}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>${reversion.jupiter-api}</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <modules>
+        <module>mod-vfs-api</module>
+    </modules>
 
     <build>
         <plugins>
             <!-- central-publish 插件配置 -->
+            <!-- 若不需推送至中央仓库，则不配置该插件 -->
             <plugin>
                 <groupId>org.sonatype.central</groupId>
                 <artifactId>central-publishing-maven-plugin</artifactId>
             </plugin>
             <!-- GPG签名配置 -->
+            <!-- 若不需签名，则不配置该插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
             </plugin>
-            <!-- source.jar 构建 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-            </plugin>
-            <!-- javadoc.jar 构建 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-            </plugin>
         </plugins>
     </build>
-
 </project>
