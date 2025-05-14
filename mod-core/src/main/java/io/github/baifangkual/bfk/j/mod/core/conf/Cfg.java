@@ -1,5 +1,9 @@
 package io.github.baifangkual.bfk.j.mod.core.conf;
 
+import io.github.baifangkual.bfk.j.mod.core.exception.CfgOptionValueNotFoundException;
+import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
+import io.github.baifangkual.bfk.j.mod.core.mark.Iter;
+import io.github.baifangkual.bfk.j.mod.core.model.Tup2;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 import io.github.baifangkual.bfk.j.mod.core.util.TypeRef;
 
@@ -11,12 +15,12 @@ import java.util.function.Supplier;
 /**
  * <b>配置类</b><br>
  * 存储配置信息，可存储0到n个配置信息，一个配置信息以一个“配置项”的形式表示，一个“配置项”包含一个“配置键”和一个“配置值”，
- * 与配置类通过{@link #set(Option, Object)}、{@link #get(Option)}等方式交互的{@link Option}携带的泛型参数描述了一个配置值的类型<br>
+ * 与配置类通过{@link #set(Option, Object)}、{@link #tryGet(Option)}等方式交互的{@link Option}携带的泛型参数描述了一个配置值的类型<br>
  * 一个配置类实体中，不会存在两个或以上的配置项的{@link Option#key()}(“配置键”)相同，
  * 若通过{@link #set(Option, Object)}设置的两个配置项的“配置键”相同，则在设置第二个配置项时将抛出异常{@link CfgOptionKeyDuplicateException}，
  * 而通过{@link #reset(Option, Object)}设置两个配置项的“配置键”相同的配置时，后设置的配置项将覆盖先设置的配置项<br>
- * 通过{@link #get(Option)}或{@link #unsafeGet(Option)}获取配置值时，将不会使用配置项的默认值({@link Option#defaultValue()})，
- * 而通过{@link #getOrDefault(Option)}或{@link #unsafeGetOrDefault(Option)}获取配置值时，若配置类中没有该配置项，则将使用配置项的默认值<br>
+ * 通过{@link #tryGet(Option)}或{@link #get(Option)}获取配置值时，将不会使用配置项的默认值({@link Option#defaultValue()})，
+ * 而通过{@link #tryGetOrDefault(Option)}或{@link #getOrDefault(Option)}获取配置值时，若配置类中没有该配置项，则将使用配置项的默认值<br>
  * 该配置类实体状态可变，线程不安全，若需要将该对象用以线程共享变量，则应当使用 {@link #toReadonly()} 方法共享不可变只读Cfg对象<br>
  * 该配置类参考seatunnel.Config、ReadOnlyConfig和flink.Config创建<br>
  * 该配置类实体对象设定为运行时对象，非传输对象，遂对Jackson等JSON序列化和反序列化支持并不友好，如果一定要通过JSON序列化和反序列化该类型，
@@ -37,27 +41,27 @@ import java.util.function.Supplier;
  *     // 向配置类中设置“配置项” ...
  *     cfg.set(NUMBERS, List.of(3, 2, 1));
  *     // 从配置类中读取“配置值” ...
- *     Optional<List<Integer>> numbersOpt = cfg.get(NUMBERS);
- *     List<Integer> numbers = cfg.unsafeGet(NUMBERS);
- *     Optional<List<Integer>> numbersOptOrDefaultValue = cfg.getOrDefault(NUMBERS);
- *     List<Integer> numbersOrDefaultValue = cfg.unsafeGetOrDefault(NUMBERS);
+ *     Optional<List<Integer>> numbersOpt = cfg.tryGet(NUMBERS);
+ *     List<Integer> numbers = cfg.get(NUMBERS);
+ *     Optional<List<Integer>> numbersOrDefault = cfg.tryGetOrDefault(NUMBERS);
+ *     List<Integer> numbersOrDefault = cfg.getOrDefault(NUMBERS);
  *     }
  * </pre>
  *
  * @author baifangkual
  * @see #set(Option, Object)
  * @see #reset(Option, Object)
+ * @see #tryGet(Option)
  * @see #get(Option)
- * @see #unsafeGet(Option)
+ * @see #tryGetOrDefault(Option)
  * @see #getOrDefault(Option)
- * @see #unsafeGetOrDefault(Option)
  * @see Option
  * @see TypeRef
  * @see Option.KeyBindBuilder
  * @see Option.Builder
  * @since 2024/6/18 v0.0.3
  */
-public class Cfg implements Serializable {
+public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
 
     @Serial
     private final static long serialVersionUID = 1919810L;
@@ -87,7 +91,7 @@ public class Cfg implements Serializable {
     }
 
     /**
-     * 给定一个map，以该map为基础创建配置类，允许该map有值或为空
+     * 给定一个map，以该map为基础创建配置类，允许该map有值或为empty
      *
      * @param map Map实现类
      * @return 新配置类
@@ -97,13 +101,13 @@ public class Cfg implements Serializable {
     }
 
     /**
-     * 给定一个map提供者，从该map提供者重获取map并以此为基础创建配置类，允许该map有值或为空
+     * 给定一个map提供者，从该map提供者重获取map并以此为基础创建配置类，允许该map有值或为empty
      *
-     * @param cfgMapSup Map提供者
+     * @param fnGetMap Map提供者函数
      * @return 新配置类
      */
-    public static Cfg ofMap(Supplier<? extends Map<String, Object>> cfgMapSup) {
-        return new Cfg(cfgMapSup);
+    public static Cfg ofMap(Supplier<? extends Map<String, Object>> fnGetMap) {
+        return new Cfg(fnGetMap);
     }
 
     /**
@@ -285,29 +289,29 @@ public class Cfg implements Serializable {
      * 给定配置键,返回指定的配置键所对应的值<br>
      * 当Cfg中未有该配置键时，则返回给定的otherValue值
      *
-     * @param option     配置键, 不能为null
-     * @param otherValue 当给定配置键所对应的值不存在时，使用该值作为返回值, 可以使用null作为otherValue
-     * @param <T>        配置值类型
+     * @param option 配置键, 不能为null
+     * @param other  当给定配置键所对应的值不存在时，使用该值作为返回值, 可以使用null作为other
+     * @param <T>    配置值类型
      * @return 配置值
      * @throws NullPointerException 当给定的配置键为null时
      */
-    public <T> T getOr(Cfg.Option<T> option, T otherValue) {
-        return get(option).orElse(otherValue);
+    public <T> T getOr(Cfg.Option<T> option, T other) {
+        return tryGet(option).orElse(other);
     }
 
     /**
      * 给定配置键,返回指定的配置键所对应的值<br>
      * 当Cfg中未有该配置键时，则执行函数并返回函数执行的返回值
      *
-     * @param option        配置键, 不能为null
-     * @param otherValueSup 当给定配置键所对应的值不存在时，执行该函数并获取值作为返回值，给定的该函数不能为null
-     * @param <T>           配置值类型
+     * @param option     配置键, 不能为null
+     * @param fnGetValue 当给定配置键所对应的值不存在时，执行该函数并获取值作为返回值，给定的该函数不能为null
+     * @param <T>        配置值类型
      * @return 配置值
      * @throws NullPointerException 当给定的配置键为null时
      */
-    public <T> T getOr(Cfg.Option<T> option, Supplier<? extends T> otherValueSup) {
-        Objects.requireNonNull(otherValueSup, "otherValueSup is null");
-        return get(option).orElseGet(otherValueSup);
+    public <T> T getOr(Cfg.Option<T> option, Supplier<? extends T> fnGetValue) {
+        Objects.requireNonNull(fnGetValue, "fnGetValue is null");
+        return tryGet(option).orElseGet(fnGetValue);
     }
 
     /**
@@ -320,12 +324,12 @@ public class Cfg implements Serializable {
      * @return 配置值
      * @throws NullPointerException            当给定的配置键为null时
      * @throws CfgOptionValueNotFoundException 当给定配置键不在Cfg对象中时
-     * @see #get(Option)
-     * @see #unsafeGetOrDefault(Option)
+     * @see #tryGet(Option)
      * @see #getOrDefault(Option)
+     * @see #tryGetOrDefault(Option)
      */
-    public <T> T unsafeGet(Cfg.Option<T> option) throws CfgOptionValueNotFoundException {
-        return get(option)
+    public <T> T get(Cfg.Option<T> option) throws CfgOptionValueNotFoundException {
+        return tryGet(option)
                 .orElseThrow(() -> new CfgOptionValueNotFoundException(option));
     }
 
@@ -338,11 +342,11 @@ public class Cfg implements Serializable {
      * @param <T>    配置值类型
      * @return 配置值Optional
      * @throws NullPointerException 当给定的配置键为null时
-     * @see #unsafeGet(Option)
-     * @see #unsafeGetOrDefault(Option)
+     * @see #get(Option)
      * @see #getOrDefault(Option)
+     * @see #tryGetOrDefault(Option)
      */
-    public <T> Optional<T> get(Cfg.Option<T> option) {
+    public <T> Optional<T> tryGet(Cfg.Option<T> option) {
         Objects.requireNonNull(option, "Cfg.Option is null");
         String key = option.key();
         T nullableValue = preciseGetByKey(key);
@@ -372,12 +376,12 @@ public class Cfg implements Serializable {
      * @return 配置值
      * @throws NullPointerException            当给定的配置键为null时
      * @throws CfgOptionValueNotFoundException 当给定配置键不在Cfg对象中，且找不到任何一个非空的默认值时
+     * @see #tryGet(Option)
      * @see #get(Option)
-     * @see #unsafeGet(Option)
-     * @see #getOrDefault(Option)
+     * @see #tryGetOrDefault(Option)
      */
-    public <T> T unsafeGetOrDefault(Cfg.Option<T> option) throws CfgOptionValueNotFoundException {
-        return getOrDefault(option)
+    public <T> T getOrDefault(Cfg.Option<T> option) throws CfgOptionValueNotFoundException {
+        return tryGetOrDefault(option)
                 .orElseThrow(() -> new CfgOptionValueNotFoundException(option));
     }
 
@@ -391,11 +395,11 @@ public class Cfg implements Serializable {
      * @param <T>    配置值类型
      * @return 配置值Optional
      * @throws NullPointerException 当给定的配置键为null时
+     * @see #tryGet(Option)
      * @see #get(Option)
-     * @see #unsafeGet(Option)
-     * @see #unsafeGetOrDefault(Option)
+     * @see #getOrDefault(Option)
      */
-    public <T> Optional<T> getOrDefault(Cfg.Option<T> option) {
+    public <T> Optional<T> tryGetOrDefault(Cfg.Option<T> option) {
         /*
         20241015：
         经过一段时间使用，发现该方法的一个问题：
@@ -416,7 +420,7 @@ public class Cfg implements Serializable {
         20250509:
         该方法在整理时语义已重新规划，现能与get()方法以及unsafeGet()方法语义对齐
          */
-        T nullableValue = get(option).orElse(null);
+        T nullableValue = tryGet(option).orElse(null);
         if (nullableValue == null) {
             // get 并且也使用了failBack 还是为null，则开始寻找并使用默认值
             nullableValue = option.defaultValue;
@@ -504,6 +508,22 @@ public class Cfg implements Serializable {
     @Override
     public String toString() {
         return "Cfg[" + map.getClass().getName() + "(" + map + ")]";
+    }
+
+    /**
+     * 返回迭代器<br>
+     * 该迭代器载荷的类型为{@link Tup2}，其中{@link Tup2#l()}引用“配置键”，{@link Tup2#r()}引用“配置值”<br>
+     * 该迭代器将委托至该{@link Cfg}内部的{@link #map}的{@link Map#entrySet()}的迭代器，
+     * 遂{@link Iterator#remove()}方法可用与否将取决于内部的{@link #map}实现<br>
+     *
+     * @return 迭代器
+     */
+    @Override
+    public Iterator<Tup2<String, Object>> iterator() {
+        Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
+        return Iter.ETMIterDecorator.of(
+                it, (en) -> Tup2.of(en.getKey(), en.getValue())
+        );
     }
 
     /**
@@ -935,4 +955,37 @@ public class Cfg implements Serializable {
 
     }
 
+    /**
+     * 表示在一个配置类实例中设置{@link Option#key()}重复的配置项
+     *
+     * @author baifangkual
+     * @since 2025/5/10
+     */
+    static class CfgOptionKeyDuplicateException extends IllegalArgumentException {
+
+        @Serial
+        private static final long serialVersionUID = 1919810L;
+
+        CfgOptionKeyDuplicateException(String optionKey) {
+            super(buildErrMsgByOptionKey(optionKey));
+        }
+
+        CfgOptionKeyDuplicateException(Option<?> option) {
+            super(buildErrMsgByOption(option));
+        }
+
+        /**
+         * 重复配置的异常信息模板
+         */
+        private static final String EXISTS_MSG_TEMP = "Cfg.Option({}) already exists in Cfg instance";
+
+
+        static String buildErrMsgByOption(Option<?> option) {
+            return buildErrMsgByOptionKey(option.key());
+        }
+
+        static String buildErrMsgByOptionKey(String optionKey) {
+            return STF.f(EXISTS_MSG_TEMP, optionKey);
+        }
+    }
 }

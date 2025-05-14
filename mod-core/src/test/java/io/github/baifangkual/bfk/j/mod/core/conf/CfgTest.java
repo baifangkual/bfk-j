@@ -1,5 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.conf;
 
+import io.github.baifangkual.bfk.j.mod.core.exception.CfgOptionValueNotFoundException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +24,7 @@ public class CfgTest {
                 .build();
 
         cfg.set(opt1, true);
-        Assertions.assertEquals(true, cfg.unsafeGet(opt1));
+        Assertions.assertEquals(true, cfg.get(opt1));
 
     }
 
@@ -39,7 +40,7 @@ public class CfgTest {
                 .notFoundValueMsg("this is opt1.req noValueMsg")
                 .build();
 
-        Optional<String> s = cfg.get(opt);
+        Optional<String> s = cfg.tryGet(opt);
         Assertions.assertEquals(Optional.empty(), s);
 
     }
@@ -81,7 +82,7 @@ public class CfgTest {
 //        System.out.println(opt1FallBack1);
 
         Assertions.assertThrows(CfgOptionValueNotFoundException.class, () -> {
-            String s = cfg.unsafeGet(opt);
+            String s = cfg.get(opt);
             System.out.println(s);
         });
     }
@@ -98,12 +99,12 @@ public class CfgTest {
                 .description("this is opt.cfgOption description")
                 .build();
 
-        Optional<String> s = cfg.get(strOpt);
+        Optional<String> s = cfg.tryGet(strOpt);
         Assertions.assertEquals(Optional.empty(), s);
-        Assertions.assertThrows(CfgOptionValueNotFoundException.class, () -> cfg.unsafeGet(strOpt));
-        Optional<String> orDefault = cfg.getOrDefault(strOpt);
+        Assertions.assertThrows(CfgOptionValueNotFoundException.class, () -> cfg.get(strOpt));
+        Optional<String> orDefault = cfg.tryGetOrDefault(strOpt);
         Assertions.assertEquals(Optional.of(defaultString), orDefault);
-        Assertions.assertEquals(defaultString, cfg.unsafeGetOrDefault(strOpt));
+        Assertions.assertEquals(defaultString, cfg.getOrDefault(strOpt));
 
 
     }
@@ -121,7 +122,7 @@ public class CfgTest {
                 .build();
 
         cfg.set(strOpt1, defaultString);
-        Assertions.assertThrows(CfgOptionKeyDuplicateException.class, () -> cfg.set(strOpt2, defaultString));
+        Assertions.assertThrows(Cfg.CfgOptionKeyDuplicateException.class, () -> cfg.set(strOpt2, defaultString));
 
     }
 

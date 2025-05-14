@@ -257,4 +257,54 @@ public interface Iter<T> extends Iterable<T> {
     default Spliterator<T> spliterator() {
         return Iterable.super.spliterator();
     }
+
+
+    /**
+     * 类型映射迭代器装饰器(element type mapping iterator decorator)<br>
+     * 给定一个迭代器和一个函数以构造该类型，每次调用迭代器的{@link Iterator#next()}方法时，
+     * 都会对元素使用函数进行类型转换
+     *
+     * @param <E> 映射前类型
+     * @param <T> 映射后类型
+     */
+    class ETMIterDecorator<E, T> implements Iterator<T> {
+        private final Iterator<E> it;
+        private final Function<? super E, ? extends T> fn;
+
+        private ETMIterDecorator(Iterator<E> it,
+                                 Function<? super E, ? extends T> fn) {
+            this.it = Objects.requireNonNull(it, "it(Iterator) is null");
+            this.fn = Objects.requireNonNull(fn, "fn(Function) is null");
+        }
+
+        /**
+         * 创建一个类型映射迭代器装饰器<br>
+         * 给定的函数在{@link Iterator#next()}方法内被调用
+         *
+         * @param it  迭代器
+         * @param fn  函数，映射迭代器中元素
+         * @param <E> 映射前类型
+         * @param <T> 映射后类型
+         * @return 迭代器
+         */
+        public static <E, T> Iterator<T> of(Iterator<E> it,
+                                            Function<? super E, ? extends T> fn) {
+            return new ETMIterDecorator<>(it, fn);
+        }
+
+        @Override
+        public boolean hasNext() {
+            return it.hasNext();
+        }
+
+        @Override
+        public T next() {
+            return fn.apply(it.next());
+        }
+
+        @Override
+        public void remove() {
+            it.remove();
+        }
+    }
 }
