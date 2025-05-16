@@ -38,11 +38,52 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- dep version -->
+        <reversion.apache-common-net>3.11.1</reversion.apache-common-net>
+        <reversion.minio>8.5.12</reversion.minio>
+        <reversion.smbj>0.13.0</reversion.smbj>
+        <reversion.auto-service>1.1.1</reversion.auto-service>
     </properties>
 
     <modules>
         <module>mod-vfs-api</module>
+        <module>mod-vfs-impl-ftp</module>
+        <module>mod-vfs-impl-smb</module>
     </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.github.baifangkual</groupId>
+                <artifactId>mod-vfs-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.auto.service</groupId>
+                <artifactId>auto-service</artifactId>
+                <version>${reversion.auto-service}</version>
+                <scope>provided</scope>
+            </dependency>
+            <!-- dep ftp https://commons.apache.org/proper/commons-net/ -->
+            <dependency>
+                <groupId>commons-net</groupId>
+                <artifactId>commons-net</artifactId>
+                <version>${reversion.apache-common-net}</version>
+            </dependency>
+            <!-- dep minio https://min.io/docs/minio/linux/developers/minio-drivers.html#java-sdk -->
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${reversion.minio}</version>
+            </dependency>
+            <!-- dep smb smb2/3 sup https://github.com/hierynomus/smbj -->
+            <dependency>
+                <groupId>com.hierynomus</groupId>
+                <artifactId>smbj</artifactId>
+                <version>${reversion.smbj}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>

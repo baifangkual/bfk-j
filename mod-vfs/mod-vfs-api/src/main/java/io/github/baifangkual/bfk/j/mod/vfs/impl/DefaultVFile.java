@@ -9,7 +9,7 @@ import io.github.baifangkual.bfk.j.mod.vfs.VPath;
 import java.util.Objects;
 
 /**
- * 虚拟文件，默认实现
+ * impl {@link VFile}<br>
  *
  * @author baifangkual
  * @since 2024/8/29 v0.0.5

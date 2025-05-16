@@ -10,9 +10,13 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
-import static io.github.baifangkual.bfk.j.mod.vfs.immutable.VFSDefaultConst.PATH_SEPARATOR;
+import static io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst.PATH_SEPARATOR;
 
 /**
+ * impl {@link VPath}<br>
+ * 以字符串数组切片形式存储一级一级目录，该形式好对目录层级Path进行管理，
+ * 但若内存中过多，则可能造成十分分散的数组引用内存片段
+ *
  * @author baifangkual
  * @since 2024/8/28 v0.0.5
  */
@@ -28,14 +32,14 @@ public class DefaultSliceAbsolutePath implements VPath {
     }
 
     private DefaultSliceAbsolutePath(VFS vfs, String[] pathSlice) {
-        // todo nonNull check 测试正使用 null 先不填充 null检查
-        // todo 20250515 对该进行doc说明补全
         this.vfs = vfs;
         this.pathSlice = pathSlice;
     }
 
-    public static String[] slicePath(String path) {
-        Err.realIf(path == null || path.isBlank(), IllegalVPathException::new, "非法的无效路径: \"{}\"", path);
+    private static String[] slicePath(String path) {
+        if (path == null || path.isBlank()) {
+            throw new IllegalVPathException("path is null or empty");
+        }
         if (PATH_SEPARATOR.equals(path)) {
             return EMP;
         }
@@ -48,7 +52,7 @@ public class DefaultSliceAbsolutePath implements VPath {
         return path.split(PATH_SEPARATOR);
     }
 
-    public static String[] slice(String[] tp, int begin, int end) {
+    private static String[] slice(String[] tp, int begin, int end) {
         int len = tp.length;
         if (end < 0) {
             end = len + end;
@@ -79,7 +83,9 @@ public class DefaultSliceAbsolutePath implements VPath {
 
     @Override
     public VPath join(String relativePath) {
-        Err.realIf(relativePath == null || relativePath.isBlank(), IllegalVPathException::new, "非法的无效路径: \"{}\"", relativePath);
+        if (relativePath == null || relativePath.isBlank()) {
+            throw new IllegalVPathException("path is null or empty");
+        }
         if (!relativePath.contains(PATH_SEPARATOR)) {
             String[] range = new String[this.pathSlice.length + 1];
             System.arraycopy(this.pathSlice, 0, range, 0, this.pathSlice.length);

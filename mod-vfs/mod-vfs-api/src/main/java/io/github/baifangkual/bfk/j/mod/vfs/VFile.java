@@ -10,7 +10,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 
-import static io.github.baifangkual.bfk.j.mod.vfs.immutable.VFSDefaultConst.PATH_SEPARATOR;
+import static io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst.PATH_SEPARATOR;
 
 /**
  * <b>虚拟目录文件实体</b><br>

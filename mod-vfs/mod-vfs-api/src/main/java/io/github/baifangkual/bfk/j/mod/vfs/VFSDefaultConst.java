@@ -1,4 +1,4 @@
-package io.github.baifangkual.bfk.j.mod.vfs.immutable;
+package io.github.baifangkual.bfk.j.mod.vfs;
 
 import io.github.baifangkual.bfk.j.mod.core.lang.Const;
 
@@ -22,7 +22,7 @@ public class VFSDefaultConst {
      */
     public static final int BYTE_BUFFER_SIZE = 1024 * 1024 * 8;
     /**
-     * 路径分隔符
+     * 路径分隔符（在VFS系统中的路径分隔符表示）
      */
     public static final String PATH_SEPARATOR = Const.String.SLASH;
     /**

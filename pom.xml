@@ -58,7 +58,7 @@
         <reversion.jupiter-api>5.10.2</reversion.jupiter-api>
         <!-- boot 与 cloud 版本有兼容性对应关系 -->
         <reversion.spring-boot-dependencies>3.2.7</reversion.spring-boot-dependencies>
-        <!-- <reversion.spring-cloud-dependencies>2023.0.3</reversion.spring-cloud-dependencies> -->
+        <reversion.spring-cloud-dependencies>2023.0.3</reversion.spring-cloud-dependencies>
     </properties>
 
     <dependencyManagement>
@@ -78,16 +78,16 @@
             <!--                <type>pom</type>-->
             <!--            </dependency>-->
             <dependency>
+                <groupId>io.github.baifangkual</groupId>
+                <artifactId>mod-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${reversion.lombok}</version>
                 <scope>provided</scope>
                 <optional>true</optional>
-            </dependency>
-            <dependency>
-                <groupId>io.github.baifangkual</groupId>
-                <artifactId>mod-core</artifactId>
-                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>

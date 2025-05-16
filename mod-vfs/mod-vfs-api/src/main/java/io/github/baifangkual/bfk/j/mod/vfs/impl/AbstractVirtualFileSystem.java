@@ -7,6 +7,8 @@ import io.github.baifangkual.bfk.j.mod.vfs.exception.IllegalVFSBuildParamsExcept
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSBuildingFailException;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;
 
+import java.util.HashMap;
+
 /**
  * 顶层vfs公共抽象，内有构造该VFS的配置类的只读引用
  *
@@ -28,13 +30,11 @@ public abstract class AbstractVirtualFileSystem implements VFS {
         if (cfg == null) {
             throw new IllegalVFSBuildParamsException("given VFS cfg is null");
         }
-        // todo 20250515 这里原有 final Cfg ocp = Config.ofConfig(config) 浅拷贝过程，
-        //  原该类内的readonly引用是拷贝后的，原设计是为了隔离构造VFS的外部的Cfg和VFS内部的cfg引用，
-        //  后续Cfg应实现Cloneable并可用于此，（因为有beforeCfgRefBind过程，遂可能该clone必要！
-        final Cfg ocp = cfg;
-        beforeReadonlyCfgRefBind(ocp);
+        // 对cfg内map做新的map，使内外cfg无关联，当然，map内部更深的引用还是同一个
+        final Cfg ocp = Cfg.ofMap(new HashMap<>(cfg.toReadonlyMap()));
+        beforeCfgBind(ocp);
         this.readonlyCfg = ocp.toReadonly();
-        afterReadonlyCfgRefBind(this.readonlyCfg);
+        afterReadonlyCfgBind(this.readonlyCfg);
     }
 
     /**
@@ -51,17 +51,17 @@ public abstract class AbstractVirtualFileSystem implements VFS {
      *
      * @param cfg 外界传递的vfs连接参数
      */
-    protected void beforeReadonlyCfgRefBind(Cfg cfg) {
+    protected void beforeCfgBind(Cfg cfg) {
     }
 
     /**
-     * 该方法被调用阶段属于{@link #beforeReadonlyCfgRefBind(Cfg)} 之后被调用，用以明确检查给定参数是否正确，
+     * 该方法被调用阶段属于{@link #beforeCfgBind(Cfg)} 之后被调用，用以明确检查给定参数是否正确，
      * 默认行为空实现，到该阶段时，vfs实例内部{@link #readonlyCfg}已经有引用且该配置实例不可变
      *
      * @param readonlyCfg 不可变配置实例
      * @throws IllegalVFSBuildParamsException 当给定参数明确会导致vfs构造失败时，显示抛出该
      */
-    protected void afterReadonlyCfgRefBind(Cfg readonlyCfg) throws IllegalVFSBuildParamsException {
+    protected void afterReadonlyCfgBind(Cfg readonlyCfg) throws IllegalVFSBuildParamsException {
     }
 
 
