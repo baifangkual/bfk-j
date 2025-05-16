@@ -1,6 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.vfs.immutable;
 
-import io.github.baifangkual.bfk.j.mod.core.immutable.Const;
+import io.github.baifangkual.bfk.j.mod.core.lang.Const;
 
 /**
  * VFS相关常量、默认值等，引用在此

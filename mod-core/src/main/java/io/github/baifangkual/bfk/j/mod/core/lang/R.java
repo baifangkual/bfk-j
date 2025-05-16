@@ -1,6 +1,4 @@
-package io.github.baifangkual.bfk.j.mod.core.model;
-
-import io.github.baifangkual.bfk.j.mod.core.exception.ResultUnwrapException;
+package io.github.baifangkual.bfk.j.mod.core.lang;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -219,7 +217,7 @@ public sealed interface R<T, E> extends Serializable
     /**
      * 执行给定的函数，返回可能为“正常”也可能为“错误”的结果<br>
      * 当函数执行过程中发生异常时，该方法将返回“错误结果”，否则返回“正常结果”（即函数返回值）<br>
-     * 除了{@link Callable}，该函数也可为{@link io.github.baifangkual.bfk.j.mod.core.function.FnGet}类型
+     * 除了{@link Callable}，该函数也可为{@link io.github.baifangkual.bfk.j.mod.core.func.FnGet}类型
      *
      * @param fn   正常结果值提供函数
      * @param <Ok> 正常结果类型
@@ -274,9 +272,9 @@ public sealed interface R<T, E> extends Serializable
      * 当容器对象为"错误结果"对象时，抛出异常
      *
      * @return 正常结果
-     * @throws ResultUnwrapException 当容器对象为错误结果时
+     * @throws UnwrapException 当容器对象为错误结果时
      */
-    T ok() throws ResultUnwrapException;
+    T ok() throws UnwrapException;
 
     /**
      * 尝试获取正常结果<br>
@@ -292,9 +290,9 @@ public sealed interface R<T, E> extends Serializable
      * 当容器对象为"正常结果"对象时，抛出异常
      *
      * @return 错误结果
-     * @throws ResultUnwrapException 当容器对象为正常结果时
+     * @throws UnwrapException 当容器对象为正常结果时
      */
-    E err() throws ResultUnwrapException;
+    E err() throws UnwrapException;
 
     /**
      * 尝试获取错误结果<br>
@@ -318,24 +316,24 @@ public sealed interface R<T, E> extends Serializable
     /**
      * 解包该实体以尝试获取{@link T}<br>
      * 当该实体为{@link R.Ok}时能够成功解包并返回{@link T}，
-     * 否则将立即抛出{@link ResultUnwrapException}<br>
+     * 否则将立即抛出{@link UnwrapException}<br>
      * 若该实体为{@link R.Err}且{@link E}为{@link Throwable}时，
-     * 将使其作为抛出的{@link ResultUnwrapException}的{@code cause}，
-     * 否则，抛出的{@link ResultUnwrapException}没有{@code cause}
+     * 将使其作为抛出的{@link UnwrapException}的{@code cause}，
+     * 否则，抛出的{@link UnwrapException}没有{@code cause}
      *
      * @return 正常结果值（或直接抛出异常）
-     * @throws ResultUnwrapException 当该实体为“错误结果”时
+     * @throws UnwrapException 当该实体为“错误结果”时
      * @see #unwrap(Supplier)
      * @see #unwrapOr(Object)
      * @see #unwrapOrGet(Supplier)
      */
-    T unwrap() throws ResultUnwrapException;
+    T unwrap() throws UnwrapException;
 
     /**
      * 解包该实体以尝试获取{@link T}，若失败则抛出指定异常<br>
      *
-     * @param <X>                   要抛出的异常类型
-     * @param fnGetThrowableIfNotOk 异常提供函数
+     * @param <X>     要抛出的异常类型
+     * @param ifNotOk 异常提供函数
      * @return 正常结果值（或直接抛出指定异常）
      * @throws X                    当没有“正常结果值”时
      * @throws NullPointerException 当没有“正常结果值”且异常提供函数为空时
@@ -344,7 +342,7 @@ public sealed interface R<T, E> extends Serializable
      * @see #unwrap()
      * @since 0.0.5
      */
-    <X extends Throwable> T unwrap(Supplier<? extends X> fnGetThrowableIfNotOk) throws X;
+    <X extends Throwable> T unwrap(Supplier<? extends X> ifNotOk) throws X;
 
 
     /**
@@ -522,8 +520,8 @@ public sealed interface R<T, E> extends Serializable
         }
 
         @Override
-        public Err err() throws ResultUnwrapException {
-            throw new ResultUnwrapException("not found 'err' value");
+        public Err err() throws UnwrapException {
+            throw new UnwrapException("not found 'err' value");
         }
 
         @Override
@@ -532,7 +530,7 @@ public sealed interface R<T, E> extends Serializable
         }
 
         @Override
-        public Ok unwrap() throws ResultUnwrapException {
+        public Ok unwrap() throws UnwrapException {
             return ok;
         }
 
@@ -547,7 +545,7 @@ public sealed interface R<T, E> extends Serializable
         }
 
         @Override
-        public <X extends Throwable> Ok unwrap(Supplier<? extends X> fnGetThrowableIfNotOk) throws X {
+        public <X extends Throwable> Ok unwrap(Supplier<? extends X> ifNotOk) throws X {
             return ok;
         }
 
@@ -598,8 +596,8 @@ public sealed interface R<T, E> extends Serializable
         }
 
         @Override
-        public Ok ok() throws ResultUnwrapException {
-            throw new ResultUnwrapException("not found 'ok' value");
+        public Ok ok() throws UnwrapException {
+            throw new UnwrapException("not found 'ok' value");
         }
 
         @Override
@@ -613,13 +611,13 @@ public sealed interface R<T, E> extends Serializable
         }
 
         @Override
-        public Ok unwrap() throws ResultUnwrapException {
+        public Ok unwrap() throws UnwrapException {
             // 当err类型为异常(可抛出)时
             if (err instanceof Throwable e) {
-                throw new ResultUnwrapException(e);
+                throw new UnwrapException(e);
             } else {
                 // 当err类型不为异常(可抛出)时, 包装其
-                throw new ResultUnwrapException("not an 'Ok'");
+                throw new UnwrapException("not an 'Ok'");
             }
         }
 
@@ -634,8 +632,8 @@ public sealed interface R<T, E> extends Serializable
         }
 
         @Override
-        public <X extends Throwable> Ok unwrap(Supplier<? extends X> fnGetThrowableIfNotOk) throws X {
-            throw fnGetThrowableIfNotOk.get();
+        public <X extends Throwable> Ok unwrap(Supplier<? extends X> ifNotOk) throws X {
+            throw ifNotOk.get();
         }
 
         @Override
@@ -655,6 +653,22 @@ public sealed interface R<T, E> extends Serializable
     }
 
 
+    /**
+     * 表达{@link R}类型解包时的异常
+     */
+    class UnwrapException extends RuntimeException {
+        public UnwrapException(String message) {
+            super(message);
+        }
+
+        public UnwrapException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public UnwrapException(Throwable cause) {
+            super(cause);
+        }
+    }
 }
 
 

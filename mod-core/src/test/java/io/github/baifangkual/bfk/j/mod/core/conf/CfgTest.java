@@ -1,6 +1,5 @@
 package io.github.baifangkual.bfk.j.mod.core.conf;
 
-import io.github.baifangkual.bfk.j.mod.core.exception.CfgOptionValueNotFoundException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -81,7 +80,7 @@ public class CfgTest {
 //        System.out.println(opt);
 //        System.out.println(opt1FallBack1);
 
-        Assertions.assertThrows(CfgOptionValueNotFoundException.class, () -> {
+        Assertions.assertThrows(Cfg.OptionValueNotFoundException.class, () -> {
             String s = cfg.get(opt);
             System.out.println(s);
         });
@@ -101,7 +100,7 @@ public class CfgTest {
 
         Optional<String> s = cfg.tryGet(strOpt);
         Assertions.assertEquals(Optional.empty(), s);
-        Assertions.assertThrows(CfgOptionValueNotFoundException.class, () -> cfg.get(strOpt));
+        Assertions.assertThrows(Cfg.OptionValueNotFoundException.class, () -> cfg.get(strOpt));
         Optional<String> orDefault = cfg.tryGetOrDefault(strOpt);
         Assertions.assertEquals(Optional.of(defaultString), orDefault);
         Assertions.assertEquals(defaultString, cfg.getOrDefault(strOpt));
@@ -122,7 +121,7 @@ public class CfgTest {
                 .build();
 
         cfg.set(strOpt1, defaultString);
-        Assertions.assertThrows(Cfg.CfgOptionKeyDuplicateException.class, () -> cfg.set(strOpt2, defaultString));
+        Assertions.assertThrows(Cfg.OptionKeyDuplicateException.class, () -> cfg.set(strOpt2, defaultString));
 
     }
 

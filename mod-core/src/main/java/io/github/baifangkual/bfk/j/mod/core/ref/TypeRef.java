@@ -1,4 +1,4 @@
-package io.github.baifangkual.bfk.j.mod.core.util;
+package io.github.baifangkual.bfk.j.mod.core.ref;
 
 import java.io.Serial;
 import java.io.Serializable;

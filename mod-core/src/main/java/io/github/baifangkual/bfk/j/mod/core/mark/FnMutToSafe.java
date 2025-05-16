@@ -1,6 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.mark;
 
-import io.github.baifangkual.bfk.j.mod.core.model.R;
+import io.github.baifangkual.bfk.j.mod.core.lang.R;
 
 /**
  * <b>安全函数标记接口</b><br>

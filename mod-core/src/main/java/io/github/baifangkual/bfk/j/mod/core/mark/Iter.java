@@ -24,67 +24,6 @@ public interface Iter<T> extends Iterable<T> {
     @Override
     Iterator<T> iterator();
 
-    /**
-     * 执行Map提供者函数，并对每个被迭代元素执行KeyFn，收集为Map<br>
-     * 该方法并未对每个被迭代元素执行KeyFn后是否为null做校验，当被迭代元素执行KeyFn后为null时，
-     * 抛出异常与否取决于Map是否允许存储null键
-     *
-     * @param fn    Map提供者函数
-     * @param keyFn Map.key转换函数
-     * @param <K>   Map.key类型
-     * @return Map
-     * @throws NullPointerException 当给定的fn为空时，或给定的KeyFn为空时，或迭代器为空时，或给定的fn执行后返回的Map为空时
-     * @apiNote 因为该方法将元素收集到Map中，遂函数fn生成的Map必须是可写的
-     * @see #toHashMap(Function)
-     */
-    default <K> Map<K, T> toMap(Supplier<? extends Map<K, T>> fn,
-                                Function<? super T, ? extends K> keyFn) {
-        Objects.requireNonNull(fn, "fn is null");
-        Objects.requireNonNull(keyFn, "keyFn is null");
-        Iterator<T> it = iterator();
-        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
-        Map<K, T> map = fn.get();
-        Objects.requireNonNull(map, "fn.get() returned a null Map");
-        while (it.hasNext()) {
-            T t = it.next();
-            K key = keyFn.apply(t);
-            map.put(key, t);
-        }
-        return map;
-    }
-
-    /**
-     * 对每个被迭代元素执行KeyFn，收集为Map<br>
-     * 该方法返回的Map为HashMap
-     *
-     * @param keyFn Map.key转换函数
-     * @param <K>   Map.key类型
-     * @return HashMap
-     * @throws NullPointerException 当给定的KeyFn为空时，或迭代器为空时
-     * @see #toMap(Supplier, Function)
-     */
-    default <K> Map<K, T> toHashMap(Function<? super T, ? extends K> keyFn) {
-        return toMap(HashMap::new, keyFn);
-    }
-
-
-    /**
-     * 使用{@link Set}集合收集该类型当中的所有元素<br>
-     * 返回的{@link Set}为不可变集合
-     *
-     * @return Set(Immutable)
-     * @throws NullPointerException 当该类型返回的迭代器为空时
-     */
-    default Set<T> toImmutableSet() {
-        Iterator<T> it = iterator();
-        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
-        Set<T> list = new HashSet<>();
-        while (it.hasNext()) {
-            T t = it.next();
-            list.add(t);
-        }
-        return Collections.unmodifiableSet(list);
-    }
 
     /**
      * 执行给定的集合提供者函数获取函数返回的{@link Set}，并收集该类型当中的所有元素<br>
@@ -132,31 +71,15 @@ public interface Iter<T> extends Iterable<T> {
     }
 
     /**
-     * 使用{@link List}集合收集该类型当中的所有元素<br>
-     * 返回的{@link List}为不可变集合
-     *
-     * @return List(Immutable)
-     * @throws NullPointerException 当该类型返回的迭代器为空时
-     */
-    default List<T> toImmutableList() {
-        Iterator<T> it = iterator();
-        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
-        List<T> list = new ArrayList<>();
-        while (it.hasNext()) {
-            T t = it.next();
-            list.add(t);
-        }
-        return Collections.unmodifiableList(list);
-    }
-
-    /**
      * 返回{@link Stream}<br>
      * 该方法返回的流实际是委托给{@link ArrayList}返回的流，
      * 并非默认{@link Iterable#spliterator()}构造的流，遂不会差性能
      *
      * @return Stream
+     * @apiNote 该默认方法会返回委托给List的流，若实现类中元素较少，应覆盖该实现已
+     * 避免构建中间List的开销
      */
-    default Stream<T> toStream() {
+    default Stream<T> stream() {
         return toList(ArrayList::new).stream();
     }
 
@@ -166,8 +89,10 @@ public interface Iter<T> extends Iterable<T> {
      * 并非默认{@link Iterable#spliterator()}构造的流，遂不会差性能
      *
      * @return ParallelStream
+     * @apiNote 该默认方法会返回委托给List的流，若实现类中元素较少，应覆盖该实现已
+     * 避免构建中间List的开销
      */
-    default Stream<T> toParallelStream() {
+    default Stream<T> parallelStream() {
         return toList(ArrayList::new).parallelStream();
     }
 

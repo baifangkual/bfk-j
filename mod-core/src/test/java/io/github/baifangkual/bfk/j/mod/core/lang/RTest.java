@@ -1,6 +1,5 @@
-package io.github.baifangkual.bfk.j.mod.core.model;
+package io.github.baifangkual.bfk.j.mod.core.lang;
 
-import io.github.baifangkual.bfk.j.mod.core.exception.ResultUnwrapException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +41,7 @@ public class RTest {
     @Test
     public void test05() {
         R<Integer, Exception> r = R.ofOk(5);
-        Assertions.assertThrows(ResultUnwrapException.class, r::err);
+        Assertions.assertThrows(R.UnwrapException.class, r::err);
         Assertions.assertTrue(r.toOptional().isPresent());
         Assertions.assertTrue(r.tryOk().isPresent());
         Assertions.assertTrue(r.tryErr().isEmpty());
@@ -51,13 +50,13 @@ public class RTest {
     @Test
     public void test06() {
         R<String, IOException> err = R.ofErr(new IOException("err"));
-        Assertions.assertThrows(ResultUnwrapException.class, err::ok);
+        Assertions.assertThrows(R.UnwrapException.class, err::ok);
     }
 
     @Test
     public void test07() {
         R<String, Exception> err = R.ofErr(new IllegalStateException("err"));
-        Assertions.assertThrows(ResultUnwrapException.class, err::unwrap);
+        Assertions.assertThrows(R.UnwrapException.class, err::unwrap);
         R<Integer, Exception> r = R.ofOk(5);
         Integer unwrap = r.unwrap();
         Assertions.assertEquals(5, unwrap);

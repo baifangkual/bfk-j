@@ -1,4 +1,4 @@
-package io.github.baifangkual.bfk.j.mod.core.exception;
+package io.github.baifangkual.bfk.j.mod.core.panic;
 
 import java.io.Serial;
 import java.io.Serializable;

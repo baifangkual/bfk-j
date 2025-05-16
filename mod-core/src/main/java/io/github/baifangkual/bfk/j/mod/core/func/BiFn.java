@@ -1,8 +1,8 @@
-package io.github.baifangkual.bfk.j.mod.core.function;
+package io.github.baifangkual.bfk.j.mod.core.func;
 
 
-import io.github.baifangkual.bfk.j.mod.core.exception.PanicException;
-import io.github.baifangkual.bfk.j.mod.core.model.R;
+import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
+import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToSafe;
 import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToUnSafe;

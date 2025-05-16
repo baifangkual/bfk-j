@@ -1,11 +1,10 @@
 package io.github.baifangkual.bfk.j.mod.core.conf;
 
-import io.github.baifangkual.bfk.j.mod.core.exception.CfgOptionValueNotFoundException;
 import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 import io.github.baifangkual.bfk.j.mod.core.mark.Iter;
-import io.github.baifangkual.bfk.j.mod.core.model.Tup2;
+import io.github.baifangkual.bfk.j.mod.core.lang.Tup2;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
-import io.github.baifangkual.bfk.j.mod.core.util.TypeRef;
+import io.github.baifangkual.bfk.j.mod.core.ref.TypeRef;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -17,7 +16,7 @@ import java.util.function.Supplier;
  * 存储配置信息，可存储0到n个配置信息，一个配置信息以一个“配置项”的形式表示，一个“配置项”包含一个“配置键”和一个“配置值”，
  * 与配置类通过{@link #set(Option, Object)}、{@link #tryGet(Option)}等方式交互的{@link Option}携带的泛型参数描述了一个配置值的类型<br>
  * 一个配置类实体中，不会存在两个或以上的配置项的{@link Option#key()}(“配置键”)相同，
- * 若通过{@link #set(Option, Object)}设置的两个配置项的“配置键”相同，则在设置第二个配置项时将抛出异常{@link CfgOptionKeyDuplicateException}，
+ * 若通过{@link #set(Option, Object)}设置的两个配置项的“配置键”相同，则在设置第二个配置项时将抛出异常{@link OptionKeyDuplicateException}，
  * 而通过{@link #reset(Option, Object)}设置两个配置项的“配置键”相同的配置时，后设置的配置项将覆盖先设置的配置项<br>
  * 通过{@link #tryGet(Option)}或{@link #get(Option)}获取配置值时，将不会使用配置项的默认值({@link Option#defaultValue()})，
  * 而通过{@link #tryGetOrDefault(Option)}或{@link #getOrDefault(Option)}获取配置值时，若配置类中没有该配置项，则将使用配置项的默认值<br>
@@ -160,13 +159,13 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param <T>    该键值对存储的配置值的类型
      * @return this
      * @throws NullPointerException           当给定的配置键为null或给定的配置值为null时
-     * @throws CfgOptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
+     * @throws OptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
      */
     public <T> Cfg set(Cfg.Option<T> option, T value) {
         Objects.requireNonNull(option, "Cfg.Option is null");
         Objects.requireNonNull(value, "value is null");
         String key = option.key();
-        Err.realIf(this.map.containsKey(key), () -> new CfgOptionKeyDuplicateException(option));
+        Err.realIf(this.map.containsKey(key), () -> new OptionKeyDuplicateException(option));
         this.map.put(key, value);
         return this;
     }
@@ -178,7 +177,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param <T>       该键值对存储的配置值的类型
      * @return this
      * @throws NullPointerException           当给定的配置键为null或给定的配置值为null时
-     * @throws CfgOptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
+     * @throws OptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
      * @see #set(Option, Object)
      */
     public <T> Cfg setIf(boolean condition, Option<T> option, T value) {
@@ -196,7 +195,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param <T>    该键值对存储的配置值的类型
      * @return this
      * @throws NullPointerException           当给定的配置键为null时
-     * @throws CfgOptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
+     * @throws OptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
      * @see #setIf(boolean, Option, Object)
      */
     public <T> Cfg setIfNotNull(Option<T> option, T value) {
@@ -323,14 +322,14 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param <T>    配置值类型
      * @return 配置值
      * @throws NullPointerException            当给定的配置键为null时
-     * @throws CfgOptionValueNotFoundException 当给定配置键不在Cfg对象中时
+     * @throws OptionValueNotFoundException 当给定配置键不在Cfg对象中时
      * @see #tryGet(Option)
      * @see #getOrDefault(Option)
      * @see #tryGetOrDefault(Option)
      */
-    public <T> T get(Cfg.Option<T> option) throws CfgOptionValueNotFoundException {
+    public <T> T get(Cfg.Option<T> option) throws OptionValueNotFoundException {
         return tryGet(option)
-                .orElseThrow(() -> new CfgOptionValueNotFoundException(option));
+                .orElseThrow(() -> new OptionValueNotFoundException(option));
     }
 
     /**
@@ -375,14 +374,14 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param <T>    配置值类型
      * @return 配置值
      * @throws NullPointerException            当给定的配置键为null时
-     * @throws CfgOptionValueNotFoundException 当给定配置键不在Cfg对象中，且找不到任何一个非空的默认值时
+     * @throws OptionValueNotFoundException 当给定配置键不在Cfg对象中，且找不到任何一个非空的默认值时
      * @see #tryGet(Option)
      * @see #get(Option)
      * @see #tryGetOrDefault(Option)
      */
-    public <T> T getOrDefault(Cfg.Option<T> option) throws CfgOptionValueNotFoundException {
+    public <T> T getOrDefault(Cfg.Option<T> option) throws OptionValueNotFoundException {
         return tryGetOrDefault(option)
-                .orElseThrow(() -> new CfgOptionValueNotFoundException(option));
+                .orElseThrow(() -> new OptionValueNotFoundException(option));
     }
 
     /**
@@ -449,13 +448,13 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param map Map[?:str, ?]
      * @return this
      * @throws NullPointerException           当给定的map为null时
-     * @throws CfgOptionKeyDuplicateException 当当前配置类中已有给定的map中的键时
+     * @throws OptionKeyDuplicateException 当当前配置类中已有给定的map中的键时
      */
     private Cfg setFromMap(Map<? extends String, ?> map) {
         Objects.requireNonNull(map, "map is null");
         // tod 当key相同，这里会覆盖掉原有的值，遂这里应当进行判断
         map.forEach((othKey, othValue) -> {
-            Err.realIf(this.map.containsKey(othKey), () -> new CfgOptionKeyDuplicateException(othKey));
+            Err.realIf(this.map.containsKey(othKey), () -> new OptionKeyDuplicateException(othKey));
             this.map.put(othKey, othValue);
         });
         return this;
@@ -961,16 +960,16 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @author baifangkual
      * @since 2025/5/10
      */
-    static class CfgOptionKeyDuplicateException extends IllegalArgumentException {
+    static class OptionKeyDuplicateException extends IllegalArgumentException {
 
         @Serial
         private static final long serialVersionUID = 1919810L;
 
-        CfgOptionKeyDuplicateException(String optionKey) {
+        OptionKeyDuplicateException(String optionKey) {
             super(buildErrMsgByOptionKey(optionKey));
         }
 
-        CfgOptionKeyDuplicateException(Option<?> option) {
+        OptionKeyDuplicateException(Option<?> option) {
             super(buildErrMsgByOption(option));
         }
 
@@ -986,6 +985,89 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
 
         static String buildErrMsgByOptionKey(String optionKey) {
             return STF.f(EXISTS_MSG_TEMP, optionKey);
+        }
+    }
+
+    /**
+     * 表示在配置类实例中找不到配置项配置值的异常
+     *
+     * @author baifangkual
+     * @since 2024/6/15 v0.0.3
+     */
+    public static class OptionValueNotFoundException extends NoSuchElementException {
+
+        @Serial
+        private static final long serialVersionUID = 1919810L;
+
+        public OptionValueNotFoundException(Option<?> option) {
+            super(buildingNotFoundValueMsg(option, true));
+        }
+
+
+        /**
+         * 表示找不到配置值的异常模板信息
+         */
+        private static final String NO_VALUE_ERR_MSG_TEMPLATE = "Not found value for Cfg.Option({})";
+        /**
+         * 追加的配置项默认值信息
+         */
+        private static final String APPEND_OPTION_DEFAULT_VALUE = "\nCfg.Option.DefaultValue:\n\t{}";
+        /**
+         * 追加的配置项的说明提示
+         */
+        private static final String APPEND_OPTION_DESCRIPTION = "\nCfg.Option.Description:\n\t{}";
+        /**
+         * 追加的配置项找不到的信息
+         */
+        private static final String APPEND_OPTION_VALUE_NOT_FOUND = "\nCfg.Option.NotFoundValueMsg:\n\t{}";
+        /**
+         * 追加的failBackOf的信息
+         */
+        private static final String APPEND_OPTION_FAIL_BACK = "\nCfg.Option.FallbackOf:\n\t{}";
+
+        /**
+         * 构造找不到配置值的异常信息过程
+         *
+         * @param option               配置项
+         * @param appendFallbackOptMsg 表示是否需要追加fallbackOption的信息
+         * @return msg for not found
+         */
+        @SuppressWarnings("StringConcatenationInLoop")
+        static String buildingNotFoundValueMsg(Option<?> option, boolean appendFallbackOptMsg) {
+            final String key = option.key();
+            final String nullableDescription = option.description()
+                    .filter(desc -> !desc.isBlank())
+                    .orElse(null);
+            final String nullableNoValueMsg = option.notFoundValueMsg()
+                    .filter(nvm -> !nvm.isBlank())
+                    .orElse(null);
+            final Object nullableDefValue = option.defaultValue();
+
+            String msg = STF.f(NO_VALUE_ERR_MSG_TEMPLATE, key);
+            msg = nullableDefValue == null ? msg : msg + STF.f(APPEND_OPTION_DEFAULT_VALUE, nullableDefValue);
+            msg = nullableDescription == null ? msg : msg + STF.f(APPEND_OPTION_DESCRIPTION, nullableDescription);
+            msg = nullableNoValueMsg == null ? msg : msg + STF.f(APPEND_OPTION_VALUE_NOT_FOUND, nullableNoValueMsg);
+
+            if (!appendFallbackOptMsg) {
+                return msg;
+            }
+
+            List<? extends Option<?>> fallbackOfOpt = Optional.ofNullable(option.fallbackOf())
+                    .filter(fbl -> !fbl.isEmpty())
+                    .orElse(null);
+            // 为空则直接返回，否则追加fallback的信息
+            if (fallbackOfOpt == null) {
+                return msg;
+            }
+            List<String> fallbackOfOptKeys = fallbackOfOpt.stream().map(Option::key).toList();
+            msg = msg + STF.f(APPEND_OPTION_FAIL_BACK, fallbackOfOptKeys);
+
+
+            for (Option<?> fbOpt : fallbackOfOpt) {
+                msg = msg + "\n\n" + buildingNotFoundValueMsg(fbOpt, false);
+            }
+
+            return msg;
         }
     }
 }

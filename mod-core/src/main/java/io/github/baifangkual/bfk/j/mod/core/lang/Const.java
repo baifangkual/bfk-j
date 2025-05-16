@@ -1,4 +1,4 @@
-package io.github.baifangkual.bfk.j.mod.core.immutable;
+package io.github.baifangkual.bfk.j.mod.core.lang;
 
 /**
  * 常量引用存放地<br>

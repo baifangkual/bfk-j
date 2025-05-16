@@ -1,6 +1,5 @@
 package io.github.baifangkual.bfk.j.mod.core.panic;
 
-import io.github.baifangkual.bfk.j.mod.core.exception.PanicException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

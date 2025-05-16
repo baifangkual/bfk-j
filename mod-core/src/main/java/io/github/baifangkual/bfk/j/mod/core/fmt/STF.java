@@ -1,6 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.fmt;
 
-import io.github.baifangkual.bfk.j.mod.core.immutable.Const;
+import io.github.baifangkual.bfk.j.mod.core.lang.Const;
 
 import java.util.Objects;
 

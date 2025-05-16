@@ -1,7 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.core.trait;
 
 
-import io.github.baifangkual.bfk.j.mod.core.exception.PanicException;
+import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 
 /**

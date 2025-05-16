@@ -1,5 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.util;
 
+import io.github.baifangkual.bfk.j.mod.core.ref.TypeRef;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

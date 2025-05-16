@@ -1,4 +1,4 @@
-package io.github.baifangkual.bfk.j.mod.core.model;
+package io.github.baifangkual.bfk.j.mod.core.lang;
 
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 

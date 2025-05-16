@@ -1,9 +1,8 @@
 package io.github.baifangkual.bfk.j.mod.core.panic;
 
-import io.github.baifangkual.bfk.j.mod.core.exception.PanicException;
 import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
-import io.github.baifangkual.bfk.j.mod.core.function.FnGet;
-import io.github.baifangkual.bfk.j.mod.core.function.FnRun;
+import io.github.baifangkual.bfk.j.mod.core.func.FnGet;
+import io.github.baifangkual.bfk.j.mod.core.func.FnRun;
 
 import java.util.function.Function;
 import java.util.function.Supplier;

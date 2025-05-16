@@ -1,4 +1,4 @@
-package io.github.baifangkual.bfk.j.mod.core.model;
+package io.github.baifangkual.bfk.j.mod.core.lang;
 
 import io.github.baifangkual.bfk.j.mod.core.mark.Iter;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
@@ -8,6 +8,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * <b>有向线</b><br>
@@ -392,5 +393,25 @@ public class Line<P> implements Iter<P>, Serializable {
                 };
             }
         };
+    }
+
+    /**
+     * 返回载荷两个元素的流
+     *
+     * @return 流
+     */
+    @Override
+    public Stream<P> stream() {
+        return Stream.of(begin, end);
+    }
+
+    /**
+     * 返回载荷两个元素的并行流
+     *
+     * @return 并行流
+     */
+    @Override
+    public Stream<P> parallelStream() {
+        return Stream.of(begin, end).parallel();
     }
 }

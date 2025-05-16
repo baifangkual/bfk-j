@@ -1,6 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.mark;
 
-import io.github.baifangkual.bfk.j.mod.core.exception.PanicException;
+import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
 
 /**
  * <b>不安全函数标记接口</b><br>

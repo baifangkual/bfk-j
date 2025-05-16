@@ -1,5 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.exception;
 
+import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
