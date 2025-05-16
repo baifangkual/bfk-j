@@ -3,6 +3,7 @@ package io.github.baifangkual.bfk.j.mod.core.conf;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 /**
@@ -75,11 +76,6 @@ public class CfgTest {
                 .notFoundValueMsg("this is opt1.req noValueMsg")
                 .fallbackOf(opt1FallBack1, opt1FallBack2, opt1FallBack3)
                 .build();
-
-//        String s1 = cfg.unsafeGet(opt);
-//        System.out.println(opt);
-//        System.out.println(opt1FallBack1);
-
         Assertions.assertThrows(Cfg.OptionValueNotFoundException.class, () -> {
             String s = cfg.get(opt);
             System.out.println(s);
@@ -140,5 +136,18 @@ public class CfgTest {
 
         cfg.set(strOpt1, defaultString);
         cfg.reset(strOpt2, defaultString);
+    }
+
+    @Test
+    public void test07() {
+        Cfg cfg = Cfg.ofNew();
+        final String defaultString = "defaultString";
+        Cfg.Option<String> strOpt1 = Cfg.Option.of("cfgOption")
+                .stringType()
+                .build();
+
+        cfg.set(strOpt1, defaultString);
+        final Cfg ocp = Cfg.ofMap(new HashMap<>(cfg.toReadonlyMap()));
+        Assertions.assertEquals(ocp, cfg);
     }
 }

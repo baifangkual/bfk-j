@@ -1,8 +1,8 @@
 package io.github.baifangkual.bfk.j.mod.core.conf;
 
 import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
-import io.github.baifangkual.bfk.j.mod.core.mark.Iter;
 import io.github.baifangkual.bfk.j.mod.core.lang.Tup2;
+import io.github.baifangkual.bfk.j.mod.core.mark.Iter;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 import io.github.baifangkual.bfk.j.mod.core.ref.TypeRef;
 
@@ -24,7 +24,7 @@ import java.util.function.Supplier;
  * 该配置类参考seatunnel.Config、ReadOnlyConfig和flink.Config创建<br>
  * 该配置类实体对象设定为运行时对象，非传输对象，遂对Jackson等JSON序列化和反序列化支持并不友好，如果一定要通过JSON序列化和反序列化该类型，
  * 可选择向Jackson实现{@code com.fasterxml.jackson.databind.JsonSerializer}和{@code com.fasterxml.jackson.databind.JsonDeserializer},
- * 或选择使用序列化{@link #readonlyMap()}及反序列化{@link #ofMap(Map)} 结果，因为该对象直接保存的键值类型信息存储在{@link Option}中，
+ * 或选择使用序列化{@link #toReadonlyMap()}及反序列化{@link #ofMap(Map)} 结果，因为该对象直接保存的键值类型信息存储在{@link Option}中，
  * 而非Cfg本身中，所以通过JSON反序列化的Cfg可能在Get键值时出现类型转换异常{@link ClassCastException},需注意该点,
  * 遂对该类型使用序列化，最好使用java原生的序列化方式<br>
  * <pre>
@@ -114,7 +114,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      *
      * @return 配置类的只读Map视图
      */
-    public Map<String, Object> readonlyMap() {
+    public Map<String, Object> toReadonlyMap() {
         return Collections.unmodifiableMap(map);
     }
 
@@ -147,7 +147,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @return immutable readonly Cfg
      */
     public Cfg toReadonly() {
-        return new Cfg(this::readonlyMap);
+        return new Cfg(this::toReadonlyMap);
     }
 
     /**
@@ -158,7 +158,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param value  配置值, 不能为null
      * @param <T>    该键值对存储的配置值的类型
      * @return this
-     * @throws NullPointerException           当给定的配置键为null或给定的配置值为null时
+     * @throws NullPointerException        当给定的配置键为null或给定的配置值为null时
      * @throws OptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
      */
     public <T> Cfg set(Cfg.Option<T> option, T value) {
@@ -176,7 +176,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param value     配置值，不能为null
      * @param <T>       该键值对存储的配置值的类型
      * @return this
-     * @throws NullPointerException           当给定的配置键为null或给定的配置值为null时
+     * @throws NullPointerException        当给定的配置键为null或给定的配置值为null时
      * @throws OptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
      * @see #set(Option, Object)
      */
@@ -194,7 +194,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param value  配置值
      * @param <T>    该键值对存储的配置值的类型
      * @return this
-     * @throws NullPointerException           当给定的配置键为null时
+     * @throws NullPointerException        当给定的配置键为null时
      * @throws OptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
      * @see #setIf(boolean, Option, Object)
      */
@@ -321,7 +321,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param option 配置键, 不能为null
      * @param <T>    配置值类型
      * @return 配置值
-     * @throws NullPointerException            当给定的配置键为null时
+     * @throws NullPointerException         当给定的配置键为null时
      * @throws OptionValueNotFoundException 当给定配置键不在Cfg对象中时
      * @see #tryGet(Option)
      * @see #getOrDefault(Option)
@@ -373,7 +373,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param option 配置键, 不能为null
      * @param <T>    配置值类型
      * @return 配置值
-     * @throws NullPointerException            当给定的配置键为null时
+     * @throws NullPointerException         当给定的配置键为null时
      * @throws OptionValueNotFoundException 当给定配置键不在Cfg对象中，且找不到任何一个非空的默认值时
      * @see #tryGet(Option)
      * @see #get(Option)
@@ -447,7 +447,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      *
      * @param map Map[?:str, ?]
      * @return this
-     * @throws NullPointerException           当给定的map为null时
+     * @throws NullPointerException        当给定的map为null时
      * @throws OptionKeyDuplicateException 当当前配置类中已有给定的map中的键时
      */
     private Cfg setFromMap(Map<? extends String, ?> map) {
