@@ -94,6 +94,12 @@
                 <artifactId>slf4j-api</artifactId>
                 <version>${reversion.slf4j-api}</version>
             </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-api</artifactId>
+                <version>${reversion.jupiter-api}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
