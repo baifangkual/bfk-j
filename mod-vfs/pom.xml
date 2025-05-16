@@ -49,6 +49,7 @@
         <module>mod-vfs-api</module>
         <module>mod-vfs-impl-ftp</module>
         <module>mod-vfs-impl-smb</module>
+        <module>mod-vfs-impl-minio</module>
     </modules>
 
     <dependencyManagement>
