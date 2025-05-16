@@ -85,7 +85,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      *
      * @return 新配置类
      */
-    public static Cfg ofNew() {
+    public static Cfg newCfg() {
         return new Cfg(HashMap::new);
     }
 
@@ -96,7 +96,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @return 新配置类
      */
     public static Cfg ofMap(Map<? extends String, ?> map) {
-        return ofNew().setFromMap(map);
+        return newCfg().setFromMap(map);
     }
 
     /**

@@ -357,7 +357,7 @@ public class Line<P> implements Iter<P>, Serializable {
      * @see #findAllPoint(Iterable)
      */
     public static <P> R<Queue<Set<P>>, RuntimeException> forOrder(Iterable<Line<P>> lines) {
-        return R.ofFnSupplier(() -> {
+        return R.ofSupplier(() -> {
             Set<P> all = findAllPoint(lines);
             Err.realIf(!isDirectedAcyclicGraph(lines, all),
                     IllegalStateException::new, "lines is not a directed acyclic graph");

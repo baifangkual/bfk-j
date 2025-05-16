@@ -16,7 +16,7 @@ public class CfgTest {
     @Test
     public void test01() {
 
-        Cfg cfg = Cfg.ofNew();
+        Cfg cfg = Cfg.newCfg();
 
         Cfg.Option<Boolean> opt1 = Cfg.Option.of("opt1")
                 .booleanType()
@@ -31,7 +31,7 @@ public class CfgTest {
     @Test
     public void test02() {
         // not found msg test
-        Cfg cfg = Cfg.ofNew();
+        Cfg cfg = Cfg.newCfg();
 
         Cfg.Option<String> opt = Cfg.Option.of("opt1.req")
                 .stringType()
@@ -49,7 +49,7 @@ public class CfgTest {
     @Test
     public void test03() {
         // not found msg test
-        Cfg cfg = Cfg.ofNew();
+        Cfg cfg = Cfg.newCfg();
 
         Cfg.Option<String> opt1FallBack1 = Cfg.Option.of("opt1.fallback1")
                 .stringType()
@@ -85,7 +85,7 @@ public class CfgTest {
     @Test
     public void test04() {
         // get unsafeGet and getOrDefault and unsafeGetOrDefault test
-        Cfg cfg = Cfg.ofNew();
+        Cfg cfg = Cfg.newCfg();
 
         final String defaultString = "defaultString";
 
@@ -106,7 +106,7 @@ public class CfgTest {
 
     @Test
     public void test05() {
-        Cfg cfg = Cfg.ofNew();
+        Cfg cfg = Cfg.newCfg();
         final String defaultString = "defaultString";
         Cfg.Option<String> strOpt1 = Cfg.Option.of("cfgOption")
                 .stringType()
@@ -124,7 +124,7 @@ public class CfgTest {
     @Test
     public void test06() {
         // reset test
-        Cfg cfg = Cfg.ofNew();
+        Cfg cfg = Cfg.newCfg();
         final String defaultString = "defaultString";
         Cfg.Option<String> strOpt1 = Cfg.Option.of("cfgOption")
                 .stringType()
@@ -140,7 +140,7 @@ public class CfgTest {
 
     @Test
     public void test07() {
-        Cfg cfg = Cfg.ofNew();
+        Cfg cfg = Cfg.newCfg();
         final String defaultString = "defaultString";
         Cfg.Option<String> strOpt1 = Cfg.Option.of("cfgOption")
                 .stringType()

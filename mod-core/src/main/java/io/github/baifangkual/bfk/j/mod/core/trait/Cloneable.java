@@ -32,6 +32,6 @@ public interface Cloneable<T extends Cloneable<T>> extends java.lang.Cloneable {
      * @return 新实例（浅拷贝）| RuntimeErr
      */
     default R<T, RuntimeException> tryClone() {
-        return R.ofFnSupplier(this::clone);
+        return R.ofSupplier(this::clone);
     }
 }

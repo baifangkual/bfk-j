@@ -223,9 +223,9 @@ public sealed interface R<T, E> extends Serializable
      * @param <Ok> 正常结果类型
      * @return 正常结果 | 错误结果
      * @throws NullPointerException 当给定的“正常结果值提供函数”为空时
-     * @see #ofFnSupplier(Supplier)
+     * @see #ofSupplier(Supplier)
      */
-    static <Ok> R<Ok, Exception> ofFnCallable(Callable<? extends Ok> fn) {
+    static <Ok> R<Ok, Exception> ofCallable(Callable<? extends Ok> fn) {
         Objects.requireNonNull(fn, "given 'fn' must not be null");
         try {
             return ofOk(fn.call());
@@ -242,9 +242,9 @@ public sealed interface R<T, E> extends Serializable
      * @param <Ok> 正常结果类型
      * @return 正常结果 | 错误结果
      * @throws NullPointerException 当给定的“正常结果值提供函数”为空时
-     * @see #ofFnCallable(Callable)
+     * @see #ofCallable(Callable)
      */
-    static <Ok> R<Ok, RuntimeException> ofFnSupplier(Supplier<? extends Ok> fn) {
+    static <Ok> R<Ok, RuntimeException> ofSupplier(Supplier<? extends Ok> fn) {
         Objects.requireNonNull(fn, "given 'fn' must not be null");
         try {
             return ofOk(fn.get());
