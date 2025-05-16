@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * @author baifangkual
  * @since 2024/9/6
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"CommentedOutCode", "unused"})
 @Slf4j
 public class CommonsNetTest {
 

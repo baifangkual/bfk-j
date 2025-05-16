@@ -14,7 +14,7 @@ import java.util.List;
  * @author baifangkual
  * create time 2024/9/13
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"CommentedOutCode", "unused"})
 public class FTPVFSTest {
 
 //    private VFS buildingFTPVFS() {

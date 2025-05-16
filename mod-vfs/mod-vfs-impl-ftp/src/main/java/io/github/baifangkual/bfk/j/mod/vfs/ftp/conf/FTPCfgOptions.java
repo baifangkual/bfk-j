@@ -5,7 +5,7 @@ import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
 import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst;
 
 /**
- * ftp连接配置
+ * ftp vfs 连接配置
  *
  * @author baifangkual
  * @since 2024/9/9 v0.0.5
