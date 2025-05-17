@@ -1,6 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.vfs.ftp;
 
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
+import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import io.github.baifangkual.bfk.j.mod.vfs.*;
 import io.github.baifangkual.bfk.j.mod.vfs.ftp.conf.FTPCfgOptions;
 import org.junit.jupiter.api.Test;
@@ -18,11 +19,14 @@ import java.util.List;
 public class FTPVFSTest {
 
 //    private VFS buildingFTPVFS() {
-//        Cfg cfg = Cfg.ofNew()
+//        Cfg cfg = Cfg.newCfg()
 //                .set(FTPCfgOptions.host, "192.")
 //                .set(FTPCfgOptions.user, "")
 //                .set(FTPCfgOptions.passwd, "");
-//        return VFSFactory.build(VFSType.ftp, cfg);
+//        VFSFactory factory = VFSFactoryProvider.getFactory(VFSType.ftp)
+//                .orElseThrow(() -> new RuntimeException("No FTP factory found"));
+//        R<VFS, Exception> r = factory.tryCreate(cfg);
+//        return r.unwrap();
 //    }
 //
 //    @Test

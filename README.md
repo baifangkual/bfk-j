@@ -1,8 +1,8 @@
 # bfk-j 项目说明
 
-自用，存放部分可重用的java代码
-，将部分工作过程中一些java代码存放到该项目的部分公共模块中,
-可供后续使用。部分测试代码也将在该项目下测试
+存放部分可重用的java代码
+，将部分工作过程中一些java代码存放到该项目的部分模块中,
+可供后续使用。部分测试代码也将在该项目下测试。
 
 ## 设计约束
 
@@ -19,21 +19,45 @@
     * mod-core 包含最常用的、核心的可复用代码，涵盖配置类、容器对象、工具类等
     * mod-vfs 包含虚拟文件系统相关代码
         * mod-vfs-api 包含虚拟文件系统api接口等相关代码
+        * mod-vfs-impl-ftp 包含对ftp的实现（依赖apache-commons-net）
+        * mod-vfs-impl-smb 包含对smb的实现（依赖smbj）
+        * mod-vfs-impl-minio 包含对minio的实现（依赖minio）
 
 ## 使用
 
-该项目下代码以库形式发布在[中央仓库](https://central.sonatype.com/namespace/io.github.baifangkual)
+该项目下代码以库形式发布在 [中央仓库](https://central.sonatype.com/namespace/io.github.baifangkual)
 
-最低兼容java17
+最低兼容java17，各模块按需引入
 
 ```xml
 
-<dependency>
-    <groupId>io.github.baifangkual</groupId>
-    <artifactId>mod-core</artifactId>
-    <version>${reversion.mod-core}</version>
-</dependency>
+<dependencies>
+    <!-- 核心模块 -->
+    <dependency>
+        <groupId>io.github.baifangkual</groupId>
+        <artifactId>mod-core</artifactId>
+        <version>${reversion.mod-core}</version>
+    </dependency>
+    <!-- ftp 操作 -->
+    <dependency>
+        <groupId>io.github.baifangkual</groupId>
+        <artifactId>mod-vfs-impl-ftp</artifactId>
+        <version>${reversion.mod-vfs-impl-ftp}</version>
+    </dependency>
+    <!-- smb 操作 -->
+    <dependency>
+        <groupId>io.github.baifangkual</groupId>
+        <artifactId>mod-vfs-impl-smb</artifactId>
+        <version>${reversion.mod-vfs-impl-smb}</version>
+    </dependency>
+    <!-- minio 操作 -->
+    <dependency>
+        <groupId>io.github.baifangkual</groupId>
+        <artifactId>mod-vfs-impl-minio</artifactId>
+        <version>${reversion.mod-vfs-impl-minio}</version>
+    </dependency>
+</dependencies>
 ```
 
 ---
-最后编辑于 20250512 bfk
+最后编辑于 20250517 bfk

@@ -80,7 +80,7 @@ public class MinioPro {
     }
 
     public static String listObjPrefixVPathTranslate(VPath path) {
-        if (path.isRoot()) return null;
+        if (path.isVfsRoot()) return null;
         String har = path.simplePath();
         har = har.substring(VFSDefaultConst.PATH_SEPARATOR.length());
         return rightAddPathSeparator(har);
@@ -106,51 +106,6 @@ public class MinioPro {
             path = path.substring(0, path.length() - VFSDefaultConst.PATH_SEPARATOR.length());
         }
         return path;
-    }
-
-    /**
-     * 给定一个可变列表和一个要过滤的名称列表，当方法执行结束后，可变列表中的属于要过滤的名称列表的元素将被过滤，
-     * 当给定的要过滤的列表为null或为empty时，直接返回，
-     * 当参数excludeNames中描述的元素都已被过滤时，直接返回，
-     * 当给定的可变列表中无元素时，直接返回，
-     * 该方法最多创建一个List对象，时间复杂度O(nm)
-     *
-     * @param refMutableList 可变列表，要操作该，要求该的迭代器remove方法可用
-     * @param excludeNames   要从可变列表中删除的元素列表
-     * @throws IllegalStateException 当给定的可变列表不可变或其迭代器remove方法不可用时
-     */
-    public static void doExcludeNames(List<String> refMutableList, String... excludeNames) throws IllegalStateException {
-
-        if (excludeNames == null
-            || excludeNames.length == 0
-            || refMutableList.isEmpty()) return;
-        List<String> excL;
-        Iterator<String> it = refMutableList.iterator();
-        if (!it.hasNext()) {
-            return;
-        } else {
-            excL = Arrays.asList(excludeNames);
-        }
-        try {
-            while (it.hasNext()) {
-                /*
-                不可行，因为Arrays.asList方法返回的List为Arrays类内部的ArrayList，该List未实现其remove方法
-                if (excL.isEmpty()) {
-                    break;
-                }
-                */
-                String i = it.next();
-                if (excL.contains(i)) {
-                    it.remove();
-                    /*
-                    不可行，因为Arrays.asList方法返回的List为Arrays类内部的ArrayList，该List未实现其remove方法
-                    excL.remove(i);
-                    */
-                }
-            }
-        } catch (RuntimeException e) {
-            throw new IllegalStateException(e);
-        }
     }
 
     /**

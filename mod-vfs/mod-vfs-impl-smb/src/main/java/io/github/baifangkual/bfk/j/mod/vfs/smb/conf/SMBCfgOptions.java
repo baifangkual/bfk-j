@@ -4,7 +4,8 @@ import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
 import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst;
 
 /**
- * smb vfs 连接配置
+ * smb vfs 连接配置<br>
+ * 可通过{@link io.github.baifangkual.bfk.j.mod.vfs.VFSFactoryProvider}创建{@link io.github.baifangkual.bfk.j.mod.vfs.VFS}
  *
  * @author baifangkual
  * @since 2024/8/28 v0.0.5

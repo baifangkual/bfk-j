@@ -3,10 +3,8 @@ package io.github.baifangkual.bfk.j.mod.vfs.ftp;
 import com.google.auto.service.AutoService;
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
 import io.github.baifangkual.bfk.j.mod.vfs.VFS;
+import io.github.baifangkual.bfk.j.mod.vfs.VFSFactory;
 import io.github.baifangkual.bfk.j.mod.vfs.VFSType;
-import io.github.baifangkual.bfk.j.mod.vfs.spi.VFSRegister;
-
-import java.util.function.Function;
 
 /**
  * ftp vfs spi
@@ -14,15 +12,16 @@ import java.util.function.Function;
  * @author baifangkual
  * @since 2024/9/13 v0.0.5
  */
-@AutoService(VFSRegister.class)
-public class FTPVFSRegister implements VFSRegister {
+@AutoService(VFSFactory.class)
+public class FTPVFSFactory implements VFSFactory {
     @Override
-    public VFSType supportType() {
+    public VFSType support() {
         return VFSType.ftp;
     }
 
     @Override
-    public Function<Cfg, VFS> constructorRef() {
-        return FTPVirtualFileSystem::new;
+    public VFS create(Cfg cfg) {
+        return new FTPVirtualFileSystem(cfg);
     }
+
 }

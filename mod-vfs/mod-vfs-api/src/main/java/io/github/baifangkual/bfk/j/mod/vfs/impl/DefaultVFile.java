@@ -44,7 +44,7 @@ public class DefaultVFile implements VFile {
     }
 
     @Override
-    public VFS getVFileSystem() {
+    public VFS selfVfs() {
         return vfs;
     }
 
@@ -68,11 +68,11 @@ public class DefaultVFile implements VFile {
 
     @Override
     public String toString() {
-        return "DefaultVFile{" +
+        return "VFile(" +
                "vfs=" + vfs +
                ", path=" + path +
                ", type=" + type +
                ", sizeOfBytes=" + sizeOfBytes +
-               '}';
+               ')';
     }
 }

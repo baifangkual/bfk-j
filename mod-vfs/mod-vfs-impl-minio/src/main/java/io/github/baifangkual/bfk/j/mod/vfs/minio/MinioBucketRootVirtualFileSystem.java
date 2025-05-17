@@ -13,6 +13,7 @@ import io.github.baifangkual.bfk.j.mod.vfs.impl.DefaultVFile;
 import io.github.baifangkual.bfk.j.mod.vfs.minio.action.FileFlagDirectoryAction;
 import io.github.baifangkual.bfk.j.mod.vfs.minio.action.MinioAPIDirectoryAction;
 import io.github.baifangkual.bfk.j.mod.vfs.minio.action.NativeDirectoryAction;
+import io.github.baifangkual.bfk.j.mod.vfs.minio.conf.MinioCfgOptions;
 import io.minio.*;
 import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
@@ -22,16 +23,17 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.StreamSupport;
 
-import static io.github.baifangkual.bfk.j.mod.vfs.minio.MinioConfOptions.*;
+import static io.github.baifangkual.bfk.j.mod.vfs.minio.conf.MinioCfgOptions.*;
 
 /**
  * minio 虚拟文件系统实现，该实现线程安全，该线程安全性依赖{@link MinioClient},
  * <a href="https://github.com/minio/minio-java/issues/975">依据</a><br>
- * 该实现的构造函数所需的配置类配置在 {@link MinioConfOptions}, 可参阅其<br>
+ * 该实现的构造函数所需的配置类配置在 {@link MinioCfgOptions}, 可参阅其<br>
  * <b>minio的已知特性</b>
  * <ul>
  *     <li>bucket名不得包含大写字母，下划线等，中划线可包括，应该也不可中文</li>
@@ -45,15 +47,19 @@ import static io.github.baifangkual.bfk.j.mod.vfs.minio.MinioConfOptions.*;
  * </ul>
  * <p>设定该VFS不允许同目录出现同名文件与文件夹（一是因为minio这种情况的行为怪异，不确定其健壮，二是因为大部分文件系统都不允许该情况存在）<br>
  * <b>因minio无文件夹概念，遂该虚拟文件系统以某种形式模拟文件夹，可有如下方法释义</b><br>
- * <b>方式一 使用类似minio的文件夹概念</b>
+ * <b>方式一 使用原生minio/s3的文件夹概念</b>
  * <ul>
  *     <li>文件夹行为实现类为 {@link NativeDirectoryAction}</li>
- *     <li>任意层级的任意目录，都存在，除非同层级下有同名字节文件已存在，也即exists方法将永远返回true</li>
- *     <li>mkdir方法将永远不会抛出异常，除非同级下已有同名字节文件存在</li>
- *     <li>同理以上延申，可有：VPath的toFile方法将永远不为{@link Optional#empty()}</li>
+ *     <li>没有显式的“文件夹”概念，需要通过 检查该前缀下是否有对象 来判断“文件夹”是否存在</li>
+ *     <li>若检查某前缀下有对象，则表示该“前缀”所在位置有一个“文件夹”</li>
  * </ul>
- * <p>方式一不会有冗余，且最接近原生minio设定，但可能导致rmDir等行为难以理解<br>
- * <b>方式二 使用冗余文件标识目录</b>
+ * <p>方式一不会有冗余，且为原生minio设定，但可能对部分VFS行为造成难以理解的影响<br>
+ * <p>方式一的实现{@link NativeDirectoryAction}已经重写了完全遵照minio/s3的模拟设定，
+ * 为防止出现使用{@link #mkdir(VPath)}后再使用{@link #exists(VPath)}发现“文件夹”即创建了又不存在的问题，
+ * 该Action内缓存了“被创建的minio空文件夹”。虽该minio实现之前业务有使用过并优化过，
+ * 但自从这次重写{@link NativeDirectoryAction}后还未深度使用过，
+ * 遂后续深度使用可能会发现部分问题导致VFS的API的约束与保证无法实现等，那时应将现象记录并修复bug<br>
+ * <b>方式二 使用冗余文件标识目录（未实现且已废弃）</b>
  * <ul>
  *     <li>文件夹行为实现类为 {@link FileFlagDirectoryAction}</li>
  *     <li>创建文件夹时，将创建一个带有固定文件名的文件在文件夹下，作为标记，也为冗余，该冗余文件名及其内容固定</li>
@@ -62,14 +68,14 @@ import static io.github.baifangkual.bfk.j.mod.vfs.minio.MinioConfOptions.*;
  *     <li>随使用，桶将会越发冗余，所有实例行为将往创建冗余文件表示文件夹的形式靠拢</li>
  * </ul>
  * <p>方式二将创建冗余文件表示文件夹，对minio的使用方式偏离minio设定，但更靠近fileSystem设想。并且，这种行为的理想使用条件是整个桶均由该vfs管理才可<br>
- * <b>方式三 使用Minio提供的API的默认文件夹行为</b>
+ * <b>方式三 使用Minio提供的API的默认文件夹行为（未实现）</b>
  * <ul>
  *     <li>文件夹行为实现类为 {@link MinioAPIDirectoryAction}</li>
  *     <li>经测试，minio提供的API的默认的文件夹行为会在使用创建文件夹（IO0字节情况，prefix以斜杠结尾）时，创建一个文件夹，该被创建的文件夹
  *     下有一个与文件夹同名的实体，该实体行为较怪异，但假设将这种情况设定为文件夹实际存在，则其行为也是清晰的，该方式与方式二类似，同样的，缺点也同样：
  *     这个桶必须要由VFS管理</li>
  * </ul>
- * 默认文件夹行为配置在 {@link MinioConfOptions#dirActionStrategy}<p>
+ * 默认文件夹行为配置在 {@link MinioCfgOptions#dirActionStrategy}<p>
  *
  * @author baifangkual
  * @since 2024/9/2 v0.0.5
@@ -89,7 +95,6 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
      */
     private final long putObjectBufSize;
     private final MinioDirectoryAction directoryAction;
-    private final String[] exclude;
     private final AtomicBoolean isClosed = new AtomicBoolean(true);
 
 
@@ -105,8 +110,8 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
         final Cfg readonlyCfg = readonlyCfg();
         String accKey = readonlyCfg.tryGet(accessKey).orElse(null);
         String secKey = readonlyCfg.tryGet(secretKey).orElse(null);
-        String host = readonlyCfg.get(MinioConfOptions.host);
-        int port = readonlyCfg.getOrDefault(MinioConfOptions.port);
+        String host = readonlyCfg.get(MinioCfgOptions.host);
+        int port = readonlyCfg.getOrDefault(MinioCfgOptions.port);
         boolean useHttps = readonlyCfg.getOrDefault(useHttpsSecure);
         MinioClient.Builder CliBuilder = MinioClient.builder()
                 .endpoint(host, port, useHttps);
@@ -114,7 +119,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
             CliBuilder.credentials(accKey, secKey);
         }
         final MinioClient oCli = CliBuilder.build();
-        String buckN = readonlyCfg.get(MinioConfOptions.bucket);
+        String buckN = readonlyCfg.get(MinioCfgOptions.bucket);
         boolean err = false;
         try {
             boolean bkE = MinioPro.checkBucketExists(oCli, buckN);
@@ -124,7 +129,6 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
                 this.port = port;
                 this.bucket = buckN;
                 this.directoryAction = buildingDirAction(readonlyCfg.getOrDefault(dirActionStrategy), oCli, buckN);
-                this.exclude = readonlyCfg.getOrDefault(excludeMinioObjNames).toArray(new String[0]);
                 this.putObjectBufSize = safeBufRange(readonlyCfg.getOrDefault(bufSize));
                 this.root = new DefaultSliceAbsolutePath(this, VFSDefaultConst.PATH_SEPARATOR);
                 this.cli = oCli;
@@ -172,7 +176,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
 
     @Override
     public boolean exists(VPath path) throws VFSIOException {
-        if (path.isRoot()) {
+        if (path.isVfsRoot()) {
              /*
              to do 如果 path 为 root 则应该使用 bucketExists
              不能为root做操作，遂直接true
@@ -211,13 +215,8 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
 
 
     @Override
-    public VFSType supportType() {
-        return VFSType.minio_bucket;
-    }
-
-    @Override
-    public String realRootPathString() {
-        return VFSDefaultConst.PATH_SEPARATOR + bucket;
+    public VFSType type() {
+        return VFSType.minio;
     }
 
     @Override
@@ -232,11 +231,11 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
 
     @Override
     public List<VPath> lsDir(VPath path) throws VFSIOException {
-        Optional<VFile> file = tryGetFile(path);
+        Optional<VFile> file = getFile(path);
         if (file.isPresent()) {
             VFile vf = file.get();
             if (vf.isDirectory()) {
-                return directoryAction.lsDir(path, exclude);
+                return directoryAction.lsDir(path);
             } else {
                 throw new VFSIOException(STF.f("Not a directory: {}", path));
             }
@@ -246,25 +245,34 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
     }
 
     @Override
-    public void mkdir(VPath path) throws VFSIOException {
+    public VFile mkdir(VPath path) throws VFSIOException {
         /*
         20241107 fix 如果为root，即已经存在，又因为该方法的策略为确保结果一致性，
         遂当self为root时，跳过创建目录的过程即可
+        20250517 该方法已取消结果一致性保证，方法语义更严格，遂若为root，抛出异常，因为root一定已经存在了
          */
-        if (path.isRoot()) {
-            return;
+        Objects.requireNonNull(path, "given path is null");
+        if (path.isVfsRoot()) {
+            throw new VFSIOException("directory already exists");
         }
+        // 实体存在
         Optional<StatObjectResponse> statObjectResponse = objStat(path);
         if (statObjectResponse.isPresent()) {
-            throw new VFSIOException(STF.f("位置已存在同名文件: {}", path));
+            throw new VFSIOException(STF.f("位置已存在同名文件, bucket: '{}', path: '{}'", this.bucket, path.simplePath()));
         }
-        if (!directoryAction.directoryExists(path)) {
-            directoryAction.mkdir(path);
+        // 文件夹存在
+        if (directoryAction.directoryExists(path)) {
+            throw new VFSIOException(STF.f("Directory already exists, bucket: '{}', path: '{}'", this.bucket, path.simplePath()));
         }
+        // 创建其
+        directoryAction.mkdir(path);
+        // 勉强 可能逻辑重复冗余, 或直接创建VFile更好？
+        return getFile(path).orElseThrow(() -> new VFSIOException(STF.f("\"{}\" not exists", path)));
     }
 
     @Override
     public void rmFile(VPath path) throws VFSIOException {
+        Objects.requireNonNull(path, "given path is null");
         Optional<VFile> f = path.toFile();
         if (f.isPresent()) {
             if (f.get().isDirectory()) {
@@ -274,11 +282,16 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
             } else {
                 throw new VFSIOException(STF.f("\"{}\" is not a directory or simple file", path));
             }
+        } else {
+            // 20250517 该方法表意已修改，没有结果一致性语义，即若位置本来无一物，则抛出异常
+            // 20250517 无需纠正，该方法已修改，没有结果一致性语义,结果一致性与否，下发给下级原生行为
+            throw new VFSIOException(STF.f("\"{}\" not exists", path));
         }
     }
 
     @Override
     public void rmdir(VPath path, boolean recursive) throws VFSIOException {
+        Objects.requireNonNull(path, "given path is null");
         if ((!recursive) && (!lsDir(path).isEmpty())) {
             throw new VFSIOException(STF.f("\"{}\" is not a empty directory", path));
         }
@@ -289,6 +302,8 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
         //  删除自身：要求必须为空文件夹，则可以删除自身
         //  删除自身及子，递归删除
         rmSelf(path);
+        // 20250517 minio似乎不容易做到“本不存在，所以抛出异常“行为，遂这里不追加“本不存在，所以抛出异常“行为
+        // 20250517 无需纠正，该方法已修改，没有结果一致性语义,结果一致性与否，下发给下级原生行为
     }
 
     private void rmChildren(VPath path, boolean recursive) throws VFSIOException {
@@ -368,14 +383,15 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
 
 
     @Override
-    public Optional<VFile> tryGetFile(VPath path) throws VFSIOException {
-        if (path.isRoot()) {
+    public Optional<VFile> getFile(VPath path) throws VFSIOException {
+        Objects.requireNonNull(path, "given path is null");
+        if (path.isVfsRoot()) {
             return Optional.of(new DefaultVFile(this, root, VFileType.directory, 0));
         }
         Optional<StatObjectResponse> statOpt = objStat(path);
         if (statOpt.isPresent()) {
             StatObjectResponse stat = statOpt.get();
-            return Optional.of(new DefaultVFile(this, path, VFileType.file, stat.size()));
+            return Optional.of(new DefaultVFile(this, path, VFileType.simpleFile, stat.size()));
         } else {
             if (directoryAction.directoryExists(path)) {
                 return Optional.of(new DefaultVFile(this, path, VFileType.directory, 0));
@@ -385,37 +401,23 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
     }
 
     @Override
-    public Optional<InputStream> tryGetFileInputStream(VFile file) throws VFSIOException {
+    public InputStream getFileInputStream(VFile file) throws VFSIOException {
         if (file.isDirectory()) {
-            return Optional.empty();
+            throw new VFSIOException(STF.f("\"{}\" is a directory", file));
         } else if (file.isSimpleFile()) {
-            GetObjectResponse closeableObjectResponse = MinioPro.sneakyRun(() -> cli.getObject(GetObjectArgs.builder()
+            return MinioPro.sneakyRun(() -> cli.getObject(GetObjectArgs.builder()
                     .bucket(bucket)
                     .object(MinioPro.leftCleanPathSeparator(file.toPath().simplePath()))
                     .build()));
-            return Optional.of(closeableObjectResponse);
         } else {
-            throw new VFSIOException(STF.f("Not a simple file or directory: {}", file));
+            throw new VFSIOException(STF.f("Not a simple file or directory: '{}'", file));
         }
     }
 
-    /**
-     * 获取 ls path 的 迭代器，但凡迭代器中有一个元素，都认定该文件夹实际存在，
-     * 需注意，该方法也可证明使用 minio API 官方示例中 创建的文件夹是否存在，
-     * 在官方api中，创建文件夹行为为创建一个文件夹，其中有同名的文件夹，但ls能看到其内部该同名文件夹指向的仍为外部被创建的文件夹，
-     * 遂该引用在ls中可见，即使该文件夹为空文件夹（仅创建，不存放任何）（以该方式认定空文件夹标准）其内部仍有一个可迭代元素，遂在该
-     * 情况下，该方法将返回true （该方法应仅能检测文件夹的存在与否，无法检测文件是否存在与否）
-     *
-     * @param path 要检测的文件夹
-     * @return true 该文件夹实际存在 false 该文件夹并不实际存在
-     */
-    private boolean hasRealDirectoryInPath(VPath path) {
-        Iterable<Result<Item>> rd = lsInner(path, false);
-        return rd.iterator().hasNext();
-    }
-
     @Override
-    public VFile mkFile(VPath path, InputStream inputStream) throws VFSIOException {
+    public VFile mkFile(VPath path, InputStream newFileData) throws VFSIOException {
+        Objects.requireNonNull(path, "given path is null");
+        Objects.requireNonNull(newFileData, "given input stream is null");
         /*
         statObj 存在，证明已存在同名文件，因minio的文件夹性质，遂无需检查文件夹是否实际存在
         但这里有一个问题，当该path所指定的地方已有文件夹存在，则其应以何种方式响应该 mkFile？
@@ -425,11 +427,12 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
          */
         Err.realIf(objStat(path).isPresent(), VFSIOException::new, "\"{}\" 已存在文件，无法创建", path);
         //to do fix me 使用第二种方式查看其，查看其内部是否有文件以确定其是否真的存在
-        Err.realIf(hasRealDirectoryInPath(path), () -> new VFSIOException(STF.f("\"{}\" 已存在文件夹，无法创建同名文件", path)));
+        Err.realIf(directoryAction.directoryExists(path),
+                () -> new VFSIOException(STF.f("\"{}\" 已存在文件夹，无法创建同名文件", path)));
         MinioPro.sneakyRun(() -> cli.putObject(PutObjectArgs.builder()
                 .bucket(bucket)
                 .object(MinioPro.leftCleanPathSeparator(path.simplePath()))
-                .stream(inputStream, -1, putObjectBufSize)
+                .stream(newFileData, -1, putObjectBufSize)
                 .build()));
         return path.toFile().orElseThrow(() -> new VFSIOException(STF.f("\"{}\" not exists", path)));
     }

@@ -2,57 +2,32 @@ package io.github.baifangkual.bfk.j.mod.vfs;
 
 
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
+import io.github.baifangkual.bfk.j.mod.core.mark.Factory;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSBuildingFailException;
-import io.github.baifangkual.bfk.j.mod.vfs.spi.VFSRegister;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ServiceLoader;
 
 /**
- * 虚拟文件系统简单工厂
+ * VFS类型实现提供者（支持注册器）<br>
+ * 所有下级的{@link VFS}实现模块都应该通过java spi以某种方式实现该接口，
+ * 当某种VFS以SPI实现该接口后，则VFS可通过{@link VFSFactoryProvider}发现
  *
  * @author baifangkual
  * @since 2024/8/30 v0.0.5
  */
-
-public class VFSFactory {
-
-    private static final Logger log = LoggerFactory.getLogger(VFSFactory.class);
-
-    private static final List<VFSRegister> REGISTERS;
-
-    /*
-      通过 spi 注册可用的vfs
+public interface VFSFactory extends Factory<Cfg, VFS> {
+    /**
+     * 返回该提供者可提供哪种类型的{@link VFS}
+     *
+     * @return VFS类型
      */
-    static {
-        REGISTERS = new ArrayList<>(VFSType.values().length);
-        ServiceLoader.load(VFSRegister.class).forEach(REGISTERS::add);
-        if (log.isDebugEnabled()) {
-            for (VFSRegister reg : REGISTERS) {
-                log.info("VFS [{}] 已通过SPI注册", reg.supportType());
-            }
-        }
-    }
+    VFSType support();
 
     /**
-     * 获取可使用的，受支持的VFS类型列表，这些通过spi机制发现
+     * 给定{@link Cfg}表示构造该VFS所需配置参数，创建一个{@link VFS}
+     *
+     * @param cfg 创建VFS所需配置
+     * @return VFS
+     * @throws VFSBuildingFailException 当给定的参数缺失、异常、无法构造VFS实例时
      */
-    public static List<VFSType> supportedTypes() {
-        return REGISTERS.stream().map(VFSRegister::supportType).toList();
-    }
-
-    /**
-     * 构造一个虚拟文件系统以供使用，要求给定明确的类型和所需参数，当要求的{@link VFSType}不存在时，抛出异常
-     */
-    public static VFS build(VFSType vfsType, Cfg vfsConfig) {
-        VFSRegister register = REGISTERS.stream().filter(reg -> reg.supportType() == vfsType)
-                .findFirst()
-                .orElseThrow(() -> new VFSBuildingFailException(STF.f("not found vfs impl for {}", vfsType)));
-        return register.constructorRef().apply(vfsConfig);
-    }
-
+    @Override
+    VFS create(Cfg cfg) throws VFSBuildingFailException;
 }

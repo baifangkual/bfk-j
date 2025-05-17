@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -187,14 +188,10 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     }
 
     @Override
-    public VFSType supportType() {
-        return VFSType.smb_share;
+    public VFSType type() {
+        return VFSType.smb;
     }
 
-    @Override
-    public String realRootPathString() {
-        return refRoot;
-    }
 
     @Override
     public VPath root() throws VFSIOException {
@@ -211,28 +208,12 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     public List<VPath> lsDir(VPath path) throws VFSIOException {
         DiskShare ds = this.singleConnPack.getShare();
         String sp = path.simplePath();
-        Err.realIf(!ds.folderExists(sp), VFSIOException::new, "Not a directory: {}", sp);
+        Err.realIf(!ds.folderExists(sp), VFSIOException::new, "Not a directory: '{}'", sp);
         List<FileIdBothDirectoryInformation> list = ds.list(sp);
         return list.stream().map(FileDirectoryQueryableInformation::getFileName)
                 .filter(n -> !(n.equals(VFSDefaultConst.CURR_PATH) || n.equals(VFSDefaultConst.PARENT_PATH)))
                 .map(path::join)
                 .toList();
-    }
-
-    @Override
-    public Optional<List<VPath>> ls(VPath path) throws VFSIOException {
-        DiskShare ds = this.singleConnPack.getShare();
-        String sp = path.simplePath();
-        if (ds.folderExists(sp)) {
-            List<VPath> vpL = ds.list(sp)
-                    .stream().map(FileDirectoryQueryableInformation::getFileName)
-                    .filter(n -> !(n.equals(VFSDefaultConst.CURR_PATH) || n.equals(VFSDefaultConst.PARENT_PATH)))
-                    .map(path::join)
-                    .toList();
-            return Optional.of(vpL);
-        } else {
-            return Optional.empty();
-        }
     }
 
     @Override
@@ -248,39 +229,51 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
                     boolean dir = FileAttrTranslate.isDir(f.getFileAttributes());
                     /* 隐藏文件显示否？*/
                     return (VFile) (new DefaultVFile(this, fPath.join(fn),
-                            dir ? VFileType.directory : VFileType.file,
+                            dir ? VFileType.directory : VFileType.simpleFile,
                             dir ? 0L : f.getAllocationSize()));
                 }).toList();
     }
 
     @Override
-    public void mkdir(VPath path) throws VFSIOException {
+    public VFile mkdir(VPath path) throws VFSIOException {
         /*
         20241107 fix 如果为root，即已经存在，又因为该方法的策略为确保结果一致性，
         遂当self为root时，跳过创建目录的过程即可
+        20250517 该方法已取消结果一致性保证，方法语义更严格，遂若为root，抛出异常，因为root一定已经存在了
          */
-        if (path.isRoot()) {
-            return;
+        Objects.requireNonNull(path, "given path is null");
+        if (path.isVfsRoot()) {
+            throw new VFSIOException("directory already exists");
         }
         DiskShare ds = this.singleConnPack.getShare();
         ds.mkdir(path.simplePath());
+        // 勉强 可能逻辑重复冗余, 或直接创建VFile更好？
+        return getFile(path).orElseThrow(() -> new VFSIOException(STF.f("\"{}\" not exists", path)));
     }
 
     @Override
     public void rmFile(VPath path) throws VFSIOException {
+        Objects.requireNonNull(path, "given path is null");
         DiskShare ds = this.singleConnPack.getShare();
+        // 20250517 该方法表意已修改，没有结果一致性语义，即若位置本来无一物，
+        // 则抛出异常，但该SMB实现尚不清楚（可能测试过，但我忘了）该的rm是何种含义，遂这里先不添加tryGetFile的冗余
+        // 20250517 无需纠正，该方法已修改，没有结果一致性语义,结果一致性与否，下发给下级原生行为
         ds.rm(path.simplePath());
     }
 
     @Override
     public void rmdir(VPath path, boolean recursive) throws VFSIOException {
+        Objects.requireNonNull(path, "given path is null");
         DiskShare ds = this.singleConnPack.getShare();
+        // 20250517 该方法表意已修改，没有结果一致性语义，即若位置本来无一物，
+        // 则抛出异常，但该SMB实现尚不清楚（可能测试过，但我忘了）该的rm是何种含义，遂这里先不添加tryGetFile的冗余
+        // 20250517 无需纠正，该方法已修改，没有结果一致性语义,结果一致性与否，下发给下级原生行为
         ds.rmdir(path.simplePath(), recursive);
     }
 
     @Override
     public boolean exists(VPath path) throws VFSIOException {
-        if (path.isRoot()) {
+        if (path.isVfsRoot()) {
             return true;
         }
         DiskShare ds = singleConnPack.getShare();
@@ -289,8 +282,9 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     }
 
     @Override
-    public Optional<VFile> tryGetFile(VPath path) throws VFSIOException {
-        if (path.isRoot()) {
+    public Optional<VFile> getFile(VPath path) throws VFSIOException {
+        Objects.requireNonNull(path, "given path is null");
+        if (path.isVfsRoot()) {
             return Optional.of(new DefaultVFile(this, vfsRoot, VFileType.directory, 0));
         }
         if (exists(path)) {
@@ -299,7 +293,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
             FileStandardInformation fI = ds.getFileInformation(sp, FileStandardInformation.class);
 
             return Optional.of(new DefaultVFile(this, path,
-                    fI.isDirectory() ? VFileType.directory : VFileType.file,
+                    fI.isDirectory() ? VFileType.directory : VFileType.simpleFile,
                     fI.isDirectory() ? 0L : fI.getAllocationSize()));
         } else {
             return Optional.empty();
@@ -307,8 +301,8 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     }
 
     @Override
-    public Optional<InputStream> tryGetFileInputStream(VFile file) throws VFSIOException {
-        if (file.isDirectory()) return Optional.empty();
+    public InputStream getFileInputStream(VFile file) throws VFSIOException {
+        if (file.isDirectory()) throw new VFSIOException(STF.f("\"{}\" is a directory", file));
         else if (file.isSimpleFile()) {
             DiskShare ds = this.singleConnPack.getShare();
             File openFile = ds.openFile(file.toPath().simplePath(),
@@ -319,9 +313,9 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
                     null
             );
             InputStream inputStream = openFile.getInputStream();
-            return Optional.of(new SMBJInputStreamDelegator(openFile, inputStream));
+            return new SMBJInputStreamDelegator(openFile, inputStream);
         } else {
-            throw new VFSIOException(STF.f("Not a simple file or directory: {}", file));
+            throw new VFSIOException(STF.f("Not a simple file or directory: '{}'", file));
         }
     }
 
@@ -340,12 +334,14 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     }
 
     @Override
-    public VFile mkFile(VPath path, InputStream inputStream) throws VFSIOException {
-        if (tryGetFile(path).isPresent()) {
+    public VFile mkFile(VPath path, InputStream newFileData) throws VFSIOException {
+        Objects.requireNonNull(path, "given path is null");
+        Objects.requireNonNull(newFileData, "given input stream is null");
+        if (getFile(path).isPresent()) {
             throw new VFSIOException(STF.f("{}:\"{}\" already exists", this, path));
         }
         try (OutputStream out = createFile(path)) {
-            inputStream.transferTo(out);
+            newFileData.transferTo(out);
         } catch (IOException e) {
             throw new VFSIOException(e);
         }

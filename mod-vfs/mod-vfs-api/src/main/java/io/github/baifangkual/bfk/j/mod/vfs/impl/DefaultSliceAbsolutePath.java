@@ -8,7 +8,6 @@ import io.github.baifangkual.bfk.j.mod.vfs.exception.IllegalVPathException;
 
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 
 import static io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst.PATH_SEPARATOR;
 
@@ -101,19 +100,15 @@ public class DefaultSliceAbsolutePath implements VPath {
     }
 
     @Override
-    public VFS getVFileSystem() {
+    public VFS selfVfs() {
         return vfs;
     }
 
     @Override
-    public boolean isRoot() {
+    public boolean isVfsRoot() {
         return pathSlice.length == 0;
     }
 
-    @Override
-    public String toString() {
-        return simplePath();
-    }
 
     @Override
     public String simplePath() {
@@ -129,23 +124,16 @@ public class DefaultSliceAbsolutePath implements VPath {
     }
 
     @Override
-    public String realPath() {
-        final String sp = simplePath();
-        boolean rsp = sp.equals(PATH_SEPARATOR);
-        return vfs.realRootPathString().equals(PATH_SEPARATOR) ? sp : (rsp ? vfs.realRootPathString() : vfs.realRootPathString() + sp);
-    }
-
-    @Override
     public int level() {
         return pathSlice.length;
     }
 
     @Override
-    public Optional<String> tryLast() {
-        if (isRoot()) {
-            return Optional.empty();
+    public String name() {
+        if (isVfsRoot()) {
+            return PATH_SEPARATOR;
         } else {
-            return Optional.of(pathSlice[pathSlice.length - 1]);
+            return pathSlice[pathSlice.length - 1];
         }
     }
 
@@ -167,5 +155,10 @@ public class DefaultSliceAbsolutePath implements VPath {
     public int compareTo(VPath other) {
         if (this == other) return 0;
         return Integer.compare(this.level(), other.level());
+    }
+
+    @Override
+    public String toString() {
+        return simplePath();
     }
 }

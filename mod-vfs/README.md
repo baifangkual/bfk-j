@@ -5,17 +5,18 @@
 该模块作为工具集，对调用方提供统一的API和接口等
 
 ## 使用
+
 ```java
 // 构建或从他处转换至参数对象
-Cfg vfsCfg = Cfg.of("...");
+Cfg cfg = Cfg.of("...");
 // 构建 虚拟文件系统
-VFS vfs = VFSFactory.build(vfsType, vfsCfg);
+VFS vfs = VFSFactoryProvider.create(vfsType, cfg);
 ```
 VFS、VPath、VFile的关系和操作等，查看相应的类文档：
 * io.github.baifangkual.bfk.j.mod.vfs.VFS
 * io.github.baifangkual.bfk.j.mod.vfs.VFile
 * io.github.baifangkual.bfk.j.mod.vfs.VPath
-* io.github.baifangkual.bfk.j.mod.vfs.VFSRegister
+* io.github.baifangkual.bfk.j.mod.vfs.VFSFactory
 
 该模块提供对多种资源文件的访问方法：
 
@@ -26,10 +27,9 @@ VFS、VPath、VFile的关系和操作等，查看相应的类文档：
   * io.github.baifangkual.bfk.j.mod.vfs.smb.conf.SMBCfgOptions
   * io.github.baifangkual.bfk.j.mod.vfs.smb.SMBShareRootVirtualFileSystem
 * MINIO(依赖minio)
-  * io.github.baifangkual.bfk.j.mod.vfs.minio.MinioCfgOptions
+  * io.github.baifangkual.bfk.j.mod.vfs.minio.conf.MinioCfgOptions
   * io.github.baifangkual.bfk.j.mod.vfs.minio.MinioBucketRootVirtualFileSystem
-* LOCAL_FILE(not impl)
-* TEMP_FILE(not impl)
+* LOCAL(not impl)
 * HDFS(not impl)
 * ...
 
@@ -46,7 +46,7 @@ VFS、VPath、VFile的关系和操作等，查看相应的类文档：
 * 提供文件系统中文件及文件夹的存在与否查询
 
 ## VFS子模块开发
-* 子模块需通过java spi实现`io.github.baifangkual.bfk.j.mod.vfs.VFSRegister`, 完成实现类的服务提供和发现
+* 子模块需通过java spi实现`io.github.baifangkual.bfk.j.mod.vfs.VFSFactory`, 完成实现类的服务提供和发现
 * 子模块需实现`io.github.baifangkual.bfk.j.mod.vfs.VFS`接口的所有必要方法，在已知部分行为的情况下，可拓展覆盖部分默认方法行为
 
 ## 额外

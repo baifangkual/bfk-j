@@ -68,7 +68,7 @@ public abstract class AbstractVirtualFileSystem implements VFS {
     /**
      * 当 vfs 已被设定为已关闭，则调用该方法将抛出异常
      */
-    protected void ifCloseThrowVFSRuntimeIOE() {
+    protected void ifClosedThrowVFSRtIOE() throws VFSIOException{
         if (isClosed()) {
             throw new VFSIOException("VFS: " + this + " is closed.");
         }

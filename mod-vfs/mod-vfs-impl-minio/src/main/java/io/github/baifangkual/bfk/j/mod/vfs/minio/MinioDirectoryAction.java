@@ -23,7 +23,7 @@ public interface MinioDirectoryAction {
     /**
      * 展开文件夹中元素，文件和文件夹，判断给定path是否为文件应在上层判断拦截
      */
-    List<VPath> lsDir(VPath path, String... excludeNames) throws VFSIOException;
+    List<VPath> lsDir(VPath path) throws VFSIOException;
 
     /**
      * 创建文件夹，判断同目录层级下文件是否已存在应在上层，

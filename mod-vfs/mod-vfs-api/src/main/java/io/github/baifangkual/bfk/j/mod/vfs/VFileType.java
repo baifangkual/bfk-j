@@ -8,16 +8,17 @@ package io.github.baifangkual.bfk.j.mod.vfs;
  */
 public enum VFileType {
     /**
-     * 表示普通文件
+     * 表示普通文件（可对其进行字节读写）
      */
-    file,
+    simpleFile,
     /**
      * 表示文件夹
      */
     directory,
     /**
      * 表示符号链接、软连接等,
-     * 因为增加该类型会增加复杂性，遂打算后续废弃该类型，若有该相关需求，后续可开发
+     *
+     * @deprecated 因为增加该类型会增加复杂性，遂打算废弃该类型
      */
     @Deprecated
     link,
