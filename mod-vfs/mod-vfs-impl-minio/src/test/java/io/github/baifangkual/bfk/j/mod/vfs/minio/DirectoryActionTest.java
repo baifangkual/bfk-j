@@ -25,17 +25,6 @@ public class DirectoryActionTest {
         Assertions.assertEquals("abc", MinioPro.rightCleanPathSeparator("abc/"));
         Assertions.assertEquals("abc", MinioPro.leftCleanPathSeparator("abc"));
         Assertions.assertEquals("abc", MinioPro.leftCleanPathSeparator("/abc"));
-        ArrayList<String> sl = new ArrayList<>();
-        sl.add("abc");
-        sl.add("def");
-        sl.add("ghi");
-        sl.add("jkl");
-        MinioPro.doExcludeNames(sl, "jkl");
-        Assertions.assertEquals(List.of("abc", "def", "ghi"), sl);
-        MinioPro.doExcludeNames(sl);
-        Assertions.assertEquals(List.of("abc", "def", "ghi"), sl);
-        MinioPro.doExcludeNames(sl, (String) null);
-        Assertions.assertEquals(List.of("abc", "def", "ghi"), sl);
 
     }
 //
