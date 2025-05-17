@@ -59,7 +59,6 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     private final String host;
     private final int port;
     private final String share;
-    private final String refRoot;
     private final AuthenticationContext ac;
     private final SMBClient smbClient;
     private final ConnPack singleConnPack;
@@ -70,16 +69,15 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
      * 该构造应为所有子类型统一构造的入口，在该构造内，子类型有权校验及变更给定的配置,
      * 可能会影响给定的参数
      *
-     * @param config 外界传递的vfs连接参数
+     * @param cfg 外界传递的vfs连接参数
      * @throws VFSBuildingFailException 当构造过程发生异常时，应由该包装或抛出
      */
-    public SMBShareRootVirtualFileSystem(Cfg config) throws VFSBuildingFailException {
-        super(config);
+    public SMBShareRootVirtualFileSystem(Cfg cfg) throws VFSBuildingFailException {
+        super(cfg);
         final Cfg immutableConfig = readonlyCfg();
         this.host = immutableConfig.get(SMBCfgOptions.host);
         this.port = immutableConfig.getOrDefault(SMBCfgOptions.port);
         this.share = immutableConfig.get(SMBCfgOptions.share);
-        this.refRoot = VFSDefaultConst.PATH_SEPARATOR + this.share;
         this.ac = createAc();
         // mid ref client
         SMBClient smbClient = null;

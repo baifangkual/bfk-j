@@ -102,11 +102,11 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
      * 该构造应为所有子类型统一构造的入口，在该构造内，子类型有权校验及变更给定的配置,
      * 可能会影响给定的参数
      *
-     * @param config 外界传递的vfs连接参数
+     * @param cfg 外界传递的vfs连接参数
      * @throws VFSBuildingFailException 当构造过程发生异常时，应由该包装或抛出
      */
-    public MinioBucketRootVirtualFileSystem(Cfg config) throws VFSBuildingFailException {
-        super(config);
+    public MinioBucketRootVirtualFileSystem(Cfg cfg) throws VFSBuildingFailException {
+        super(cfg);
         final Cfg readonlyCfg = readonlyCfg();
         String accKey = readonlyCfg.tryGet(accessKey).orElse(null);
         String secKey = readonlyCfg.tryGet(secretKey).orElse(null);
