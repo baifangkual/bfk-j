@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>mod-vfs</artifactId>
-        <version>0.0.5</version>
+        <version>0.0.6</version>
     </parent>
 
     <artifactId>mod-vfs-impl-ftp</artifactId>
