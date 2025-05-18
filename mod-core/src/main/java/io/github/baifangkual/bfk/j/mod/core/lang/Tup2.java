@@ -1,6 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.core.lang;
 
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
+import io.github.baifangkual.bfk.j.mod.core.trait.Cloneable;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -22,7 +23,7 @@ import java.util.function.Function;
  * @author baifangkual
  * @since 2024/6/24 v0.0.3
  */
-public final class Tup2<L, R> implements Serializable {
+public final class Tup2<L, R> implements Serializable, Cloneable<Tup2<L, R>> {
 
     @Serial
     private static final long serialVersionUID = 2L;
@@ -133,5 +134,11 @@ public final class Tup2<L, R> implements Serializable {
     @Override
     public String toString() {
         return "Tup2(" + l + ", " + r + ')';
+    }
+
+    @Override
+    @SuppressWarnings("MethodDoesntCallSuperMethod")
+    public Tup2<L, R> clone() {
+        return Tup2.of(l, r);
     }
 }

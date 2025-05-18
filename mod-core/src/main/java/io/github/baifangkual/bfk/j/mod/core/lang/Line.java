@@ -2,6 +2,7 @@ package io.github.baifangkual.bfk.j.mod.core.lang;
 
 import io.github.baifangkual.bfk.j.mod.core.mark.Iter;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
+import io.github.baifangkual.bfk.j.mod.core.trait.Cloneable;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -18,7 +19,7 @@ import java.util.stream.Stream;
  * @since 2024/6/18 v0.0.4
  */
 @SuppressWarnings("ClassCanBeRecord")
-public class Line<P> implements Iter<P>, Serializable {
+public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -413,5 +414,11 @@ public class Line<P> implements Iter<P>, Serializable {
     @Override
     public Stream<P> parallelStream() {
         return Stream.of(begin, end).parallel();
+    }
+
+    @Override
+    @SuppressWarnings("MethodDoesntCallSuperMethod")
+    public Line<P> clone() {
+        return Line.of(begin, end);
     }
 }
