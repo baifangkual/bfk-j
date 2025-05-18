@@ -9,8 +9,8 @@ import java.util.function.Supplier;
 
 /**
  * <b>异常校验工具类</b><br>
- * 利用java泛型擦除屏蔽预检异常声明,为使栈展开不繁琐，该类里方法不应定位为互相调用，应确保该线程安全<br>
- * 该类中方法签名中 realxxx 表示直接返回相应的异常（运行时或预检异常），panicxxx 表示返回以{@link PanicException}类型包装的相应异常<br>
+ * 该类方法签名中 {@code realxxx} 表示直接返回相应的异常（运行时或预检异常），
+ * {@code panicxxx} 表示返回以{@link PanicException}类型包装的相应异常<br>
  * 使用说明：
  * <pre>
  *     {@code
@@ -25,7 +25,7 @@ import java.util.function.Supplier;
  *     // 进行显式抛出预检异常的操作而又不想声明try/cache或不想将预检异常向方法throws声明时
  *     Err.runOrThrowReal(() -> System.out.println(new URL("test://")));
  *     // 同上，区别是操作有返回值
- *     URL url = Err.runOrThrowReal(() -> new URL("test://"));
+ *     URL url = Err.getOrThrowReal(() -> new URL("test://"));
  *     }
  * </pre>
  * 或可参考各方法上更为详细的说明及示例<br>
@@ -56,10 +56,12 @@ public final class Err {
     }
 
     /**
-     * 该调用将立即抛出指定异常，即使异常为预检异常，当前作用域也不需要显式声明预检异常，
+     * 该调用将立即抛出指定异常，即使异常为预检异常，当前作用域也不需要显式{@code throws}声明预检异常，
      * 骗过编译器，无需将预检异常显式转为运行时异常
      *
      * @param err 给定要抛出的异常
+     * @apiNote 该方法因为可以抛出预检异常而不在上下文中显式声明要抛出的预检异常，遂从外部/上层方法签名中无法得知可能抛出的
+     * 预检异常，使用该方法要明确该方法可能造成的风险
      */
     @SuppressWarnings("unchecked")
     public static <ERR extends Exception> void throwReal(Exception err) throws ERR {
@@ -80,6 +82,8 @@ public final class Err {
      *
      * @param expr 布尔表达式
      * @param msg  携带的信息
+     * @apiNote 该方法因为可以抛出预检异常而不在上下文中显式声明要抛出的预检异常，遂从外部/上层方法签名中无法得知可能抛出的
+     * 预检异常，使用该方法要明确该方法可能造成的风险
      */
     public static void realIf(boolean expr, String msg) {
         if (expr) {
@@ -92,6 +96,8 @@ public final class Err {
      *
      * @param expr  布尔表达式
      * @param trSup 异常生产者函数
+     * @apiNote 该方法因为可以抛出预检异常而不在上下文中显式声明要抛出的预检异常，遂从外部/上层方法签名中无法得知可能抛出的
+     * 预检异常，使用该方法要明确该方法可能造成的风险
      */
     public static void realIf(boolean expr, Supplier<? extends Exception> trSup) {
         if (expr) {
@@ -105,6 +111,8 @@ public final class Err {
      * @param expr 布尔表达式
      * @param trFn 异常生产函数
      * @param msg  异常携带信息
+     * @apiNote 该方法因为可以抛出预检异常而不在上下文中显式声明要抛出的预检异常，遂从外部/上层方法签名中无法得知可能抛出的
+     * 预检异常，使用该方法要明确该方法可能造成的风险
      */
     public static void realIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                               String msg) {
@@ -120,6 +128,8 @@ public final class Err {
      * @param trFn    异常生产函数
      * @param msgTemp 异常信息模板（形如：“err: msg:{}”)
      * @param msgArgs 填充异常信息模板的参数列表（按顺序填充异常信息模板中的"{}")
+     * @apiNote 该方法因为可以抛出预检异常而不在上下文中显式声明要抛出的预检异常，遂从外部/上层方法签名中无法得知可能抛出的
+     * 预检异常，使用该方法要明确该方法可能造成的风险
      */
     public static void realIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                               String msgTemp, Object... msgArgs) {
@@ -139,6 +149,8 @@ public final class Err {
      *                   与{@link Err#realIf(boolean, Function, String, Object...)}方法区分开
      *                   当调用该方法的作用域中没有直接对应的msgTemplate中所需参数的值且构造该值需要复杂的流程或大对象时，
      *                   该方法将优化此场景，即仅当确定要抛出异常时才会执行参数的构造
+     * @apiNote 该方法因为可以抛出预检异常而不在上下文中显式声明要抛出的预检异常，遂从外部/上层方法签名中无法得知可能抛出的
+     * 预检异常，使用该方法要明确该方法可能造成的风险
      */
     public static void realIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                               String msgTemp, Supplier<? extends Object[]> msgArgsSup) {
@@ -208,7 +220,7 @@ public final class Err {
      * @param msgTemp    异常对象的消息的模板，参数使用 "{}" 表示
      * @param msgArgsSup 函数，能够提供填充异常对象的消息模板的参数，
      *                   之所以使用该参数提供函数是为了优化一些场景，
-     *                   与{@link Err#realIf(boolean, Function, String, Object...)}方法区分开
+     *                   与{@link Err#panicIf(boolean, Function, String, Object...)}方法区分开
      *                   当调用该方法的作用域中没有直接对应的msgTemplate中所需参数的值且构造该值需要复杂的流程或大对象时，
      *                   该方法将优化此场景，即仅当确定要抛出异常时才会执行参数的构造
      */
@@ -235,6 +247,8 @@ public final class Err {
      * </pre>
      *
      * @param fnGet 可执行语句,可能异常，异常时直接抛出，对预检和运行时异常皆可
+     * @apiNote 该方法因为可以抛出预检异常而不在上下文中显式声明要抛出的预检异常，遂从外部/上层方法签名中无法得知可能抛出的
+     * 预检异常，使用该方法要明确该方法可能造成的风险
      */
     public static <R> R getOrThrowReal(FnGet<? extends R> fnGet) {
         return FnGet.getOrThrowReal(fnGet);
@@ -255,6 +269,8 @@ public final class Err {
      * </pre>
      *
      * @param fnRun 可执行语句,可能异常，异常时直接抛出，对预检和运行时异常皆可
+     * @apiNote 该方法因为可以抛出预检异常而不在上下文中显式声明要抛出的预检异常，遂从外部/上层方法签名中无法得知可能抛出的
+     * 预检异常，使用该方法要明确该方法可能造成的风险
      */
     public static void runOrThrowReal(FnRun fnRun) {
         FnRun.runOrThrowReal(fnRun);
