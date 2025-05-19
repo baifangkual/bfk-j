@@ -19,6 +19,10 @@ public final class Const {
      */
     public static final class String {
         /**
+         * 字符串常量：空字符串
+         */
+        public static final java.lang.String EMPTY = "";
+        /**
          * 字符串常量：空json {@code "{}"}
          */
         public static final java.lang.String DELIM_EMPTY = "{}";
@@ -26,7 +30,7 @@ public final class Const {
         /**
          * 字符串常量：制表符 {@code "\t"}
          */
-        public static final java.lang.String TAB = "	";
+        public static final java.lang.String TAB = "\t";
 
         /**
          * 字符串常量：点 {@code "."}
@@ -125,7 +129,7 @@ public final class Const {
         /**
          * 字符常量：制表符 {@code '\t'}
          */
-        public static final char TAB = '	';
+        public static final char TAB = '\t';
         /**
          * 字符常量：点 {@code '.'}
          */
