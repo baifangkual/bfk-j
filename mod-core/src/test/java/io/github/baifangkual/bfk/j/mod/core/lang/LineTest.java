@@ -3,9 +3,8 @@ package io.github.baifangkual.bfk.j.mod.core.lang;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
-import java.util.Set;
 
 /**
  * @author baifangkual
@@ -17,7 +16,7 @@ public class LineTest {
     @Test
     public void test() {
 
-        R<Queue<Set<Integer>>, RuntimeException> r = Line.forOrder(List.of(
+        R<LinkedList<List<Integer>>, RuntimeException> r = Line.orderDAGQueue(List.of(
                 Line.of(1, 2),
                 Line.of(2, 3),
                 Line.of(3, 4),
@@ -29,7 +28,7 @@ public class LineTest {
 
     @Test
     public void test2() {
-        R<Queue<Set<Integer>>, RuntimeException> r = Line.forOrder(List.of(
+        R<LinkedList<List<Integer>>, RuntimeException> r = Line.orderDAGQueue(List.of(
                 Line.of(1, 2),
                 Line.of(2, 3),
                 Line.of(3, 1)

@@ -146,7 +146,8 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @param all   所有参与line的 点({@link P})，该集合中允许n个点不参与lines中的关系描述，该给定的集合中{@link P}不应重复
      * @param <P>   节点类型（line对象 begin 和 end 的类型）
      * @return true 是一个dag图，也即图能够从头走到尾部， false 不是dag图，（图中有循环|lines中使用了all中未声明的点...)
-     * @throws NullPointerException 当给定的lines为空或all为空时
+     * @throws NullPointerException  当给定的lines为空或all为空时
+     * @throws IllegalStateException 当给定的all中没有任何一个节点时
      * @apiNote 该方法内会使用P类型做MapKey来计算出度和入度，遂P类型是否实现equals和hashcode应在业务侧做考量
      */
     public static <P> boolean isDirectedAcyclicGraph(Iterable<Line<P>> lines,
@@ -192,6 +193,21 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
     }
 
     /**
+     * 检测给定的多个线对象能否组成一个或多个有向无环图(directed acyclic graph)<br>
+     * 若可迭代对象内
+     *
+     * @param lines n个线段对象，表示节点关系
+     * @param <P>   节点数据类型
+     * @return true 可以构成dag图，反之则不可以
+     * @throws NullPointerException 当给定的可迭代对象为空时
+     * @see #isDirectedAcyclicGraph(Iterable, Iterable)
+     */
+    public static <P> boolean isDirectedAcyclicGraph(Iterable<Line<P>> lines) {
+        Objects.requireNonNull(lines, "lines is null");
+        return isDirectedAcyclicGraph(lines, findAllNode(lines));
+    }
+
+    /**
      * 给定可迭代对象 lines 和 all ，返回lines（n个有向图）的n个头节点（开始节点）<br>
      * 头节点定义：一定不为所有{@link Line#end()}指向的节点，可能为{@link Line#begin()}指向的节点(如果在lines中的话)，
      * 若找不到或没有头节点，则返回的Set为empty
@@ -204,7 +220,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @apiNote 该方法内使用HashSet做差集，P类型是否实现equals和hashcode应在业务侧做考量，另外，孤立点（仅在all中而不在lines中出现的点）
      * 也被认为是头节点
      */
-    public static <P> Set<P> findHeaders(Iterable<Line<P>> lines, Iterable<P> all) {
+    public static <P> Set<P> findHeaderNodes(Iterable<Line<P>> lines, Iterable<P> all) {
         Objects.requireNonNull(all, "all is null");
         Objects.requireNonNull(lines, "lines is null");
         // mut result 可变集合，不可操作入参集合
@@ -229,7 +245,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @throws NullPointerException 当给定的lines为空时
      * @apiNote 该方法内使用HashSet，P类型是否实现equals和hashcode应在业务侧做考量
      */
-    public static <P> Set<P> findAllPoint(Iterable<Line<P>> lines) {
+    public static <P> Set<P> findAllNode(Iterable<Line<P>> lines) {
         Objects.requireNonNull(lines, "lines is null");
         final Set<P> points = new HashSet<>();
         for (Line<P> l : lines) {
@@ -242,7 +258,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
 
     /**
      * 给定 节点关系lines、所有节点、头节点集合，返回可从头节点遍历完所有节点且按照lines关系顺序获取的队列<br>
-     * Queue[Set[Point]] 当中Set[Point] 表示这个Set内的Point可同时被获取到（多线程下...等情况...),
+     * 返回的 LinkedList[List[Point]] 当中List[Point] 表示这个List内的Point可同时被获取到/为平行关系（多线程下...等情况...),
      * 孤立点将被直接当作头节点,该方法可保证所有Point能被遍历且仅遍历一次
      *
      * @param headers 头节点集合
@@ -256,34 +272,37 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @apiNote 该方法内使用HashSet等做各种比较，遂P类型是否实现equals和hashcode应在业务侧做考量，另外，孤立点（仅在all中而不在lines中出现的点）
      * 也被认为是头节点
      */
-    public static <P> Queue<Set<P>> forOrder(Iterable<Line<P>> lines,
-                                             Iterable<P> all,
-                                             Iterable<P> headers) {
+    public static <P> LinkedList<List<P>> orderDAGQueue(Iterable<Line<P>> lines,
+                                                   Iterable<P> all,
+                                                   Iterable<P> headers) {
         List<Line<P>> findLines = Iter.toStream(lines).toList();
         List<P> findAll = Iter.toStream(all).toList();
         List<P> findHeaders = Iter.toStream(headers).toList();
         // 当headers迭代器不为空，且headerList为空，即认为明确表示没有头节点，该情况应直接抛出异常
         Err.realIf(findHeaders.isEmpty(), IllegalArgumentException::new,
                 "给定参数认定无头节点，遂无法从头排序");
-        final LinkedList<Set<P>> midResultNextIds = new LinkedList<>();
+        final LinkedList<List<P>> midResultNextIds = new LinkedList<>();
         if (findLines.isEmpty()) { // 因为没有lines 为确保执行，所有都为头节点即可
-            midResultNextIds.add(new HashSet<>(findAll));
+            midResultNextIds.add(new ArrayList<>(findAll));
             return midResultNextIds;
         }
         // 循环nextIds poll 为 null 表示 已到终点
-        Queue<Set<P>> loopNextIdsQueue = new LinkedList<>();
+        Queue<List<P>> loopNextIdsQueue = new LinkedList<>();
         // 存放执行顺序，但有重复执行的，所以该为中间结果，后续从后到前遍历去除重复
         // init headerIds
         // tod 可能有不参与线的 孤立点, fix 20240628 孤立点被当作头节点，从头节点遍历
-        loopNextIdsQueue.add(new HashSet<>(findHeaders)); //immutable ...
+        loopNextIdsQueue.add(new ArrayList<>(findHeaders)); //immutable ...
         // init full mut,on end must empty
-        Set<P> lineMutFullPoint = new HashSet<>(findAll);
+        List<P> lineMutFullPoint = new ArrayList<>(findAll);
         // 从lines复制其引用，然后可变 每次找到可用的从list中删除
         List<Line<P>> mutLines = new ArrayList<>(findLines);
+        // 重复利用该Set临时存储 next
+        Set<P> currentNextIds = new HashSet<>();
         while (!loopNextIdsQueue.isEmpty()) {
-            Set<P> next = loopNextIdsQueue.poll();
+            List<P> next = loopNextIdsQueue.poll();
             midResultNextIds.add(next); // 每次将 loopNextIdsQueue中构成的执行顺序的set引用copy至此
-            Set<P> currentNextIds = new HashSet<>();
+            // 每次清理该
+            currentNextIds.clear();
             for (P nId : next) {
                 lineMutFullPoint.remove(nId);
                 for (Line<P> line : mutLines) {
@@ -298,7 +317,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
                 }
             }
             // 到此，mutLines中 current 的所有nextId已经放入 currentNextIds 中, 可能为empty，因为若当前为最后一个时...
-            if (!currentNextIds.isEmpty()) loopNextIdsQueue.add(currentNextIds);
+            if (!currentNextIds.isEmpty()) loopNextIdsQueue.add(new ArrayList<>(currentNextIds));
         }
         // check lineMutFullPoint, 当点都被走到时，这个集合应当为null，否则说明其为孤立点，
         // fix 是否上述已有逻辑完成该？ ...
@@ -306,9 +325,9 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
                 "以 {} 作为头节点，这些节点将无法被遍历到: {}", findHeaders, lineMutFullPoint);
         // 至此 midResultNextIds中已经排序执行顺序了，但还有重复执行的，需将其从后往前遍历，找到需执行的实际顺序
         for (int i = midResultNextIds.size() - 1; i >= 0; i--) {
-            Set<P> endIds = midResultNextIds.get(i);
+            List<P> endIds = midResultNextIds.get(i);
             for (int insIdx = i - 1; insIdx >= 0; insIdx--) {
-                Set<P> beginIds = midResultNextIds.get(insIdx);
+                List<P> beginIds = midResultNextIds.get(insIdx);
                 beginIds.removeAll(endIds);
             }
         }
@@ -318,7 +337,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
 
     /**
      * 给定 节点关系lines、所有节点，返回可从头节点遍历完所有节点且按照lines关系顺序获取的队列<br>
-     * Queue[Set[Point]] 当中Set[Point] 表示这个Set内的Point可同时被获取到（多线程下...等情况...),
+     * 返回的 LinkedList[List[Point]] 当中List[Point] 表示这个List内的Point可同时被获取到/为平行关系（多线程下...等情况...),
      * 孤立点将被直接当作头节点,该方法可保证所有Point能被遍历且仅遍历一次
      *
      * @param all   所有节点
@@ -331,17 +350,17 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @apiNote 该方法内使用HashSet等做各种比较，遂P类型是否实现equals和hashcode应在业务侧做考量，另外，孤立点（仅在all中而不在lines中出现的点）
      * 也被认为是头节点
      * @implNote 该方法内将根据参数lines和all自动寻找头节点
-     * @see #forOrder(Iterable, Iterable, Iterable)
-     * @see #findHeaders(Iterable, Iterable)
+     * @see #orderDAGQueue(Iterable, Iterable, Iterable)
+     * @see #findHeaderNodes(Iterable, Iterable)
      */
-    public static <P> Queue<Set<P>> forOrder(Iterable<Line<P>> lines,
-                                             Iterable<P> all) {
-        return forOrder(lines, all, findHeaders(lines, all));
+    public static <P> LinkedList<List<P>> orderDAGQueue(Iterable<Line<P>> lines,
+                                                   Iterable<P> all) {
+        return orderDAGQueue(lines, all, findHeaderNodes(lines, all));
     }
 
     /**
      * 给定 节点关系lines、返回可从头节点遍历完所有节点且按照lines关系顺序获取的队列<br>
-     * Queue[Set[Point]] 当中Set[Point] 表示这个Set内的Point可同时被获取到（多线程下...等情况...),
+     * 返回的 LinkedList[List[Point]] 当中List[Point] 表示这个List内的Point可同时被获取到/为平行关系（多线程下...等情况...),
      * 孤立点将被直接当作头节点,该方法可保证所有Point能被遍历且仅遍历一次
      *
      * @param lines 节点关系，有向
@@ -352,17 +371,17 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @throws IllegalStateException    当给定的节点中有些节点无法从头节点被遍历到时，或者给定的节点关系无法构成一个DAG图时
      * @apiNote P类型是否实现equals和hashcode应在业务侧做考量
      * @implNote 该方法内将根据参数lines自动寻找参与的所有节点和头节点
-     * @see #forOrder(Iterable, Iterable)
+     * @see #orderDAGQueue(Iterable, Iterable)
      * @see #isDirectedAcyclicGraph(Iterable, Iterable)
-     * @see #findHeaders(Iterable, Iterable)
-     * @see #findAllPoint(Iterable)
+     * @see #findHeaderNodes(Iterable, Iterable)
+     * @see #findAllNode(Iterable)
      */
-    public static <P> R<Queue<Set<P>>, RuntimeException> forOrder(Iterable<Line<P>> lines) {
+    public static <P> R<LinkedList<List<P>>, RuntimeException> orderDAGQueue(Iterable<Line<P>> lines) {
         return R.ofSupplier(() -> {
-            Set<P> all = findAllPoint(lines);
+            Set<P> all = findAllNode(lines);
             Err.realIf(!isDirectedAcyclicGraph(lines, all),
                     IllegalStateException::new, "lines is not a directed acyclic graph");
-            return forOrder(lines, all);
+            return orderDAGQueue(lines, all);
         });
     }
 
