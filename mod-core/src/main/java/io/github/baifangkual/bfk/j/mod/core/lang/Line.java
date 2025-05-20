@@ -129,7 +129,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
     }
 
     /**
-     * 给定两个可迭代对象，lines 和 all，该方法检测lines能否组成一个或多个有向无环图(directed acyclic graph)<br>
+     * 给定 lines 和 all，该方法检测lines能否组成一个或多个有向无环图(directed acyclic graph)<br>
      * 换种说法，该方法检测通过lines构成关系的多个{@link P}，能否从头遍历至尾部，也即该{@link P}的遍历执行是否是有穷的，
      * lines集合中为多个有向线段（Line对象），描述了all中多个点之间的有向关系，这些关系能够构成n个图数据结构，
      * all集合中则应当有lines集合描述的图结构的所有{@link P}实体。
@@ -149,6 +149,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @throws NullPointerException  当给定的lines为空或all为空时
      * @throws IllegalStateException 当给定的all中没有任何一个节点时
      * @apiNote 该方法内会使用P类型做MapKey来计算出度和入度，遂P类型是否实现equals和hashcode应在业务侧做考量
+     * @see #isNoLoop(Iterable)
      */
     public static <P> boolean isDirectedAcyclicGraph(Iterable<Line<P>> lines,
                                                      Iterable<P> all) {
@@ -157,6 +158,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
         // 是否有环存在 是否为dag图 使用@拓扑排序算法
         // 图中节点的 入度, 初始化全为0
         List<P> findAllPoint = Iter.toStream(all).toList();
+        Err.realIf(findAllPoint.isEmpty(), IllegalStateException::new, "not found any node");
         List<Line<P>> findAllLines = Iter.toStream(lines).toList();
         Map<P, Integer> inDegree = findAllPoint.stream()
                 //.distinct() // fix IllegalStateException: Duplicate toMap时key相同 该问题直接抛出异常，不处理其
@@ -193,22 +195,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
     }
 
     /**
-     * 检测给定的多个线对象能否组成一个或多个有向无环图(directed acyclic graph)<br>
-     * 若可迭代对象内
-     *
-     * @param lines n个线段对象，表示节点关系
-     * @param <P>   节点数据类型
-     * @return true 可以构成dag图，反之则不可以
-     * @throws NullPointerException 当给定的可迭代对象为空时
-     * @see #isDirectedAcyclicGraph(Iterable, Iterable)
-     */
-    public static <P> boolean isDirectedAcyclicGraph(Iterable<Line<P>> lines) {
-        Objects.requireNonNull(lines, "lines is null");
-        return isDirectedAcyclicGraph(lines, findAllNode(lines));
-    }
-
-    /**
-     * 给定可迭代对象 lines 和 all ，返回lines（n个有向图）的n个头节点（开始节点）<br>
+     * 给定可迭代对象 lines 和 all ，返回n个头节点（开始节点）<br>
      * 头节点定义：一定不为所有{@link Line#end()}指向的节点，可能为{@link Line#begin()}指向的节点(如果在lines中的话)，
      * 若找不到或没有头节点，则返回的Set为empty
      *
@@ -234,6 +221,21 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
         }
         headers.removeAll(ends);
         return headers;
+    }
+
+    /**
+     * 给定可迭代对象 lines，返回n个头节点（开始节点）<br>
+     * 头节点定义：一定不为所有{@link Line#end()}指向的节点，可能为{@link Line#begin()}指向的节点(如果在lines中的话)，
+     * 若找不到或没有头节点，则返回的Set为empty
+     *
+     * @param lines 包含n个 begin -> end 的结构，有向线段
+     * @param <P>   节点类型（line对象 begin 和 end 的类型）
+     * @return n个头节点（开始节点）,若找不到头节点，则Set为empty
+     * @throws NullPointerException 当给定的lines为空时
+     * @apiNote 该方法内使用HashSet做差集，P类型是否实现equals和hashcode应在业务侧做考量
+     */
+    public static <P> Set<P> findHeaderNodes(Iterable<Line<P>> lines) {
+        return findHeaderNodes(lines, findAllNode(lines));
     }
 
     /**
@@ -273,8 +275,8 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * 也被认为是头节点
      */
     public static <P> LinkedList<List<P>> orderDAGQueue(Iterable<Line<P>> lines,
-                                                   Iterable<P> all,
-                                                   Iterable<P> headers) {
+                                                        Iterable<P> all,
+                                                        Iterable<P> headers) {
         List<Line<P>> findLines = Iter.toStream(lines).toList();
         List<P> findAll = Iter.toStream(all).toList();
         List<P> findHeaders = Iter.toStream(headers).toList();
@@ -354,7 +356,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @see #findHeaderNodes(Iterable, Iterable)
      */
     public static <P> LinkedList<List<P>> orderDAGQueue(Iterable<Line<P>> lines,
-                                                   Iterable<P> all) {
+                                                        Iterable<P> all) {
         return orderDAGQueue(lines, all, findHeaderNodes(lines, all));
     }
 
@@ -383,6 +385,99 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
                     IllegalStateException::new, "lines is not a directed acyclic graph");
             return orderDAGQueue(lines, all);
         });
+    }
+
+    /**
+     * 给定n个线段，判断这些线段能否构成树（可能不是一颗）<br>
+     * 即所有{@link Line#end()}均有且只有一个父节点
+     *
+     * @param lines n个线段
+     * @param <P>   节点类型
+     * @return true 可以构成树，反之则不能
+     * @throws IllegalStateException 当给定的可迭代对象中没有任何元素时
+     * @throws NullPointerException  当给定的可迭代对象为空时
+     * @apiNote 该方法内会使用P类型做MapKey来计算出度和入度，遂P类型是否实现equals和hashcode应在业务侧做考量
+     */
+    public static <P> boolean isTree(Iterable<Line<P>> lines) {
+        if (isNoLoop(lines)) {
+            List<Line<P>> all = Iter.toStream(lines).toList();
+            // 入度初始化全0
+            Map<P, Integer> inDegree = all.stream()
+                    .map(Line::end)
+                    .distinct()
+                    .collect(Collectors.toMap(Function.identity(), n -> 0));
+            for (Line<P> l : lines) {
+                P end = l.end();
+                Integer i = inDegree.computeIfPresent(end, (k, v) -> v + 1);
+                if (Objects.equals(i, 2)) return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 给定n个线段，判断这些线段中没有循环边（环）<br>
+     * <pre>
+     *     {@code
+     *     List<Line<String>> loopLines = List.of(
+     *          Line.of("a", "b"),
+     *          Line.of("b", "c"),
+     *          Line.of("c", "a")
+     *     );
+     *     Assert.isFalse(isNoLoop(loopLines));
+     *     List<Line<String>> noLoopLines = List.of(
+     *          Line.of("a", "b"),
+     *          Line.of("b", "c")
+     *     );
+     *     Assert.isTrue(isNoLoop(noLoopLines));
+     *     }
+     * </pre>
+     *
+     * @param lines n个线段
+     * @param <P>   节点类型
+     * @return true 没有循环边，反之则有
+     * @throws IllegalStateException 当给定的可迭代对象中没有任何元素时
+     * @throws NullPointerException  当给定的可迭代对象为空时
+     * @apiNote 该方法内会使用P类型做MapKey来计算出度和入度，遂P类型是否实现equals和hashcode应在业务侧做考量
+     * @see #isDirectedAcyclicGraph(Iterable, Iterable)
+     */
+    public static <P> boolean isNoLoop(Iterable<Line<P>> lines) {
+
+        Objects.requireNonNull(lines, "lines is null");
+        List<Line<P>> allLines = Iter.toStream(lines).toList();
+        Err.realIf(allLines.isEmpty(), IllegalStateException::new, "not found any line");
+        Map<P, List<P>> graph = new HashMap<>();
+        Map<P, Integer> inDegree = new HashMap<>();
+        // 构建图和入度表
+        for (Line<P> l : allLines) {
+            graph.computeIfAbsent(l.begin(), k -> new ArrayList<>()).add(l.end());
+            // 入度1
+            inDegree.put(l.end(), inDegree.getOrDefault(l.end(), 0) + 1);
+            // 入度0
+            inDegree.putIfAbsent(l.begin(), 0);
+        }
+        Queue<P> queue = new LinkedList<>();
+        // 初始设定所有入度为0的开始走
+        inDegree.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(0))
+                .map(Map.Entry::getKey)
+                .forEach(queue::add);
+
+        int count = 0;
+        while (!queue.isEmpty()) {
+            P begin = queue.poll();
+            count += 1; // 已归纳的入度为0的实体个数
+            for (P end : graph.getOrDefault(begin, Collections.emptyList())) {
+                Integer i = inDegree.computeIfPresent(end, (k, v) -> v - 1);
+                // 如果入度为0，则添加到队列
+                if (Objects.equals(i, 0)) {
+                    queue.add(end);
+                }
+            }
+        }
+        // 走到最后，如果入度为0的与点数量相同，则证明无环
+        return count == inDegree.size();
     }
 
     // static fn ----------------------------------------------------------------------
