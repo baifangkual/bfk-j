@@ -35,7 +35,9 @@
 
 该项目下代码以库形式发布在 [中央仓库](https://central.sonatype.com/namespace/io.github.baifangkual)
 
-最低兼容java17，各模块按需引入
+各模块最低兼容 `java17`，按需引入
+
+该项目版本遵循一般约定，在版本到达 `1.0.0` 之前，不保证API稳定性
 
 ```xml
 
@@ -44,25 +46,25 @@
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>mod-core</artifactId>
-        <version>${reversion.mod-core}</version>
+        <version>0.0.6</version>
     </dependency>
     <!-- ftp 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>mod-vfs-impl-ftp</artifactId>
-        <version>${reversion.mod-vfs-impl-ftp}</version>
+        <version>0.0.6</version>
     </dependency>
     <!-- smb 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>mod-vfs-impl-smb</artifactId>
-        <version>${reversion.mod-vfs-impl-smb}</version>
+        <version>0.0.6</version>
     </dependency>
     <!-- minio 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>mod-vfs-impl-minio</artifactId>
-        <version>${reversion.mod-vfs-impl-minio}</version>
+        <version>0.0.6</version>
     </dependency>
 </dependencies>
 ```
