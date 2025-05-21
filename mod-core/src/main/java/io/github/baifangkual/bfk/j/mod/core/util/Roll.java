@@ -48,11 +48,10 @@ public final class Roll {
         while (len != length) {
             if (len < length) { // 小了补
                 n.append(random.nextLong(1, Long.MAX_VALUE));
-                len = n.length();
             } else { // 多了削
                 n.delete(length, Integer.MAX_VALUE);
-                len = n.length();
             }
+            len = n.length();
         }
         return n.toString();
     }
@@ -261,14 +260,15 @@ public final class Roll {
                     seq = sequence.incrementAndGet() & MAX_SEQUENCE_VALUE;
                     if (seq == 0L) {
                         // 当进入该块，则表示毫秒数相同且序列号已达到最大, 线程则在该方法内类似忙自旋般等到至少下一毫秒才返回
-                        timestamp = loop2NextTime(lastSystemTime);
+                        timestamp = resetSeqAndLoop2NextTime(lastSystemTime);
                     }
                 } else {
                     // 不同毫秒内，序列号置为 1 - 3 随机数
-                    // todo perf，该set移动到loop2NextTime内，这样每次不同毫秒的请求就不用重新set
+                    // to do perf，该set移动到loop2NextTime内，这样每次不同毫秒的请求就不用重新set
                     //   也无需ThreadLocalRandom.current().nextLong(1, 3)，每次set0即可，已细想过不会重复
                     //  因为上sequence.incrementAndGet()会自增，遂当同一毫秒，sequence.set0之后的第二次，至少都是拿到seq1
-                    sequence.set(ThreadLocalRandom.current().nextLong(1, 3));
+                    // no need perf
+                    // sequence.set(ThreadLocalRandom.current().nextLong(1, 3));
                     seq = sequence.get();
                 }
 
@@ -282,6 +282,35 @@ public final class Roll {
             } finally {
                 LOCK.unlock();
             }
+        }
+
+        /**
+         * 重置序列码并自旋，方法内当前线程会忙自旋到至少下一毫秒再返回<br>
+         *
+         * @return 新时间
+         * @see #nowSystemTime()
+         */
+        private long resetSeqAndLoop2NextTime(long lastTimestamp) {
+            sequence.set(0); // no need perf
+            long timestamp = nowSystemTime();
+            while (timestamp <= lastTimestamp) { // 这里，一个毫秒内，线程将会忙到下一个毫秒才会返回
+                timestamp = nowSystemTime();
+            }
+            return timestamp;
+        }
+
+        /**
+         * 获取系统时间<br>
+         *
+         * @return 系统时间
+         * @apiNote 该方法在高并发情况下会频繁进行系统调用，
+         * 遂该方法在高并发情况下使用并不好，高并发情况下或应使用ScheduledExecutorService缓存时间戳值
+         */
+        private long nowSystemTime() {
+            /*
+            原有这里使用 ScheduledExecutorService 在高并发情境下优化 System.currentTimeMillis 的性能问题，这里省去了该过程
+             */
+            return System.currentTimeMillis();
         }
 
         /**
@@ -324,38 +353,6 @@ public final class Roll {
             // 获取 pid+电脑名
             String pidAndCptName = ManagementFactory.getRuntimeMXBean().getName();
             return (pidAndCptName.hashCode() & 0xffff) % (MAX_MACHINE_ID_VALUE + 1);
-        }
-
-
-        /**
-         * 自旋方法<br>
-         * 方法内当前线程会忙自旋到至少下一毫秒再返回
-         *
-         * @return 新时间
-         * @see #nowSystemTime()
-         */
-        private long loop2NextTime(long lastTimestamp) {
-            long timestamp = nowSystemTime();
-            while (timestamp <= lastTimestamp) { // 这里，一个毫秒内，线程将会忙到下一个毫秒才会返回
-                timestamp = nowSystemTime();
-            }
-            return timestamp;
-        }
-
-        /**
-         * 获取系统时间<br>
-         *
-         * @return 系统时间
-         * @apiNote 该方法在高并发情况下会频繁进行系统调用，
-         * 遂该方法在高并发情况下使用并不好，高并发情况下或应使用ScheduledExecutorService缓存时间戳值
-         */
-        private long nowSystemTime() {
-            /*
-            原有这里使用 ScheduledExecutorService 在高并发情境下优化 System.currentTimeMillis 的性能问题，这里省去了该过程
-             */
-//            return System.currentTimeMillis();
-            // todo test 高并发
-            return SystemClockT.INSTANCE.currentTimeMillis();
         }
 
     }
