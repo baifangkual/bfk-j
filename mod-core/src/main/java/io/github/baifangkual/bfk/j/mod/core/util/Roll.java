@@ -1,6 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.core.util;
 
 
+import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 
@@ -131,46 +132,47 @@ public final class Roll {
      * @author baifangkual
      * @since 2024/12/12 v0.0.3
      */
-    private static final class IdGenerator {
+    public static final class IdGenerator {
 
         // DEFINITION ==================================
         /**
-         * 时间起始标记点，作为基准，任何情况不应变动该值<br>
-         * 当前设定的时间戳值 1609459200000L 表示时间 2021-01-01 00:00:00，
-         * {@code 63 - SEQUENCE_BITS - MACHINE_ID_BITS - CENTER_ID_BITS} (41) 位为该雪花id时间戳最大位数，
-         * 遂当前实例可用到 2090-09-07 23:47:35
+         * 宇宙大爆炸时间<br>
+         * 当前设定值 1609459200000L 表示时间 2021-01-01 00:00:00(UTC/GMT+08:00)<br>
+         * 不能在 {@code System.currentTimeMillis()} 小于该值时使用
          */
-        private static final long EPOCH = 1609459200000L; // 2021-01-01 00:00:00
+        static final long THE_BIG_BANG_TIME = 1609459200000L;
+        /**
+         * 宇宙热寂时间<br>
+         * {@value THE_BIG_BANG_TIME} + 2199023255551L = 2090-09-07 23:47:35(UTC/GMT+08:00)<br>
+         * 不能在 {@code System.currentTimeMillis()} 大于该值时使用
+         */
+        static final long THE_HEAT_DEATH_OF_TIME = THE_BIG_BANG_TIME + 2199023255551L;
         /**
          * 数据中心区分，占多少bit，数据中心个数最多 {@value MAX_CENTER_ID_VALUE} 个
          */
-        private static final long CENTER_ID_BITS = 5L;
+        static final long CENTER_ID_BITS = 5L;
         /**
          * 机器码区分，占多少bit，机器最多区分 {@value MAX_MACHINE_ID_VALUE} 个
          */
-        private static final long MACHINE_ID_BITS = 7L;
+        static final long MACHINE_ID_BITS = 7L;
         /**
          * 同毫秒区分-序列码区分，占多少bit，每毫秒内可用的id数: {@value MAX_SEQUENCE_VALUE} 个
          */
-        private static final long SEQUENCE_BITS = 10L;
+        static final long SEQUENCE_BITS = 10L;
         /**
          * 最大的容忍回溯和闰秒的毫秒数，该值不宜过大，因为对回溯的抵抗将由线程的TIME-SLEEP负责
          */
-        private static final long MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY = 5L;
+        static final long MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY = 5L;
 
         // 最大值
-        private static final long MAX_CENTER_ID_VALUE = ~(-1L << CENTER_ID_BITS);
-        private static final long MAX_MACHINE_ID_VALUE = ~(-1L << MACHINE_ID_BITS);
-        private static final long MAX_SEQUENCE_VALUE = ~(-1L << SEQUENCE_BITS);
+        static final long MAX_CENTER_ID_VALUE = ~(-1L << CENTER_ID_BITS);
+        static final long MAX_MACHINE_ID_VALUE = ~(-1L << MACHINE_ID_BITS);
+        static final long MAX_SEQUENCE_VALUE = ~(-1L << SEQUENCE_BITS);
 
         // bit 偏移量
-        private static final long MACHINE_ID_OFFSET = MACHINE_ID_BITS + SEQUENCE_BITS;
-        private static final long TIMESTAMP_OFFSET = CENTER_ID_BITS + MACHINE_ID_BITS + SEQUENCE_BITS;
+        static final long CENTER_ID_OFFSET = MACHINE_ID_BITS + SEQUENCE_BITS;
+        static final long TIMESTAMP_OFFSET = CENTER_ID_BITS + MACHINE_ID_BITS + SEQUENCE_BITS;
 
-        // INSTANCE ====================================
-        private final Lock LOCK = new ReentrantLock();
-        // 当毫秒数相同且序列号消耗完的await
-        private final Condition AWAIT = LOCK.newCondition();
         // 区分01-数据中心
         private final long centerId;
         // 区分02-机器码
@@ -199,10 +201,10 @@ public final class Roll {
          */
         public IdGenerator(long machineId, long centerId) {
             if (machineId > MAX_MACHINE_ID_VALUE || machineId < 0) {
-                throw new IllegalArgumentException(String.format("machineId > %d or < 0", MAX_MACHINE_ID_VALUE));
+                throw new IllegalArgumentException(STF.f("machineId > {} or < 0", MAX_MACHINE_ID_VALUE));
             }
             if (centerId > MAX_CENTER_ID_VALUE || centerId < 0) {
-                throw new IllegalArgumentException(String.format("centerId > %d or < 0", MAX_CENTER_ID_VALUE));
+                throw new IllegalArgumentException(STF.f("centerId > {} or < 0", MAX_CENTER_ID_VALUE));
             }
             this.machineId = machineId;
             this.centerId = centerId;
@@ -221,67 +223,65 @@ public final class Roll {
          * @throws RuntimeException      当线程收到中断信号时
          * @apiNote 该方法依赖的底层方法在高并发情况下会频繁进行系统调用
          */
-        public long nextId() {
-            LOCK.lock();
-            try {
-                long timestamp = nowSystemTime();
-                // 可能闰秒，可能发生大回溯
-                if (timestamp < lastSystemTime) {
-                    long offset = lastSystemTime - timestamp;
-                    // 差值过小，可能闰秒，则等待
-                    if (offset <= MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY) {
-                        try {
-                            // 尝试休眠双倍差值后重新获取，再次校验
-                            if (!AWAIT.await(offset << 1, TimeUnit.MILLISECONDS)) {
-                                // 因为其他地方不会操纵CONDITION唤醒当前线程，遂该if块内代码一定不会发生，该内代码仅为屏蔽idea烦人提示
-                                throw new IllegalStateException("pass ... signal");
-                            }
-                            timestamp = nowSystemTime();
-                            // 等待结束后，如果新获取的仍小于，则证明时间又发生回溯，玩你妈，应抛出异常
-                            if (timestamp < lastSystemTime) {
-                                throw new IllegalStateException(String
-                                        .format("Clock moved backwards.  Refusing to generate id for %d milliseconds", lastSystemTime - timestamp));
-                            }
-                        } catch (InterruptedException e) {
-                            // 恢复中断信号，因为闰秒或极小的时间回溯导致的休眠情况几乎不可能发生或在正常情况下被观测到，遂线程中断信号几乎不会在当前代码段内导致异常中断
-                            Thread.currentThread().interrupt();
-                            throw new RuntimeException("Thread InterruptedException");
+        public synchronized long nextId() {
+            long timestamp = nowSystemTime();
+            if (timestamp < lastSystemTime) {  // 可能闰秒，可能发生大回溯
+                long offset = lastSystemTime - timestamp;
+                if (offset <= MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY) {  // 差值小于设定可容忍值，等待
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(offset << 1);  // 尝试休眠双倍差值后重新获取，再次校验
+                        timestamp = nowSystemTime();
+                        if (timestamp < lastSystemTime) {  // 等待结束后，如果新获取的仍小于，则证明时间又发生回溯
+                            throw new IllegalStateException(STF
+                                    .f("系统时间发生回溯，拒绝在 {} 毫秒内生成Id", lastSystemTime - timestamp));
                         }
-                    } else {
-                        // 大的回溯，直接他妈异常，玩你妈
-                        throw new IllegalStateException(String.format("Clock moved backwards.  Refusing to generate id for %d milliseconds", offset));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt(); // 恢复中断信号，闰秒或极小回溯的线程休眠情况几乎不可能发生或被观测到
+                        throw new IllegalStateException(e);
                     }
+                } else { // 大的回溯，直接他妈异常
+                    throw new IllegalStateException(STF.f("系统时间发生回溯，拒绝在 {} 毫秒内生成Id", offset));
                 }
-
-                long seq;
-
-                if (lastSystemTime == timestamp) {
-                    // 相同毫秒内，序列号自增
-                    seq = sequence.incrementAndGet() & MAX_SEQUENCE_VALUE;
-                    if (seq == 0L) {
-                        // 当进入该块，则表示毫秒数相同且序列号已达到最大, 线程则在该方法内类似忙自旋般等到至少下一毫秒才返回
-                        timestamp = resetSeqAndLoop2NextTime(lastSystemTime);
-                    }
-                } else {
-                    // 不同毫秒内，序列号置为 1 - 3 随机数
-                    // to do perf，该set移动到loop2NextTime内，这样每次不同毫秒的请求就不用重新set
-                    //   也无需ThreadLocalRandom.current().nextLong(1, 3)，每次set0即可，已细想过不会重复
-                    //  因为上sequence.incrementAndGet()会自增，遂当同一毫秒，sequence.set0之后的第二次，至少都是拿到seq1
-                    // no need perf
-                    // sequence.set(ThreadLocalRandom.current().nextLong(1, 3));
-                    seq = sequence.get();
-                }
-
-                lastSystemTime = timestamp;
-
-                // 时间戳部分 | 数据中心部分 | 机器标识部分 | 序列号部分
-                return ((timestamp - EPOCH) << TIMESTAMP_OFFSET)
-                       | (centerId << MACHINE_ID_OFFSET)
-                       | (machineId << SEQUENCE_BITS)
-                       | seq;
-            } finally {
-                LOCK.unlock();
             }
+
+            long seq;
+
+            if (lastSystemTime == timestamp) {
+                // 相同毫秒内，序列号自增
+                seq = sequence.incrementAndGet() & MAX_SEQUENCE_VALUE;
+                if (seq == 0L) {
+                    // 当进入该块，则表示毫秒数相同且序列号已达到最大, 线程则在该方法内忙自旋到至少下一毫秒才返回
+                    timestamp = resetSeqAndLoop2NextTime(lastSystemTime);
+                }
+            } else {
+                // 不同毫秒内，序列号置为 1 - 3 随机数
+                // to do perf，该set移动到loop2NextTime内，这样每次不同毫秒的请求就不用重新set
+                //   也无需ThreadLocalRandom.current().nextLong(1, 3)，每次set0即可，已细想过不会重复
+                //  因为上sequence.incrementAndGet()会自增，遂当同一毫秒，sequence.set0之后的第二次，至少都是拿到seq1
+                // no need perf
+                // sequence.set(ThreadLocalRandom.current().nextLong(1, 3));
+                seq = sequence.get();
+            }
+
+            lastSystemTime = timestamp;
+
+            // 时间戳部分 | 数据中心部分 | 机器标识部分 | 序列号部分
+            return genId(timestamp, centerId, machineId, seq);
+        }
+
+        public static long genId(long timeMillis, long centerId, long machineId, long sequence) {
+            // 时间戳部分 | 数据中心部分 | 机器标识部分 | 序列号部分
+            return ((timeMillis - THE_BIG_BANG_TIME) << TIMESTAMP_OFFSET)
+                   | (centerId << CENTER_ID_OFFSET)
+                   | (machineId << SEQUENCE_BITS)
+                   | sequence;
+        }
+
+        public static long toId(IdRecord idRecord) {
+            return genId(idRecord.genTimeMillis,
+                    idRecord.centerId,
+                    idRecord.machineId,
+                    idRecord.sequence);
         }
 
         /**
@@ -355,5 +355,29 @@ public final class Roll {
             return (pidAndCptName.hashCode() & 0xffff) % (MAX_MACHINE_ID_VALUE + 1);
         }
 
+    }
+
+    /**
+     * {@link IdGenerator}生成的Id结构记录
+     *
+     * @param genTimeMillis 生成时间
+     * @param centerId      数据中心Id
+     * @param machineId     机器码
+     * @param sequence      序列号
+     */
+    public record IdRecord(long genTimeMillis, long centerId, long machineId, long sequence) {
+        /**
+         * 接收一个{@link IdGenerator#nextId()}生成的Id，返回该Id的结构记录
+         *
+         * @param snowflakeId 雪花Id
+         * @return Id结构记录
+         */
+        public static IdRecord ofId(long snowflakeId) {
+            long genTimeMillis = (snowflakeId >> IdGenerator.TIMESTAMP_OFFSET) + IdGenerator.THE_BIG_BANG_TIME;
+            long centerId = (~(-1 << IdGenerator.CENTER_ID_BITS)) & (snowflakeId >> IdGenerator.CENTER_ID_OFFSET);
+            long machineId = (~(-1 << IdGenerator.MACHINE_ID_BITS)) & (snowflakeId >> IdGenerator.SEQUENCE_BITS);
+            long sequence = (~(-1 << IdGenerator.SEQUENCE_BITS)) & snowflakeId;
+            return new IdRecord(genTimeMillis, centerId, machineId, sequence);
+        }
     }
 }

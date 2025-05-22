@@ -1,6 +1,5 @@
 package io.github.baifangkual.bfk.j.mod.core.util;
 
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -8,12 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.List;
 
 /**
  * @author baifangkual
@@ -22,6 +16,20 @@ import java.util.stream.IntStream;
 @SuppressWarnings({"CommentedOutCode", "PointlessArithmeticExpression", "RedundantSuppression"})
 public class RollTest {
 
+    @Test
+    public void test1() {
+        ZoneId zoneId = ZoneId.systemDefault();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime sTime = LocalDateTime
+                .ofInstant(Instant.ofEpochMilli(Roll.IdGenerator.THE_BIG_BANG_TIME), zoneId);
+        Assertions.assertTrue(sTime.isBefore(now));
+        LocalDateTime eTime = LocalDateTime
+                .ofInstant(Instant.ofEpochMilli(Roll.IdGenerator.THE_BIG_BANG_TIME + 2199023255551L), zoneId);
+        LocalDateTime eTime2 = LocalDateTime
+                .ofInstant(Instant.ofEpochMilli(Roll.IdGenerator.THE_BIG_BANG_TIME + 4398046511103L), zoneId);
+        Assertions.assertTrue(eTime.isAfter(now));
+        //System.out.println(eTime2);
+    }
 
     @Test
     public void test() {
@@ -37,7 +45,7 @@ public class RollTest {
     public void test2() {
         for (int i = 0; i < 100; i++) {
             String num = Roll.fixedLengthNumber(i + 1);
-            System.out.println(num);
+            //System.out.println(num);
             Assertions.assertEquals(num.length(), i + 1);
         }
     }
@@ -134,10 +142,11 @@ public class RollTest {
 //            if (befBox != null) {
 //                if (befBox.idr.timeOffset != cur.timeOffset && cur.sequence == 0) {
 //                    threadLoopTimes.get(curBox.threadNum).incrementAndGet();
-////                    System.out.println(STF
-////                            .f("bef: {}", befBox));
-////                    System.out.println(STF
-////                            .f("cur: {}", curBox));
+
+    /// /                    System.out.println(STF
+    /// /                            .f("bef: {}", befBox));
+    /// /                    System.out.println(STF
+    /// /                            .f("cur: {}", curBox));
 //                }
 //            }
 //
@@ -160,25 +169,35 @@ public class RollTest {
 //        System.out.println(STF.f("no重复: {}", countSize == collect.size()));
 //        Assertions.assertEquals(countSize, collect.size());
 
-        // 共获取到 / loop次
-        // 10s:
-        // 修改重置序号前
-        // 2033663/1986 1313791/1283 1314815/1284 3876412/3784 3235932/3160 1978368/1932
-        // 3910624/3818 2656172/2593
-        // 修改重置序号后
-        // 2603010/2543 2334723/2281 3278850/3203 3256324/3181 2752517/2689 3286020/3210
-        // 20s:
-        // 修改重置序号前
-        // 7618936/7437 4427720/4322 5751358/5613
-        // 修改重置序号后
-        // 6288389/6142 3817474/3729 3873796/3784 8190984/8000
-        // 1s:
-        // 修改重置序号前
-        // 129023/126 130047/127 131278/128 723834/706 197632/193 197631/193 | 2005180/1957 1996668/1948 2011180/1962
-        // 修改重置序号后
-        // 196419/193 129923/128 129923/128 128900/127 128900/127 509456/499 | 441940/433 1972349/1929 1975420/1932
+    // 共获取到 / loop次
+    // 10s:
+    // 修改重置序号前
+    // 2033663/1986 1313791/1283 1314815/1284 3876412/3784 3235932/3160 1978368/1932
+    // 3910624/3818 2656172/2593
+    // 修改重置序号后
+    // 2603010/2543 2334723/2281 3278850/3203 3256324/3181 2752517/2689 3286020/3210
+    // 20s:
+    // 修改重置序号前
+    // 7618936/7437 4427720/4322 5751358/5613
+    // 修改重置序号后
+    // 6288389/6142 3817474/3729 3873796/3784 8190984/8000
+    // 1s:
+    // 修改重置序号前
+    // 129023/126 130047/127 131278/128 723834/706 197632/193 197631/193 | 2005180/1957 1996668/1948 2011180/1962
+    // 修改重置序号后
+    // 196419/193 129923/128 129923/128 128900/127 128900/127 509456/499 | 441940/433 1972349/1929 1975420/1932
 //    }
-
+    @Test
+    public void test3() {
+        ZoneId zoneId = ZoneId.systemDefault();
+        for (int i = 0; i < 100; i++) {
+            long id = Roll.nextId();
+            Roll.IdRecord idObj = Roll.IdRecord.ofId(id);
+            //System.out.println(idObj);
+            LocalDateTime genTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(idObj.genTimeMillis()), zoneId);
+            Assertions.assertTrue(genTime.isBefore(LocalDateTime.now()));
+        }
+    }
 
     record ShowBox(IdR idr, String startTime, String endTime, int threadNum) {
     }
