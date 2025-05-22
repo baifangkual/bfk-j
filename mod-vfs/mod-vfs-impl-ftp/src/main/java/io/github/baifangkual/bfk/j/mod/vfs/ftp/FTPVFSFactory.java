@@ -20,7 +20,7 @@ public class FTPVFSFactory implements VFSFactory {
     }
 
     @Override
-    public VFS create(Cfg cfg) {
+    public VFS build(Cfg cfg) {
         return new FTPVirtualFileSystem(cfg);
     }
 

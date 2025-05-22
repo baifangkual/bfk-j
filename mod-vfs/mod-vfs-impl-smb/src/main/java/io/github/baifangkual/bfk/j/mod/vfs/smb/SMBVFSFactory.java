@@ -21,7 +21,7 @@ public class SMBVFSFactory implements VFSFactory {
 
 
     @Override
-    public VFS create(Cfg cfg) {
+    public VFS build(Cfg cfg) {
         return new SMBShareRootVirtualFileSystem(cfg);
     }
 }

@@ -21,7 +21,7 @@ public class MinioVFSFactory implements VFSFactory {
 
 
     @Override
-    public VFS create(Cfg cfg) {
+    public VFS build(Cfg cfg) {
         /*
         vfsType.minio if cfg not found bucket, vPath.root is all bucket
          */

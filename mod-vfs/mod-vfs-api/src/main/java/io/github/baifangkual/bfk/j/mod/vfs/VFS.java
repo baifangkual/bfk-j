@@ -40,7 +40,7 @@ import java.util.Optional;
  *     // 配置VFS所需参数
  *     Cfg vfsConfig = ...;
  *     // 通过VFS spi获取实例
- *     VFS vfs = VFSFactoryProvider.create(vfsType, vfsConfig);
+ *     VFS vfs = VFSFactoryProvider.build(vfsType, vfsConfig);
  *     // 获取到vfs的“根”，可以以根为起点，在目录中游走
  *     VPath root = vfs.root();
  *     VPath p1 = root.join("abc");

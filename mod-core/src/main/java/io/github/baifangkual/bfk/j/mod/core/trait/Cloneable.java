@@ -3,8 +3,7 @@ package io.github.baifangkual.bfk.j.mod.core.trait;
 import io.github.baifangkual.bfk.j.mod.core.lang.R;
 
 /**
- * <b>可克隆的</b><br>
- * 克隆自身
+ * <b>能够浅拷贝自身</b><br>
  *
  * @param <T> 自限定，自身类型
  * @author baifangkual

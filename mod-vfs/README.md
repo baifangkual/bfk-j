@@ -10,7 +10,7 @@
 // 构建或从他处转换至参数对象
 Cfg cfg = Cfg.of("...");
 // 构建 虚拟文件系统
-VFS vfs = VFSFactoryProvider.create(vfsType, cfg);
+VFS vfs = VFSFactoryProvider.build(vfsType, cfg);
 ```
 VFS、VPath、VFile的关系和操作等，查看相应的类文档：
 * io.github.baifangkual.bfk.j.mod.vfs.VFS

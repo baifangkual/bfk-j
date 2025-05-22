@@ -7,10 +7,15 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * <b>可迭代标记接口</b><br>
- * 类型实现该标记的{@link #iterator()}方法后，便可拥有系列方法行为，可
+ * <b>可迭代标记</b><br>
+ * 类型实现该标记的{@link #iterator()}方法后，便可拥有系列方法行为，
+ * 因该接口继承自 {@link Iterable}，遂可以使用语法糖 {@code for-each}<br>
  *
  * @author baifangkual
+ * @see #toSet(Supplier)
+ * @see #toList(Supplier)
+ * @see #stream()
+ * @see #parallelStream()
  * @since 2025/5/12 v0.0.4
  */
 public interface Iter<T> extends Iterable<T> {

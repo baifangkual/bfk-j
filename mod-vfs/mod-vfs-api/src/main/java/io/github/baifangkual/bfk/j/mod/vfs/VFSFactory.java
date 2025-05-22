@@ -2,7 +2,7 @@ package io.github.baifangkual.bfk.j.mod.vfs;
 
 
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.core.mark.Factory;
+import io.github.baifangkual.bfk.j.mod.core.trait.Factory;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSBuildingFailException;
 
 /**
@@ -29,5 +29,5 @@ public interface VFSFactory extends Factory<Cfg, VFS> {
      * @throws VFSBuildingFailException 当给定的参数缺失、异常、无法构造VFS实例时
      */
     @Override
-    VFS create(Cfg cfg) throws VFSBuildingFailException;
+    VFS build(Cfg cfg) throws VFSBuildingFailException;
 }

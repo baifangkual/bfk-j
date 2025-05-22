@@ -5,9 +5,9 @@ import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
 
 /**
- * <b>可关闭的</b><br>
+ * <b>能够被关闭</b><br>
  * 表示 有状态对象，该对象有是否已关闭的状态，并且能够明确关闭其，可使用{@link #isClosed()}查看该是否已被关闭<br>
- * 因为该接口继承了{@link AutoCloseable}，遂仍旧可使用语法糖 try-with-resource<br>
+ * 因为该接口继承了{@link AutoCloseable}，遂仍旧可使用语法糖 {@code try-with-resource}<br>
  * 该接口不对实现类的重复调用{@link #close()} 方法做约束<br>
  *
  * @author baifangkual

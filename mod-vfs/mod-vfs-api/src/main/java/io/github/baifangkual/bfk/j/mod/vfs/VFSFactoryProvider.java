@@ -16,9 +16,9 @@ import java.util.*;
  * 可用这些虚拟文件系统工厂创建虚拟文件系统实例{@link VFS}
  *
  * @author baifangkual
- * @see #create(VFSType, Cfg)
+ * @see #build(VFSType, Cfg)
  * @see #getFactory(VFSType)
- * @see #tryCreate(VFSType, Cfg)
+ * @see #tryBuild(VFSType, Cfg)
  * @since 2024/8/30 v0.0.5
  */
 public class VFSFactoryProvider {
@@ -70,14 +70,14 @@ public class VFSFactoryProvider {
      * @throws NullPointerException     给定的虚拟文件系统类型为空时
      * @throws VFSBuildingFailException 找不到类型指定的虚拟文件系统实现时
      */
-    public static VFS create(VFSType type, Cfg cfg) {
+    public static VFS build(VFSType type, Cfg cfg) {
         VFSFactory factory = getFactory(type)
                 .orElseThrow(() -> new VFSBuildingFailException(STF.f("not found vfs impl for {}", type)));
-        return factory.create(cfg);
+        return factory.build(cfg);
     }
 
-    public static R<VFS, Exception> tryCreate(VFSType type, Cfg cfg) {
-        return R.ofCallable(() -> create(type, cfg));
+    public static R<VFS, Exception> tryBuild(VFSType type, Cfg cfg) {
+        return R.ofCallable(() -> build(type, cfg));
     }
 
     public static Optional<VFSFactory> getFactory(VFSType type) {
