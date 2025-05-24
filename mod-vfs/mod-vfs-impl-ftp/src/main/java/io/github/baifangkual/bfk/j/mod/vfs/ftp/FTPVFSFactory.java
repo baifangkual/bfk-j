@@ -15,7 +15,7 @@ import io.github.baifangkual.bfk.j.mod.vfs.VFSType;
 @AutoService(VFSFactory.class)
 public class FTPVFSFactory implements VFSFactory {
     @Override
-    public VFSType support() {
+    public VFSType type() {
         return VFSType.ftp;
     }
 

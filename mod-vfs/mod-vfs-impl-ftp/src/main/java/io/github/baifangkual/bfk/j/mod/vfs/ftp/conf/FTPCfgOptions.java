@@ -3,10 +3,11 @@ package io.github.baifangkual.bfk.j.mod.vfs.ftp.conf;
 
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
 import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst;
+import io.github.baifangkual.bfk.j.mod.vfs.VFSFactory;
 
 /**
  * ftp vfs 连接配置<br>
- * 可通过{@link io.github.baifangkual.bfk.j.mod.vfs.VFSFactoryProvider}创建{@link io.github.baifangkual.bfk.j.mod.vfs.VFS}
+ * 可通过{@link VFSFactory}创建{@link io.github.baifangkual.bfk.j.mod.vfs.VFS}
  *
  * @author baifangkual
  * @since 2024/9/9 v0.0.5
