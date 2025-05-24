@@ -1,17 +1,26 @@
 package io.github.baifangkual.bfk.j.mod.core.util;
 
+import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+import static io.github.baifangkual.bfk.j.mod.core.util.Idg.EPOCH_END;
 
 /**
  * @author baifangkual
  * @since 2025/5/22
  */
+@SuppressWarnings({"ConstantValue", "PointlessArithmeticExpression", "CommentedOutCode"})
 public class IdgTest {
     @Test
     public void test1() {
@@ -20,12 +29,13 @@ public class IdgTest {
         LocalDateTime sTime = LocalDateTime
                 .ofInstant(Instant.ofEpochMilli(Idg.EPOCH_BEGIN), zoneId);
         Assertions.assertTrue(sTime.isBefore(now));
-        LocalDateTime eTime = LocalDateTime
-                .ofInstant(Instant.ofEpochMilli(Idg.EPOCH_BEGIN + 2199023255551L), zoneId);
-        LocalDateTime eTime2 = LocalDateTime
-                .ofInstant(Instant.ofEpochMilli(Idg.EPOCH_BEGIN + 4398046511103L), zoneId);
-        Assertions.assertTrue(eTime.isAfter(now));
-        //System.out.println(eTime2);
+        //long epochOffset = ~(-1L << (63  - MACHINE_ID_BITS - SEQUENCE_BITS));
+        LocalDateTime testLenEpochOffset = LocalDateTime
+                .ofInstant(Instant.ofEpochMilli(EPOCH_END), zoneId);
+        Assertions.assertTrue(testLenEpochOffset.isAfter(now));
+        Assertions.assertTrue(sTime.isBefore(now));
+        Assertions.assertTrue(sTime.isBefore(testLenEpochOffset));
+        //System.out.println(testLenEpochOffset);
     }
 
     @Test
@@ -34,164 +44,185 @@ public class IdgTest {
         for (int i = 0; i < 100; i++) {
             long id = Idg.longId();
             Idg.Id idObj = Idg.Id.ofLongId(id);
-            //System.out.println(idObj);
+            //System.out.println(STF.f("systemCurrentTimeMillis: {}", System.currentTimeMillis()));
+            //System.out.println(STF.f("longId: {}, IdObj: {}，toLongId: {}", id, idObj, idObj.toLongId()));
             LocalDateTime genTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(idObj.genTimeMillis()), zoneId);
             Assertions.assertTrue(genTime.isBefore(LocalDateTime.now()));
         }
     }
 
-    record ShowBox(IdR idr, String startTime, String endTime, int threadNum) {
-    }
-
-    record IdR(long timeOffset, long centerId, long machineId, long sequence) {
-        static IdR ofSId(long sId) {
-            long sequence = (~(-1 << 10)) & sId;
-            long machineId = (~(-1 << 7)) & (sId >> 10);
-            long centerId = (~(-1 << 5)) & (sId >> 17);
-            long timeOffset = sId >> 22;
-            return new IdR(timeOffset, centerId, machineId, sequence);
-        }
+    record ShowBox(Idg.Id idr, String startTime, String endTime, int threadNum) {
     }
 
     record AsyncR(long startMils, long endMils, List<Long> genIds, int threadNum) {
     }
 
 
-//    @Test
-//    public void test3() {
-//
-//        // ======== test time=========
-//        final int testTimeMils = 1 * 1000;
-//        final int collectorResultSize = 10000;
-//
-//        SystemClockT.INSTANCE.initialize(); // init
-//        int cupNum = Runtime.getRuntime().availableProcessors();
-//        AtomicInteger cup = new AtomicInteger(0);
-//        ZoneId zoneId = ZoneId.systemDefault();
-//        System.out.println("cupNum = " + cupNum);
-//        System.out.println("testTimeSeconds = " + testTimeMils / 1000);
-//        System.out.println("start!");
-//        List<CompletableFuture<AsyncR>> allFutures = new ArrayList<>();
-//
-//        for (int i = 0; i < cupNum; i++) {
-//            CompletableFuture<AsyncR> asyncR = CompletableFuture.supplyAsync(() -> {
-//                final int threadNum = cup.getAndIncrement();
+    @Test
+    public void test4() {
+
+        // 不跑下面的压测，因为太久了 MAN！What can I say？
+        // 测试中不要使用 AtomicLong fakeSysClock 自增，否则生成的ID太多，电脑要炸了
+        if (true) {
+            return;
+        }
+
+        // ======== test time=========
+        final int testTimeMils = 1 * 1000;
+        final int collectorResultSize = 100000;
+
+        //SystemClockT.INSTANCE.initialize(); // init
+        int cupNum = Runtime.getRuntime().availableProcessors();
+        ZoneId zoneId = ZoneId.systemDefault();
+        System.out.println("cupNum = " + cupNum);
+        System.out.println("testTimeSeconds = " + testTimeMils / 1000);
+        System.out.println("start!");
+        List<CompletableFuture<AsyncR>> allFutures = new ArrayList<>();
+        int testCupNum = 10;
+        System.out.println("testCupNum = " + testCupNum);
+
+        Set<Integer> threadNums = new CopyOnWriteArraySet<>();
+
+        // use sysClock
+        //SystemClock.INSTANCE.initialize();
+        //final Idg idg = new Idg(1L, SystemClock.INSTANCE::currentTimeMillis);
+        // use fake sysClock
+        //=====================================
+        // DON'T USE THIS！！！ 太多了，电脑要炸了
+        //AtomicLong fakeSysClock = new AtomicLong(System.currentTimeMillis());
+        //final Idg idg = new Idg(1L, fakeSysClock::getAndIncrement);
+
+        // no use sysClock
+        final Idg idg = new Idg(1L, System::currentTimeMillis);
+
+        for (int i = 0; i < testCupNum; i++) {
+            CompletableFuture<AsyncR> asyncR = CompletableFuture.supplyAsync(() -> {
+                Thread currentTrd = Thread.currentThread();
+                long id = currentTrd.getId();
+                final int threadNum = (int) id;
+                threadNums.add(threadNum);
 //                final SystemClockT clock = SystemClockT.INSTANCE;
-//                // collector result 不在线程内使用阻塞的system.out
-//                final List<Long> genIds = new ArrayList<>(collectorResultSize);
-//                // start ---
-//                long startMils = clock.currentTimeMillis();
-//                while (clock.currentTimeMillis() - startMils < testTimeMils) {
-//                    long l = Roll.nextId();
-//                    genIds.add(l);
-//                }
-//                long endMils = clock.currentTimeMillis();
-//                return new AsyncR(startMils, endMils, genIds, threadNum);
-//            });
-//            allFutures.add(asyncR);
-//        }
-//
-//        // 主线程等待子都结束
-//        CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0])).join();
-//        // 处理
-//        System.out.println("allFutures end! process result!");
-//        final Comparator<IdR> fnSortIdR = Comparator
-//                .comparingLong(IdR::timeOffset)
-//                // eq no need comp...
-////                .thenComparingLong(IdR::centerId)
-////                .thenComparingLong(IdR::machineId)
-//                .thenComparingLong(IdR::sequence);
-//
-//        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss:SSS");
-//        List<ShowBox> allResults = new LinkedList<>();
-//
-//        for (CompletableFuture<AsyncR> f : allFutures) {
-//            AsyncR threadR = f.join();
-//            long startMils = threadR.startMils;
-//            long endMils = threadR.endMils;
-//            LocalDateTime start = LocalDateTime.ofInstant(Instant.ofEpochMilli(startMils), zoneId);
-//            LocalDateTime end = LocalDateTime.ofInstant(Instant.ofEpochMilli(endMils), zoneId);
-//            String strStart = start.format(dtf);
-//            String strEnd = end.format(dtf);
-//
-//            // 都装好收集
-//            threadR.genIds.stream()
-//                    .map(IdR::ofSId)
-//                    .map(idr -> new ShowBox(idr, strStart, strEnd, threadR.threadNum))
-//                    .forEach(allResults::add);
-//        }
-//
-//
-//        List<ShowBox> sorts = new LinkedList<>();
-//        allResults.stream()
-//                .sorted((sb1, sb2) -> fnSortIdR.compare(sb1.idr, sb2.idr))
-//                .forEach(sorts::add);
-//        System.out.println("result count = " + allResults.size());
-//
-//        allResults.clear();
-//        System.gc(); // help gc
-//
-//        AtomicInteger counter = new AtomicInteger(0);
-//        // 5秒约130多万次 太多阻塞System.out 不用这种
-////        for (ShowBox box : sorts) {
-////            System.out.println(STF
-////                    .f("r[{}] t:{}, s:{}, e:{}, id: {}",
-////                            counter.incrementAndGet(), box.threadNum, box.startTime, box.endTime, box.idr));
-////        }
-//
-//
-//        Map<Integer, AtomicInteger> threadLoopTimes = new HashMap<>();
-//        IntStream.range(0, cupNum).forEach(i -> threadLoopTimes.put(i, new AtomicInteger(0)));
-//        AtomicInteger allThreadLoopTimes = new AtomicInteger(0);
-//        ShowBox befBox = null;
-//        for (ShowBox curBox : sorts) {
-//            IdR cur = curBox.idr;
-//            if (befBox != null) {
-//                if (befBox.idr.timeOffset != cur.timeOffset && cur.sequence == 0) {
-//                    threadLoopTimes.get(curBox.threadNum).incrementAndGet();
+                // collector result 不在线程内使用阻塞的system.out
+                final List<Long> genIds = new ArrayList<>(collectorResultSize);
+                // start ---
+                long startMils = System.currentTimeMillis();
+                while (System.currentTimeMillis() - startMils < testTimeMils) {
+                    long l = idg.nextId();
+                    genIds.add(l);
+                }
+                long endMils = System.currentTimeMillis();
+                return new AsyncR(startMils, endMils, genIds, threadNum);
+            });
+            allFutures.add(asyncR);
+        }
 
-    /// /                    System.out.println(STF
-    /// /                            .f("bef: {}", befBox));
-    /// /                    System.out.println(STF
-    /// /                            .f("cur: {}", curBox));
-//                }
-//            }
-//
-//            if (cur.sequence == 0) {
-//                allThreadLoopTimes.getAndIncrement();
-//            }
-//
-//            befBox = curBox;
-//        }
-//        System.out.println("allThreadLoopTimes count = " + allThreadLoopTimes.get());
-//        threadLoopTimes.forEach((key, value) -> System.out.println(STF
-//                .f("t: {}, LoopTimes count: {}", key, value.get())));
-//
-//        // 看看是否冲突
-//        int countSize = sorts.size();
-//        Set<IdR> collect = sorts.stream().map(ShowBox::idr)
-//                .collect(Collectors.toSet());
-//        System.out.println(STF.
-//                f("bef去重: {}, after:{}", countSize, collect.size()));
-//        System.out.println(STF.f("no重复: {}", countSize == collect.size()));
-//        Assertions.assertEquals(countSize, collect.size());
+        // 主线程等待子都结束
+        CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0])).join();
+        // 处理
+        System.out.println("allFutures end! process result!");
+        final Comparator<Idg.Id> fnSortIdR = Comparator
+                .comparingLong(Idg.Id::genTimeMillis)
+                .thenComparingLong(Idg.Id::sequence);
 
-    // 共获取到 / loop次
-    // 10s:
-    // 修改重置序号前
-    // 2033663/1986 1313791/1283 1314815/1284 3876412/3784 3235932/3160 1978368/1932
-    // 3910624/3818 2656172/2593
-    // 修改重置序号后
-    // 2603010/2543 2334723/2281 3278850/3203 3256324/3181 2752517/2689 3286020/3210
-    // 20s:
-    // 修改重置序号前
-    // 7618936/7437 4427720/4322 5751358/5613
-    // 修改重置序号后
-    // 6288389/6142 3817474/3729 3873796/3784 8190984/8000
-    // 1s:
-    // 修改重置序号前
-    // 129023/126 130047/127 131278/128 723834/706 197632/193 197631/193 | 2005180/1957 1996668/1948 2011180/1962
-    // 修改重置序号后
-    // 196419/193 129923/128 129923/128 128900/127 128900/127 509456/499 | 441940/433 1972349/1929 1975420/1932
-//    }
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss:SSS");
+        List<ShowBox> allResults = new LinkedList<>();
+
+        Map<Integer, Integer> threadIdRefThreadGenNum = new HashMap<>();
+
+        for (CompletableFuture<AsyncR> f : allFutures) {
+            AsyncR threadR = f.join();
+            long startMils = threadR.startMils;
+            long endMils = threadR.endMils;
+            LocalDateTime start = LocalDateTime.ofInstant(Instant.ofEpochMilli(startMils), zoneId);
+            LocalDateTime end = LocalDateTime.ofInstant(Instant.ofEpochMilli(endMils), zoneId);
+            String strStart = start.format(dtf);
+            String strEnd = end.format(dtf);
+
+            threadIdRefThreadGenNum.put(threadR.threadNum, threadR.genIds.size());
+
+            // 都装好收集
+            threadR.genIds.stream()
+                    .map(Idg.Id::ofLongId)
+                    .map(idr -> new ShowBox(idr, strStart, strEnd, threadR.threadNum))
+                    .forEach(allResults::add);
+        }
+
+        List<ShowBox> sorts = new LinkedList<>();
+        allResults.stream()
+                .sorted((sb1, sb2) -> fnSortIdR.compare(sb1.idr, sb2.idr))
+                .forEach(sorts::add);
+
+        Map<Integer, AtomicInteger> threadLoopTimes = new HashMap<>();
+        threadNums.forEach(i -> threadLoopTimes.put(i, new AtomicInteger(0)));
+        AtomicInteger allThreadLoopTimes = new AtomicInteger(0);
+        ShowBox befBox = null;
+        for (ShowBox curBox : sorts) {
+            Idg.Id cur = curBox.idr;
+            if (befBox != null) {
+                if (befBox.idr.genTimeMillis() != cur.genTimeMillis() && cur.sequence() == 0) {
+                    threadLoopTimes.get(curBox.threadNum).incrementAndGet();
+
+//                    System.out.println(STF
+//                            .f("bef: {}", befBox));
+//                    System.out.println(STF
+//                            .f("cur: {}", curBox));
+                }
+            }
+
+            if (cur.sequence() == 0) {
+                allThreadLoopTimes.getAndIncrement();
+            }
+
+            befBox = curBox;
+        }
+        System.out.println("cupNum = " + cupNum);
+        System.out.println("testTimeSeconds = " + testTimeMils / 1000);
+        System.out.println("testCupNum = " + testCupNum);
+        System.out.println("result count = " + allResults.size());
+        allResults.clear();
+        System.gc(); // help gc
+        System.out.println("allThreadLoopTimes count = " + allThreadLoopTimes.get());
+        threadLoopTimes.forEach((key, value) -> System.out.println(STF
+                .f("t: {}, LoopTimes count: {}", key, value.get())));
+
+        System.out.println("========================");
+        threadIdRefThreadGenNum.forEach((k, v) -> System.out.println(STF.f("t: {}, genCount: {}", k, v)));
+        System.out.println("========================");
+
+        // 看看是否冲突
+        int countSize = sorts.size();
+        Set<Idg.Id> collect = sorts.stream().map(ShowBox::idr)
+                .collect(Collectors.toSet());
+        System.out.println(STF.
+                f("bef去重: {}, after:{}", countSize, collect.size()));
+        System.out.println(STF.f("no重复: {}", countSize == collect.size()));
+        Assertions.assertEquals(countSize, collect.size());
+        // cupNum = 20
+        //testTimeSeconds = 2
+        //testCupNum = 10
+        //result count = 3895048
+        //allThreadLoopTimes count = 1903
+        //t: 32, LoopTimes count: 147
+        //t: 33, LoopTimes count: 219
+        //t: 34, LoopTimes count: 191
+        //t: 35, LoopTimes count: 204
+        //t: 36, LoopTimes count: 192
+        //t: 37, LoopTimes count: 254
+        //t: 38, LoopTimes count: 195
+        //t: 39, LoopTimes count: 167
+        //t: 30, LoopTimes count: 133
+        //t: 31, LoopTimes count: 200
+        //========================
+        //t: 32, genCount: 295448
+        //t: 33, genCount: 446287
+        //t: 34, genCount: 410224
+        //t: 35, genCount: 410960
+        //t: 36, genCount: 393595
+        //t: 37, genCount: 523133
+        //t: 38, genCount: 388803
+        //t: 39, genCount: 338418
+        //t: 30, genCount: 270407
+        //t: 31, genCount: 417773
+        //========================
+    }
 }

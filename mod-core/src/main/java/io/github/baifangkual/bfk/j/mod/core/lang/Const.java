@@ -1,5 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.core.lang;
 
+import java.util.List;
+
 /**
  * 常量引用存放地<br>
  * 存放到该类中的常量的命名规则：
@@ -13,6 +15,18 @@ package io.github.baifangkual.bfk.j.mod.core.lang;
  * @since 2024/11/15 v0.0.3
  */
 public final class Const {
+
+    /**
+     * base62编码元素查询表 {@code 0-9 A-Z a-z}
+     */
+    public static final List<java.lang.String> BASE62_CHARS_LOOKUP_TABLE = List.of(
+            "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+            "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+            "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+            "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"
+    );
+
 
     /**
      * 字符串常量
