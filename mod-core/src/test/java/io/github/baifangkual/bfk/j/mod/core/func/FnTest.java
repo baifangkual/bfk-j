@@ -19,11 +19,11 @@ public class FnTest {
     @Test
     public void test01() {
         Fn<String, String> fn = (s) -> "fnMod: " + s;
-        R<String, Exception> abc = fn.apply("abc");
+        R<String> abc = fn.apply("abc");
 //        System.out.println(abc);
         Assertions.assertEquals(R.ofOk("fnMod: abc"), abc);
-        Function<String, R<String, Exception>> safe = fn.toSafe();
-        R<String, Exception> def = safe.apply("def");
+        Function<String, R<String>> safe = fn.toSafe();
+        R<String> def = safe.apply("def");
 //        System.out.println(def);
         Assertions.assertEquals(R.ofOk("fnMod: def"), def);
     }
@@ -39,7 +39,7 @@ public class FnTest {
             return s;
         };
 
-        R<String, Exception> abc = fn.apply("abc");
+        R<String> abc = fn.apply("abc");
 //        System.out.println(abc);
         Assertions.assertEquals(R.ofErr(e), abc);
     }

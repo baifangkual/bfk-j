@@ -378,8 +378,8 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @see #findHeaderNodes(Iterable, Iterable)
      * @see #findAllNode(Iterable)
      */
-    public static <P> R<LinkedList<List<P>>, RuntimeException> orderDAGQueue(Iterable<Line<P>> lines) {
-        return R.ofSupplier(() -> {
+    public static <P> R<LinkedList<List<P>>> orderDAGQueue(Iterable<Line<P>> lines) {
+        return R.ofFnCallable(() -> {
             Set<P> all = findAllNode(lines);
             Err.realIf(!isDirectedAcyclicGraph(lines, all),
                     IllegalStateException::new, "lines is not a directed acyclic graph");

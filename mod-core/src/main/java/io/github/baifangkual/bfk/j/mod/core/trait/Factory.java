@@ -32,7 +32,7 @@ public interface Factory<C, T> {
      * @param cfg 创建实体所需实体
      * @return {@link R.Ok}（创建成功）| {@link R.Err}（创建失败）
      */
-    default R<T, Exception> tryBuild(C cfg) {
+    default R<T> tryBuild(C cfg) {
         try {
             return R.ofOk(build(cfg));
         } catch (Exception e) {

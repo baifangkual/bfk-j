@@ -67,7 +67,7 @@ public interface VFile extends VEntity {
      *
      * @return 文件字节流 | 获取文件字节流过程中的异常
      */
-    default R<InputStream, Exception> tryGetInputStream() {
+    default R<InputStream> tryGetInputStream() {
         //noinspection resource
         return selfVfs().tryGetFileInputStream(this);
     }

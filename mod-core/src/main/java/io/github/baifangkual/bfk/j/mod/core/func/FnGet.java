@@ -1,11 +1,11 @@
 package io.github.baifangkual.bfk.j.mod.core.func;
 
 
-import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
+import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToSafe;
 import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToUnSafe;
-import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
+import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
 
 import java.io.Serializable;
 import java.util.concurrent.Callable;
@@ -22,9 +22,9 @@ import java.util.function.Supplier;
  * @since 2024/7/15 v0.0.4
  */
 @FunctionalInterface
-public interface FnGet<Result> extends Supplier<R<Result, Exception>>, Callable<Result>,
-        FnMutToSafe<Supplier<R<Result, Exception>>>,
-        FnMutToUnSafe<Supplier<Result>>,
+public interface FnGet<R1> extends Supplier<R<R1>>, Callable<R1>,
+        FnMutToSafe<Supplier<R<R1>>>,
+        FnMutToUnSafe<Supplier<R1>>,
         Serializable {
     /**
      * 表示无入参一个出参的函数，函数运行过程中允许抛出运行时或预检异常
@@ -33,7 +33,7 @@ public interface FnGet<Result> extends Supplier<R<Result, Exception>>, Callable<
      * @throws Exception 函数运行过程中允许抛出运行时或预检异常
      * @see #call()
      */
-    Result unsafeGet() throws Exception;
+    R1 unsafeGet() throws Exception;
 
     /**
      * 执行函数，并返回{@link R}类型的容器对象表示结果，函数执行过程中的异常将在返回结果的容器对象中
@@ -41,7 +41,7 @@ public interface FnGet<Result> extends Supplier<R<Result, Exception>>, Callable<
      * @return 函数执行结果容器对象
      */
     @Override
-    default R<Result, Exception> get() {
+    default R<R1> get() {
         return toSafe().get();
     }
 
@@ -54,7 +54,7 @@ public interface FnGet<Result> extends Supplier<R<Result, Exception>>, Callable<
      * @see #unsafeGet()
      */
     @Override
-    default Result call() throws Exception {
+    default R1 call() throws Exception {
         return unsafeGet();
     }
 
@@ -64,7 +64,7 @@ public interface FnGet<Result> extends Supplier<R<Result, Exception>>, Callable<
      * @return {@link Supplier}
      */
     @Override
-    default Supplier<R<Result, Exception>> toSafe() {
+    default Supplier<R<R1>> toSafe() {
         return () -> {
             try {
                 return R.ofOk(this.unsafeGet());
@@ -80,7 +80,7 @@ public interface FnGet<Result> extends Supplier<R<Result, Exception>>, Callable<
      * @return {@link Supplier}
      */
     @Override
-    default Supplier<Result> toSneaky() {
+    default Supplier<R1> toSneaky() {
         return () -> {
             try {
                 return this.unsafeGet();
@@ -98,7 +98,7 @@ public interface FnGet<Result> extends Supplier<R<Result, Exception>>, Callable<
      * @return {@link Supplier}
      */
     @Override
-    default Supplier<Result> toUnsafe() {
+    default Supplier<R1> toUnsafe() {
         return () -> {
             try {
                 return this.unsafeGet();

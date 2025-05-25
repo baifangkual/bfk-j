@@ -1,5 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.core.lang;
 
+import io.github.baifangkual.bfk.j.mod.core.func.Fn;
+
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Objects;
@@ -14,7 +16,7 @@ import java.util.stream.Stream;
  * <b>结果（Result）</b><br>
  * 一个不可变容器 线程安全，表达可能操作失败的逻辑的结果，
  * 该类型实例要么为“正常结果”({@link R.Ok})携带“正常结果值”({@link T})，
- * 要么为“错误结果”({@link R.Err})携带“错误结果值”({@link E})，
+ * 要么为“错误结果”({@link R.Err})携带“错误结果值”({@link Exception})，
  * 该类内缺省主语的方法签名主语默认形容的是{@link T}<br>
  * 进行某操作后返回该类型实例，若操作成功，则{@link #isOk()}为true，{@link #isErr()}为false,
  * 调用{@link #ok()}将返回“正常结果”，而调用{@link #err()}则抛出异常，
@@ -23,17 +25,26 @@ import java.util.stream.Stream;
  * 类似{@link Optional}约束的那样，对该类型的引用应当永远不为{@code null}<br>
  *
  * @param <T> 正确结果值类型
- * @param <E> 错误结果值类型
  * @author baifangkual
- * @apiNote {@link E}并未约束一定为{@link Exception}类型的子级，换句话说，{@link R}携带的“错误结果值”并不一定是java异常，
- * 使用方应确保自身代码中所有“错误结果值”为{@link Exception}类型及其子级的{@link R}对象都最终被解包处理了，否则可能造成部分java异常被静默丢弃。
+ * @apiNote 使用方应确保自身代码中所有 {@link R}对象 都最终被解包处理了，否则可能造成部分重要的 java异常 被静默丢弃。
  * @implNote 该类型的实现参考Rust语言中Result类型的行为和使用场景，抽象的讲，
- * 即想要在java语言中避免try-cache-throw这种单独的异常信息传输通道（对于一个执行可能产生异常的方法（尤其是运行时异常）），
- * 其方法声明形如{@code T method(...)}，这种方法声明从外界使用者看来无法直观得知其为一个“可能产生异常”的方法，
+ * 即想要在java语言中避免try-catch-throw这种单独的异常信息传输通道（对于一个执行可能产生异常的方法（尤其是运行时异常）），
+ * 其方法声明形如 {@code T method(...)}，这种方法声明从外界使用者看来无法直观得知其为一个“可能产生异常”的方法，
  * 即使能够得知其可能抛出的异常，上层调用方也可选择不处理该异常，则异常仍会根据调用栈向上层传递，以这个角度来说，
  * 该异常的传递其实是游离在方法的返回值声明之外的单独通道，若方法声明为{@code R<T, XXException> method(...)},
  * 则调用方可立即清楚该方法为“可能产生异常”的方法，且调用方在获取结果时，必要对该结果对象进行“解包”操作，
  * 以显式以某种方式对结果对象进行处理，这样可以避免异常从调用栈底一直传递到上层。<br>
+ * （20250525更新说明：该Class已被重写，因为java中无法对泛型进行条件限定，遂当 R 为 {@code R<Integer, String>} 时，
+ * 无法处理当调用map方法执行给定函数过程抛出异常而被 R 持有的情况：假设有步骤1、2，步骤1返回R.Ok，步骤2能够处理R中的“正常结果值”，
+ * 则在原有设计中，使用map操作，若进行步骤2的时候发生异常，则操作中断，发生的异常还是按照java的原有异常逻辑向上层抛出了，
+ * 这种情况虽然表示了R.Ok中的载荷无法通过步骤2变为另一类型实例，但其反馈的原因还没没法以R的形式返回（异常被抛出了），这与R的设计相背离，
+ * 即这种情况下，R，是无用的。考虑过将map进行更改，其接收两个函数，第一个函数是map原有的语义，第二个函数表示当第一个函数执行过程发生异常时，
+ * 如何将异常对象转为R.Err的载荷的泛型类型，这种变更似乎可行，但有两个问题，第一，这样设计在使用map时会很繁琐，第二，第一个函数执行过程中异常了，
+ * 执行第二个函数，但第二个函数执行过程中也异常了，那如何通过 R 表达这种情况？显然无法表达这种情况，只有当 R 的第二泛型参数为 Exception是，
+ * 能够无脑的将抛出的异常由 R.Err 载荷表达。第三种修改方式：将 {@code R<T, E>} 修改为 {@code R<T, E extends Exception>}，
+ * 也不行，因为即使约定 E 的上界，假设 R 为 {@code R<String, IllegalStateException>}，但在map过程中抛出了 NullPointException，
+ * 若map内不做处理，则该map过程中断，异常以其原本的通道向上层传递，若map内catch该异常，则将其赋值给 E 时因为不是IllegalStateException或其子级，
+ * 会发生强转异常，只有当 E 为 Exception 时，才可安全操作。综上，决定移除 R 的第二泛型参数，R.Err 固定载荷的引用类型为 Exception）
  * 该类型目前的实现可能不是一种最好的实现方式，因为该类型目前无法形容“无返回且可能抛出异常”的方法，
  * 即该一定不为{@code R<Void, ?>}（类似{@code Optional<Void>}），以这个角度来说，
  * 该类型目前的实现是残缺的，但纷乱信息中无法总结出目前的残缺现状是因为java无法表达形容Rust中的{@code Result<(), Err>}，
@@ -54,202 +65,197 @@ import java.util.stream.Stream;
  * @see R.Err
  * @since 2024/6/18 v0.0.3
  */
-public sealed interface R<T, E> extends Serializable
+public sealed interface R<T> extends Serializable
         permits R.Ok, R.Err {
 
     /**
-     * 明确创建"正常结果"<br>
-     * 给定非空的“正常结果值”，明确的构造“正常结果”，返回{@link R.Ok}
+     * 尝试创建"正常结果"<br>
+     * 给定“正常结果值”，构造“正常结果”，返回 {@code R.Ok(ok)}，
+     * 若”正常结果值“为 {@code null}，返回 {@code R.Err(NullPointerException)}
      *
-     * @param ok    非空的正常结果值
-     * @param <Ok>  正常结果类型
-     * @param <Err> 错误结果类型
-     * @return “正常结果”
-     * @throws NullPointerException 当给定的“正常结果值”为空时
+     * @param ok  正常结果值
+     * @param <T> 正常结果类型
+     * @return {@code R.Ok(ok)} | {@code R.Err(NullPointerException)}
      */
-    static <Ok, Err> R.Ok<Ok, Err> ofOk(Ok ok) throws NullPointerException {
-        return new R.Ok<>(ok);
+    static <T> R<T> ofOk(T ok) {
+        return ok == null ?
+                new Err<>(new NullPointerException("'ok' is null"))
+                : new Ok<>(ok);
     }
 
-
     /**
-     * 明确创建"错误结果"<br>
-     * 给定非空的“错误结果值”，明确的构造“错误结果”，返回{@link R.Err}
+     * 尝试创建"错误结果"<br>
+     * 给定“错误结果值”，构造“错误结果”，返回 {@code R.Err(err)},
+     * 若”错误结果值“为 {@code null}，返回 {@code R.Err(NullPointerException)}
      *
-     * @param err   非空的错误结果值
-     * @param <Ok>  正常结果类型
-     * @param <Err> 错误结果类型
-     * @return “错误结果”
-     * @throws NullPointerException 当给定的“错误结果值”为空时
+     * @param err 错误结果值
+     * @param <T> 正常结果类型
+     * @return {@code R.Err(err)} | {@code R.Err(NullPointerException)}
      */
-    static <Ok, Err> R.Err<Ok, Err> ofErr(Err err) throws NullPointerException {
-        return new R.Err<>(err);
+    static <T> R.Err<T> ofErr(Exception err) {
+        return err == null ?
+                new Err<>(new NullPointerException("'err' is null"))
+                : new R.Err<>(err);
     }
 
     /**
      * 尝试创建"正常结果"<br>
-     * 给定{@code nullable}的“正常结果值”，若其为{@code null}，
-     * 将创建“错误结果”{@link R.Err}载荷{@link NullPointerException}，
-     * 否则创建“正常结果"{@link R.Ok}
+     * 给定“正常结果值”，若“正常结果值”不为 {@code null}，则返回 {@code R.Ok(ok)}，
+     * 若“正常结果值”为 {@code null}，则尝试使用给定的“错误结果值”，返回 {@code R.Err(err)}，
+     * 若“错误结果值”为 {@code null}，则返回 {@code R.Err(NullPointerException)}
      *
-     * @param ok   正常结果值(nullable)
-     * @param <Ok> 正常结果值类型
-     * @return 正常结果 | 错误结果
+     * @param ok  正常结果值
+     * @param err 错误结果值
+     * @param <T> 正常结果类型
+     * @return {@code R.Ok(ok)} | {@code R.Err(err)} | {@code R.Err(NullPointerException)}
      */
-    static <Ok> R<Ok, NullPointerException> ofNullable(Ok ok) {
-        try {
-            return ofOk(ok);
-        } catch (NullPointerException e) {
-            return ofErr(e);
-        }
+    static <T> R<T> ofOk(T ok, Exception err) {
+        return ok != null ? new Ok<>(ok)
+                : err != null ?
+                new Err<>(err) // err 不为空，返回之，否则返回E-NPE
+                : new Err<>(new NullPointerException("'ok' and 'err' is null"));
     }
 
     /**
-     * 创建可能为“正常”也可能为“错误”的结果<br>
-     * 给定可能为空的“正常结果值”，若“正常结果值”不为空，则返回{@link R.Ok},
-     * 若“正常结果值”为空，则尝试使用给定的“错误结果值”，返回{@link R.Err}，
-     * 若“错误结果值”为空，则抛出异常{@link NullPointerException}
-     *
-     * @param nullable 正常结果值(nullable)
-     * @param err      错误结果值
-     * @param <Ok>     正常结果类型
-     * @param <Err>    错误结果类型
-     * @return 正常结果 | 错误结果
-     * @throws NullPointerException 当给定的“错误结果值”为空时
-     */
-    static <Ok, Err> R<Ok, Err> ofNullable(Ok nullable, Err err) {
-        Objects.requireNonNull(err, "given 'err' must not be null");
-        try {
-            return ofOk(nullable);
-        } catch (NullPointerException ignore) {
-            return ofErr(err);
-        }
-    }
-
-    /**
-     * 创建可能为“正常”也可能为“错误”的结果<br>
-     * 给定可能为空的“正常结果值”，若“正常结果值”不为空，则返回{@link R.Ok},
-     * 若“正常结果值”为空，则尝试执行给定的“错误结果值提供函数”，返回{@link R.Err}，
-     * 若“错误结果值提供函数”执行时后的“错误结果值”为空，则抛出{@link NullPointerException}
+     * 尝试创建"正常结果"<br>
+     * 给定“正常结果值”，若“正常结果值”不为 {@code null}，则返回 {@code R.Ok(ok)}，
+     * 若“正常结果值”为 {@code null}，则尝试使用给定的“异常提供函数”，返回 {@code R.Err(err)}，
+     * 若“异常提供函数”为 {@code null}，或其执行过程发生异常，或其执行后返回值为 {@code null}，
+     * 则返回 {@code R.Err(NullPointerException)}
      * <pre>
      *     {@code
-     *     R<String, Exception> r = R.ofNullable(strOrNull, NullPointException::new)
+     *     R<String> r = R.ofOk(strOrNull, IllegalStateException::new)
      *     }
      * </pre>
      *
-     * @param nullable 正常结果(nullable)
-     * @param fnGetErr 错误结果值提供函数
-     * @param <Ok>     正常结果类型
-     * @param <Err>    错误结果类型
-     * @return 正常结果 | 错误结果
-     * @throws NullPointerException 当给定的“错误结果值提供函数”为空或其执行后返回的“错误结果值”为空时
+     * @param ok       正常结果
+     * @param fnGetErr 异常提供函数
+     * @param <T>      正常结果类型
+     * @return {@code R.Ok(ok)} | {@code R.Err(err)} | {@code R.Err(...)}
      */
-    static <Ok, Err> R<Ok, Err> ofNullable(Ok nullable,
-                                           Supplier<? extends Err> fnGetErr) {
-        Objects.requireNonNull(fnGetErr, "given 'fnGetErr' must not be null");
+    static <T> R<T> ofOk(T ok,
+                         Callable<? extends Exception> fnGetErr) {
+        if (ok != null) return new Ok<>(ok);
+        if (fnGetErr == null) //fnGetErr is null
+            return new Err<>(new NullPointerException("'ok' and 'fnGetErr' is null"));
         try {
-            return ofOk(nullable);
-        } catch (NullPointerException ignore) {
-            return ofErr(fnGetErr.get());
+            Exception eOfGetNullable = fnGetErr.call(); // exception or return
+            return new Err<>(Objects.requireNonNullElseGet(eOfGetNullable,
+                    () -> new NullPointerException("'ok' is null and exec 'fnGetErr' return null")));
+        } catch (Exception e) {
+            // catch exception on fnGetErr exec.
+            return new Err<>(new RuntimeException("'ok' is null and exec 'fnGetErr' throw exception", e));
         }
     }
 
     /**
-     * 创建可能为“正常”也可能为“错误”的结果<br>
-     * 给定“正常结果值提供函数”，若“正常结果值提供函数”不为空且其返回的“正常结果值”不为空，
-     * 则返回{@link R.Ok},若“正常结果值”为空，或执行“正常结果值提供函数”过程中发生异常，
-     * 则尝试使用给定的“错误结果值”，返回{@link R.Err}，
-     * 若“错误结果值”为空，则抛出异常{@link NullPointerException}
+     * 尝试创建"正常结果"<br>
+     * 给定“正常结果值提供函数”，若“正常结果值提供函数”不为 {@code null}，则执行其，
+     * 若其执行后返回值不为 {@code null}，返回 {@code R.Ok(ok)}，
+     * 若“正常结果值提供函数”为 {@code null} 或其执行过程发生异常，或其执行后返回 {@code null} ，
+     * 则尝试使用给定的“错误结果值”，返回 {@code R.Err(err)}，
+     * 若“错误结果值”为 {@code null}，则返回 {@code R.Err(NullPointerException)}
      * <pre>
      *     {@code
      *     Optional<Integer> intOpt = Optional.ofNullable(nullableInt);
-     *     R<Integer, String> r = R.ofSupplier(intOpt::get, "optional is empty");
+     *     R<Integer> r = R.ofFnCallable(intOpt::get, new IllegalStateException("optional is empty"));
      *     }
      * </pre>
      *
      * @param fnGetOk 正常结果值提供函数
      * @param err     错误结果值
-     * @param <Ok>    正常结果类型
-     * @param <Err>   错误结果类型
-     * @return 正常结果 | 错误结果
-     * @throws NullPointerException 当给定的“错误结果值”为空时
+     * @param <T>     正常结果类型
+     * @return {@code R.Ok(ok)} | {@code R.Err(err)} | {@code R.Err(...)}
      */
-    static <Ok, Err> R<Ok, Err> ofSupplier(Supplier<? extends Ok> fnGetOk, Err err) {
-        Objects.requireNonNull(err, "given 'err' must not be null");
+    static <T> R<T> ofFnCallable(Callable<? extends T> fnGetOk,
+                                 Exception err) {
+        final boolean errIsNull = err == null;
+        if (fnGetOk == null) {
+            if (errIsNull) return new Err<>(new NullPointerException("'fnGetOk' and 'err' is null"));
+            else return new Err<>(err);
+        }
         try {
-            return ofOk(fnGetOk.get());
-        } catch (Exception fnGetOkIsNullOrExecErrOrFnReturnNull) {
-            return ofErr(err);
+            T okOrNull = fnGetOk.call(); // or null
+            if (okOrNull == null) {
+                if (errIsNull)
+                    return new Err<>(new NullPointerException("exec 'fnGetOk' return null and 'err' is null"));
+                else return new Err<>(err);
+            }
+            return new Ok<>(okOrNull); // no null
+        } catch (Exception execErr) { // on this method this 'execErr' will be ignored
+            if (errIsNull) // execErr and given err is null
+                return new Err<>(new RuntimeException("'err' is null and exec 'fnGetOk' throw exception", execErr));
+            else return new Err<>(err); // given err no null
         }
     }
 
     /**
-     * 创建可能为“正常”也可能为“错误”的结果<br>
-     * 给定“正常结果值提供函数”，若“正常结果值提供函数”不为空且其返回的“正常结果值”不为空，
-     * 则返回{@link R.Ok},若“正常结果值”为空，或执行“正常结果值提供函数”过程中发生异常，
-     * 则尝试执行给定的“错误结果值提供函数”，返回{@link R.Err}，
-     * 若“错误结果值提供函数”为空或其执行后返回的“错误结果值”为空，
-     * 则抛出异常{@link NullPointerException}
+     * 尝试创建"正常结果"<br>
+     * 给定“正常结果值提供函数”，若“正常结果值提供函数”不为 {@code null}，则执行其，
+     * 若其执行后返回值不为 {@code null}，返回 {@code R.Ok(ok)}，
+     * 若“正常结果值提供函数”为 {@code null} 或其执行过程发生异常，或其执行后返回 {@code null} ，
+     * 则尝试执行给定的“错误结果值提供函数”，返回 {@code R.Err(err)}，
+     * 若“错误结果值提供函数”为 {@code null}，或其执行过程发生异常，或其执行后返回值为 {@code null} ，
+     * 则返回 {@code R.Err(NullPointerException)}
      * <pre>
      *     {@code
      *     Optional<Integer> intOpt = Optional.ofNullable(nullableInt);
-     *     R<Integer, Exception> r = R.ofSupplier(intOpt::get, NullPointException::new);
+     *     R<Integer> r = R.ofFnCallable(intOpt::get, IllegalStateException::new);
      *     }
      * </pre>
      *
      * @param fnGetOk  正常结果值提供函数
      * @param fnGetErr 错误结果值提供函数
-     * @param <Ok>     正常结果类型
-     * @param <Err>    错误结果类型
-     * @return 正常结果 | 错误结果
-     * @throws NullPointerException 当给定的“错误结果值提供函数”为空或其执行后返回的“错误结果值”为空时
+     * @param <T>      正常结果类型
+     * @return {@code R.Ok(ok)} | {@code R.Err(err)} | {@code R.Err(...)}
      */
-    static <Ok, Err> R<Ok, Err> ofSupplier(Supplier<? extends Ok> fnGetOk,
-                                           Supplier<? extends Err> fnGetErr) {
-        Objects.requireNonNull(fnGetErr, "given 'fnGetErr' must not be null");
-        try {
-            return ofOk(fnGetOk.get());
-        } catch (Exception fnGetOkIsNullOrExecErrOrFnReturnNull) {
-            return ofErr(fnGetErr.get());
+    static <T> R<T> ofFnCallable(Callable<? extends T> fnGetOk,
+                                 Callable<? extends Exception> fnGetErr) {
+        if (fnGetOk == null) { // fnGetOk is null try exec fnGetErr
+            return ofOk(null, fnGetErr);
+        } else {
+            // fnGetOk not null
+            try {
+                T okOrNull = fnGetOk.call(); // 这里可能异常
+                return ofOk(okOrNull, fnGetErr); // 这里不会异常
+            } catch (Exception eOnFnGetOkExec) {
+                // err on fnGetOk exec.
+                // so try fnGetErr
+                // 到这里那就一的拿不到 ok结果了
+                if (fnGetErr == null) //fnGetErr is null
+                    return new Err<>(new RuntimeException("'fnGetErr' is null and exec 'fnGetOk' throw exception", eOnFnGetOkExec));
+                try {
+                    Exception eOfGetNullable = fnGetErr.call(); // exception or return
+                    return new Err<>(Objects.requireNonNullElseGet(eOfGetNullable,
+                            () -> new RuntimeException("'fnGetErr' return null and exec 'fnGetOk' throw exception", eOnFnGetOkExec)));
+                } catch (Exception eOnFnGetErrExec) {
+                    // catch exception on fnGetErr exec.
+                    // so here is 2 Err
+                    RuntimeException rte = new RuntimeException(
+                            "exec 'fnGetOk' throw exception(on Suppressed) and exec 'fnGetErr' throw exception",
+                            eOnFnGetErrExec);
+                    rte.addSuppressed(eOnFnGetOkExec); // suppressed eOnFnGetOkExec
+                    return new Err<>(rte);
+                }
+            }
         }
     }
 
     /**
-     * 执行给定的函数，返回可能为“正常”也可能为“错误”的结果<br>
-     * 当函数执行过程中发生异常时，该方法将返回“错误结果”，否则返回“正常结果”（即函数返回值）<br>
-     * 除了{@link Callable}，该函数也可为{@link io.github.baifangkual.bfk.j.mod.core.func.FnGet}类型
+     * 尝试创建"正常结果"<br>
+     * 执行给定的函数，当函数执行过程中发生异常err时，该方法将返回 {@code R.Err(err)}，否则返回 {@code R.Ok(ok)},
+     * 若给定的函数为 {@code null} 或函数执行结果为 {@code null}, 则返回 {@code R.Err(NullPointException)}
      *
-     * @param fn   正常结果值提供函数
-     * @param <Ok> 正常结果类型
-     * @return 正常结果 | 错误结果
-     * @throws NullPointerException 当给定的“正常结果值提供函数”为空时
-     * @see #ofSupplier(Supplier)
+     * @param fn  正常结果值提供函数
+     * @param <T> 正常结果类型
+     * @return {@code R.Ok(ok)} | {@code R.Err(err)} | {@code R.Err(NullPointException)}
      */
-    static <Ok> R<Ok, Exception> ofCallable(Callable<? extends Ok> fn) {
-        Objects.requireNonNull(fn, "given 'fn' must not be null");
+    static <T> R<T> ofFnCallable(Callable<? extends T> fn) {
+        if (fn == null) return new Err<>(new NullPointerException("'fn' is null"));
         try {
             return ofOk(fn.call());
         } catch (Exception execFnCallErrOrFnReturnNull) {
             return ofErr(execFnCallErrOrFnReturnNull);
-        }
-    }
-
-    /**
-     * 执行给定的函数，返回可能为“正常”也可能为“错误”的结果<br>
-     * 当函数执行过程中发生异常时，该方法将返回“错误结果”，否则返回“正常结果”（即函数返回值）<br>
-     *
-     * @param fn   正常结果值提供函数
-     * @param <Ok> 正常结果类型
-     * @return 正常结果 | 错误结果
-     * @throws NullPointerException 当给定的“正常结果值提供函数”为空时
-     * @see #ofCallable(Callable)
-     */
-    static <Ok> R<Ok, RuntimeException> ofSupplier(Supplier<? extends Ok> fn) {
-        Objects.requireNonNull(fn, "given 'fn' must not be null");
-        try {
-            return ofOk(fn.get());
-        } catch (RuntimeException execFnErrOrReturnNull) {
-            return ofErr(execFnErrOrReturnNull);
         }
     }
 
@@ -278,7 +284,7 @@ public sealed interface R<T, E> extends Serializable
 
     /**
      * 尝试获取正常结果<br>
-     * 当容器对象为"错误结果"对象时，该方法返回{@link Optional#empty()}
+     * 当容器对象为"错误结果"对象时，该方法返回 {@link Optional#empty()}
      *
      * @return 正常结果Optional
      * @see #toOptional()
@@ -292,19 +298,19 @@ public sealed interface R<T, E> extends Serializable
      * @return 错误结果
      * @throws UnwrapException 当容器对象为正常结果时
      */
-    E err() throws UnwrapException;
+    Exception err() throws UnwrapException;
 
     /**
      * 尝试获取错误结果<br>
-     * 当容器对象为"正常结果"对象时，该方法返回{@link Optional#empty()}
+     * 当容器对象为"正常结果"对象时，该方法返回 {@link Optional#empty()}
      *
      * @return 错误结果Optional
      */
-    Optional<E> tryErr();
+    Optional<Exception> tryErr();
 
     /**
      * 返回{@link Optional}对象，尝试获取正常结果<br>
-     * 当容器对象为"错误结果"对象时，该方法返回{@link Optional#empty()}
+     * 当容器对象为"错误结果"对象时，该方法返回 {@link Optional#empty()}
      *
      * @return 正常结果Optional
      * @see #tryOk()
@@ -314,40 +320,56 @@ public sealed interface R<T, E> extends Serializable
     }
 
     /**
-     * 解包该实体以尝试获取{@link T}<br>
-     * 当该实体为{@link R.Ok}时能够成功解包并返回{@link T}，
-     * 否则将立即抛出{@link UnwrapException}<br>
-     * 若该实体为{@link R.Err}且{@link E}为{@link Throwable}时，
-     * 将使其作为抛出的{@link UnwrapException}的{@code cause}，
-     * 否则，抛出的{@link UnwrapException}没有{@code cause}
+     * 解包该实体以尝试获取 {@link T}<br>
+     * 当该实体为 {@link R.Ok } 时能够成功解包并返回 {@link T}，
+     * 否则将立即抛出 {@link UnwrapException}，其 cause 为 Exception<br>
+     * <pre>
+     *     {@code
+     *     R<String> rOk = R.ofOk("123");
+     *     Assert.eq("123", rOk.unwrap());
+     *     R<String> rErr = R.ofErr(new IOException());
+     *     Assert.throwE(UnwrapException.class, () -> rErr.unwrap());
+     *     Assert.isTrue(IOException.class == rErr.err().getClass());
+     *     }
+     * </pre>
      *
      * @return 正常结果值（或直接抛出异常）
      * @throws UnwrapException 当该实体为“错误结果”时
-     * @see #unwrap(Supplier)
+     * @see #unwrap(Function)
      * @see #unwrapOr(Object)
      * @see #unwrapOrGet(Supplier)
      */
     T unwrap() throws UnwrapException;
 
     /**
-     * 解包该实体以尝试获取{@link T}，若失败则抛出指定异常<br>
+     * 解包该实体以尝试获取 {@link T}<br>
+     * 当该实体为 {@link R.Ok } 时能够成功解包并返回 {@link T}，
+     * 否则将立即尝试调用函数将 {@link R.Err} 中的 {@link Exception} 作为函数输入，并抛出函数返回的异常<br>
+     * <pre>
+     *     {@code
+     *     R<String> rOk = R.ofOk("123");
+     *     Assert.eq("123", rOk.unwrap(IllegalStateException::new));
+     *     R<String> rErr = R.ofErr(new IOException());
+     *     Assert.throwE(IOException.class, () -> rErr.unwrap(e -> e));
+     *     }
+     * </pre>
      *
      * @param <X>     要抛出的异常类型
-     * @param ifNotOk 异常提供函数
+     * @param ifNotOk 异常转换函数
      * @return 正常结果值（或直接抛出指定异常）
      * @throws X                    当没有“正常结果值”时
      * @throws NullPointerException 当没有“正常结果值”且异常提供函数为空时
-     * @apiNote 异常提供函数可以方法引用形式引用异常的无参构造，形如：
+     * @apiNote 异常提供函数可以以方法引用形式引用异常的 {@code new Exception(Throwable)} 构造，形如：
      * {@code IllegalStateException::new}
      * @see #unwrap()
      * @since 0.0.5
      */
-    <X extends Throwable> T unwrap(Supplier<? extends X> ifNotOk) throws X;
+    <X extends Throwable> T unwrap(Function<? super Exception, ? extends X> ifNotOk) throws X;
 
 
     /**
-     * 解包该实体以尝试获取{@link T}，若失败则返回给定的默认值<br>
-     * 给定的默认值可以为{@code null}
+     * 解包该实体以尝试获取 {@link T}，若失败则返回给定的默认值<br>
+     * 给定的默认值可以为 {@code null}
      *
      * @param or 默认值
      * @return 正常结果值 | 默认值
@@ -357,8 +379,8 @@ public sealed interface R<T, E> extends Serializable
     T unwrapOr(T or);
 
     /**
-     * 解包该实体以尝试获取{@link T}，若失败则运行给定函数返回函数结果<br>
-     * 给定函数的返回值可以为{@code null}
+     * 解包该实体以尝试获取 {@link T}，若失败则运行给定函数返回函数结果<br>
+     * 给定函数的返回值可以为 {@code null}
      *
      * @param fnGet 默认值提供函数
      * @return 正常结果值 | 默认值
@@ -385,16 +407,16 @@ public sealed interface R<T, E> extends Serializable
      * @throws NullPointerException 当“错误结果值”存在且消费者函数为空时
      * @since 0.0.5
      */
-    void ifErr(Consumer<? super E> fnAccErr);
+    void ifErr(Consumer<? super Exception> fnAccErr);
 
     /**
-     * 当“正常结果值”存在，则返回只有一个元素的{@link Stream}，
-     * 否则，返回空流{@link Stream#empty()}
+     * 当“正常结果值”存在，则返回只有一个元素的 {@link Stream}，
+     * 否则，返回空流 {@link Stream#empty()}
      *
-     * @return 包含一个“正常结果值”的流 | 空流{@link Stream#empty()}
-     * @apiNote 该API适用于下场景（该方法会将{@link E}丢弃，使用方需考量适用与否）：
+     * @return 包含一个“正常结果值”的流 | 空流 {@link Stream#empty()}
+     * @apiNote 该API适用于下场景（该方法会将 {@link Exception} 丢弃，使用方需考量适用与否）：
      * <pre>{@code
-     *     Stream<R<T, E>> os = ...
+     *     Stream<R<T>> os = ...
      *     Stream<T> s = os.flatMap(R::stream)
      * }</pre>
      * @since 0.0.5
@@ -402,75 +424,96 @@ public sealed interface R<T, E> extends Serializable
     Stream<T> stream();
 
     /**
-     * 根据给定函数，尝试转换“正常结果值”并返回新的{@link R}对象<br>
+     * 根据给定函数，尝试转换“正常结果值”并返回新的 {@link R} 对象<br>
      * 当前实体为“正常结果”时，给定的函数将被执行以进行“正常结果值”的转换，
-     * 当前实体为“错误结果”时，给定的函数将不会被执行
+     * 当前实体为“错误结果”时，给定的函数将不会被执行<br>
+     * 若函数执行结果为 {@code null}，则 {@link R} 类型为 {@link R.Err} 携带 {@link NullPointerException},
+     * 若函数执行过程抛出异常，则 {@link R} 类型为 {@link R.Err} 携带被抛出的异常
      *
      * @param fn  正常结果值转换函数
      * @param <U> 新的“正常结果值”类型
      * @return 新的结果对象
      * @throws NullPointerException 当给定的函数为空时
-     * @throws NullPointerException 当给定函数执行后返回值为空时
      */
-    default <U> R<U, E> map(Function<? super T, ? extends U> fn) {
-        return isOk() ? ofOk(Objects.requireNonNull(fn, "fn is null").apply(ok())) : ofErr(err());
+    default <U> R<U> map(Fn<? super T, ? extends U> fn) {
+        if (isOk()) {
+            try {
+                return ofOk(Objects.requireNonNull(fn, "'fn' is null").unsafeApply(ok()));
+            } catch (Exception e) { // catch maybe fn is null or on apply exception
+                return new Err<>(e);
+            }
+        } else {
+            @SuppressWarnings("unchecked")
+            R<U> er = (R<U>) this; // 因为为Err，所以可以返回自己
+            return er;
+        }
     }
 
     /**
      * 根据给定函数，尝试转换“正常结果值”到“{@link R}对象”，并返回该对象<br>
      * 当前实体为“正常结果”时，给定的函数将被执行以进行“正常结果值”到“结果对象”的转换，
-     * 当前实体为“错误结果”时，给定的函数将不会被执行
+     * 当前实体为“错误结果”时，给定的函数将不会被执行<br>
+     * 若函数执行结果为 {@code null}，则 {@link R} 类型为 {@link R.Err} 携带 {@link NullPointerException},
+     * 若函数执行过程抛出异常，则 {@link R} 类型为 {@link R.Err} 携带被抛出的异常
      *
-     * @param fn  正常结果值到{@link R}的转换函数
+     * @param fn  正常结果值到 {@link R} 的转换函数
      * @param <U> 新的“正常结果值”类型
      * @return 新的结果对象
-     * @throws NullPointerException 当给定的函数为空或给定函数执行后返回值为空时
+     * @throws NullPointerException 当给定的函数为空时
      */
-    default <U> R<U, E> flatmap(Function<? super T, ? extends R<? extends U, ? extends E>> fn) {
+    @SuppressWarnings("unchecked")
+    default <U> R<U> flatmap(Fn<? super T, ? extends R<? extends U>> fn) {
         if (isOk()) {
             Objects.requireNonNull(fn, "fn is null");
-            @SuppressWarnings("unchecked")
-            R<U, E> apply = (R<U, E>) fn.apply(ok());
-            return Objects.requireNonNull(apply, "flatmap apply return is null");
+            try {
+                R<U> apply = (R<U>) fn.unsafeApply(ok());
+                if (apply == null) return new Err<>(new NullPointerException("flatmap fn return null"));
+                else return apply;
+            } catch (Exception execErr) {
+                return new Err<>(execErr);
+            }
+        } else {
+            // 因为为Err，所以可以返回自己
+            return (R<U>) this;
         }
-        return ofErr(err());
     }
 
     /**
-     * 根据给定函数，尝试转换“错误结果值”并返回新的{@link R}对象<br>
+     * 根据给定函数，尝试转换“错误结果值”并返回新的 {@link R} 对象<br>
      * 当前实体为“错误结果”时，给定的函数将被执行以进行“错误结果值”的转换，
      * 当前实体为“正常结果”时，给定的函数将不会被执行
      *
-     * @param fn  错误结果值转换函数
-     * @param <P> 新的“错误结果值”类型
+     * @param fn 错误结果值转换函数
      * @return 新的结果对象
      * @throws NullPointerException 当给定的函数为空时
-     * @throws NullPointerException 当给定函数执行后返回值为空时
      */
-    default <P> R<T, P> mapErr(Function<? super E, ? extends P> fn) {
-        return isErr() ? ofErr(Objects.requireNonNull(fn, "fn is null").apply(err())) : ofOk(ok());
+    default R<T> mapErr(Function<? super Exception, ? extends Exception> fn) {
+        if (isErr()) { // to do? maybe on apply will exception?
+            return ofErr(Objects.requireNonNull(fn, "'fn' is null").apply(err()));
+        } else {
+            return this;
+        }
     }
 
     /**
-     * 根据给定函数，尝试转换“错误结果值”到“{@link R}对象”，并返回该对象<br>
+     * 根据给定函数，尝试转换“错误结果值”到“{@link R} 对象”，并返回该对象<br>
      * 当前实体为“错误结果”时，给定的函数将被执行以进行“错误结果值”到“结果对象”的转换，
      * 当前实体为“正常结果”时，给定的函数将不会被执行
      *
-     * @param fn  错误结果值到{@link R}的转换函数
-     * @param <P> 新的“错误结果值”类型
+     * @param fn 错误结果值到 {@link R} 的转换函数
      * @return 新的结果对象
-     * @throws NullPointerException 当给定的函数为空或给定函数执行后返回值为空时
+     * @throws NullPointerException 当给定的函数为空时
      */
-    default <P> R<T, P> flatmapErr(Function<? super E, ? extends R<? extends T, ? extends P>> fn) {
+    default R<T> flatmapErr(Function<? super Exception, ? extends R<? extends T>> fn) {
         if (isErr()) {
             Objects.requireNonNull(fn, "fn is null");
             @SuppressWarnings("unchecked")
-            R<T, P> apply = (R<T, P>) fn.apply(err());
-            return Objects.requireNonNull(apply, "flatmap apply return is null");
+            R<T> apply = (R<T>) fn.apply(err()); // to do? maybe on apply will exception?
+            if (apply == null) return new Err<>(new NullPointerException("flatmapErr fn return null"));
+            else return apply;
         }
-        return ofOk(ok());
+        return this;
     }
-
 
     @Override
     boolean equals(Object o);
@@ -481,15 +524,13 @@ public sealed interface R<T, E> extends Serializable
     @Override
     String toString();
 
-
     /**
      * 正确结果
      *
-     * @param <Ok>  正确结果值类型
-     * @param <Err> 错误结果值类型
+     * @param <T> 正确结果值类型
      * @see R
      */
-    record Ok<Ok, Err>(Ok ok) implements R<Ok, Err>, Serializable {
+    record Ok<T>(T ok) implements R<T>, Serializable {
         @Serial
         private static final long serialVersionUID = 33L;
 
@@ -497,12 +538,10 @@ public sealed interface R<T, E> extends Serializable
             Objects.requireNonNull(ok, "'ok' is null");
         }
 
-
         @Override
         public String toString() {
             return "Ok(" + ok + ')';
         }
-
 
         @Override
         public boolean isOk() {
@@ -515,52 +554,52 @@ public sealed interface R<T, E> extends Serializable
         }
 
         @Override
-        public Optional<Ok> tryOk() {
+        public Optional<T> tryOk() {
             return Optional.of(ok);
         }
 
         @Override
-        public Err err() throws UnwrapException {
+        public Exception err() throws UnwrapException {
             throw new UnwrapException("not found 'err' value");
         }
 
         @Override
-        public Optional<Err> tryErr() {
+        public Optional<Exception> tryErr() {
             return Optional.empty();
         }
 
         @Override
-        public Ok unwrap() throws UnwrapException {
+        public T unwrap() throws UnwrapException {
             return ok;
         }
 
         @Override
-        public Ok unwrapOr(Ok or) {
+        public T unwrapOr(T or) {
             return ok;
         }
 
         @Override
-        public Ok unwrapOrGet(Supplier<? extends Ok> fnGet) {
+        public T unwrapOrGet(Supplier<? extends T> fnGet) {
             return ok;
         }
 
         @Override
-        public <X extends Throwable> Ok unwrap(Supplier<? extends X> ifNotOk) throws X {
+        public <X extends Throwable> T unwrap(Function<? super Exception, ? extends X> ifNotOk) {
             return ok;
         }
 
         @Override
-        public void ifOk(Consumer<? super Ok> fnAccOk) {
+        public void ifOk(Consumer<? super T> fnAccOk) {
             fnAccOk.accept(ok());
         }
 
         @Override
-        public void ifErr(Consumer<? super Err> fnAccErr) {
+        public void ifErr(Consumer<? super Exception> fnAccErr) {
             // pass... do nothing because I'm an 'Ok'
         }
 
         @Override
-        public Stream<Ok> stream() {
+        public Stream<T> stream() {
             return Stream.of(ok);
         }
     }
@@ -568,11 +607,10 @@ public sealed interface R<T, E> extends Serializable
     /**
      * 错误结果
      *
-     * @param <Ok>  正确结果值类型
-     * @param <Err> 错误结果值类型
+     * @param <T> 正确结果值类型
      * @see R
      */
-    record Err<Ok, Err>(Err err) implements R<Ok, Err>, Serializable {
+    record Err<T>(Exception err) implements R<T>, Serializable {
         @Serial
         private static final long serialVersionUID = 33L;
 
@@ -596,65 +634,63 @@ public sealed interface R<T, E> extends Serializable
         }
 
         @Override
-        public Ok ok() throws UnwrapException {
+        public T ok() throws UnwrapException {
             throw new UnwrapException("not found 'ok' value");
         }
 
         @Override
-        public Optional<Ok> tryOk() {
+        public Optional<T> tryOk() {
             return Optional.empty();
         }
 
         @Override
-        public Optional<Err> tryErr() {
+        public Optional<Exception> tryErr() {
             return Optional.of(err);
         }
 
         @Override
-        public Ok unwrap() throws UnwrapException {
-            // 当err类型为异常(可抛出)时
-            if (err instanceof Throwable e) {
-                throw new UnwrapException(e);
-            } else {
-                // 当err类型不为异常(可抛出)时, 包装其
-                throw new UnwrapException("not an 'Ok'");
-            }
+        public Exception err() {
+            return err;
         }
 
         @Override
-        public Ok unwrapOr(Ok or) {
+        public T unwrap() throws UnwrapException {
+            throw new UnwrapException(err);
+        }
+
+        @Override
+        public T unwrapOr(T or) {
             return or;
         }
 
         @Override
-        public Ok unwrapOrGet(Supplier<? extends Ok> fnGet) {
+        public T unwrapOrGet(Supplier<? extends T> fnGet) {
             return Objects.requireNonNull(fnGet, "fnGet is null").get();
         }
 
         @Override
-        public <X extends Throwable> Ok unwrap(Supplier<? extends X> ifNotOk) throws X {
-            throw ifNotOk.get();
+        public <X extends Throwable> T unwrap(Function<? super Exception, ? extends X> ifNotOk) throws X {
+            throw ifNotOk.apply(err);
         }
 
         @Override
-        public void ifOk(Consumer<? super Ok> fnAccOk) {
+        public void ifOk(Consumer<? super T> fnAccOk) {
             // pass... do nothing because I'm an 'Err'
         }
 
         @Override
-        public void ifErr(Consumer<? super Err> fnAccErr) {
+        public void ifErr(Consumer<? super Exception> fnAccErr) {
             fnAccErr.accept(err());
         }
 
         @Override
-        public Stream<Ok> stream() {
+        public Stream<T> stream() {
             return Stream.empty();
         }
     }
 
-
     /**
-     * 表达{@link R}类型解包时的异常
+     * 表达 {@link R} 类型解包时的异常
      */
     class UnwrapException extends RuntimeException {
         public UnwrapException(String message) {

@@ -184,8 +184,8 @@ public interface VPath extends VEntity, Comparable<VPath> {
      * @return {@link R.Ok}(虚拟文件实体(表示被创建的文件))| {@link R.Err}（创建过程的异常）
      * @apiNote 该方法不负责给定的流的关闭
      */
-    default R<VFile, Exception> tryMkFile(InputStream newFileData) {
-        return R.ofCallable(() -> mkFile(newFileData));
+    default R<VFile> tryMkFile(InputStream newFileData) {
+        return R.ofFnCallable(() -> mkFile(newFileData));
     }
 
     /**
@@ -226,7 +226,7 @@ public interface VPath extends VEntity, Comparable<VPath> {
      * @return {@link R.Ok}载荷虚拟文件实体（表示被创建或已存在的文件夹）| {@link R.Err}载荷执行过程中的异常
      * @throws VFSIOException 当前位置已存在普通文件时
      */
-    default R<VFile, Exception> tryMkDir() {
-        return R.ofCallable(this::mkDir);
+    default R<VFile> tryMkDir() {
+        return R.ofFnCallable(this::mkDir);
     }
 }

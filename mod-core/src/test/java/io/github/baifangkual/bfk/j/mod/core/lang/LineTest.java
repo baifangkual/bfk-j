@@ -16,7 +16,7 @@ public class LineTest {
     @Test
     public void test() {
 
-        R<LinkedList<List<Integer>>, RuntimeException> r = Line.orderDAGQueue(List.of(
+        R<LinkedList<List<Integer>>> r = Line.orderDAGQueue(List.of(
                 Line.of(1, 2),
                 Line.of(2, 3),
                 Line.of(3, 4),
@@ -28,7 +28,7 @@ public class LineTest {
 
     @Test
     public void test2() {
-        R<LinkedList<List<Integer>>, RuntimeException> r = Line.orderDAGQueue(List.of(
+        R<LinkedList<List<Integer>>> r = Line.orderDAGQueue(List.of(
                 Line.of(1, 2),
                 Line.of(2, 3),
                 Line.of(3, 1)

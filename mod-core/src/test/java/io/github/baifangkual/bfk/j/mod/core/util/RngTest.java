@@ -13,11 +13,11 @@ public class RngTest {
 
     @Test
     public void test() {
-        R<Long, RuntimeException> r10 = R.ofSupplier(() -> Long.valueOf(Rng.rollFixLenLarge(10)));
+        R<Long> r10 = R.ofFnCallable(() -> Rng.rollFixLenLarge(10)).map(Long::valueOf);
         Assertions.assertDoesNotThrow(() -> r10.unwrap());
-        R<Long, RuntimeException> r0 = R.ofSupplier(() -> Long.valueOf(Rng.rollFixLenLarge(0)));
+        R<Long> r0 = R.ofFnCallable(() -> Long.valueOf(Rng.rollFixLenLarge(0)));
         Assertions.assertThrows(R.UnwrapException.class, r0::unwrap);
-        R<Long, RuntimeException> r100 = R.ofSupplier(() -> Long.valueOf(Rng.rollFixLenLarge(100)));
+        R<Long> r100 = R.ofFnCallable(() -> Rng.rollFixLenLarge(100)).map(Long::valueOf);
         Assertions.assertThrows(R.UnwrapException.class, r100::unwrap);
     }
 

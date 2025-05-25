@@ -114,8 +114,8 @@ public interface VFS extends Closeable {
      * @throws NullPointerException 当给定的{@link VPath}为空时
      * @see #tryLsDir(VPath)
      */
-    default R<List<VPath>, Exception> tryLsDir(VPath path) {
-        return R.ofCallable(() -> lsDir(path));
+    default R<List<VPath>> tryLsDir(VPath path) {
+        return R.ofFnCallable(() -> lsDir(path));
     }
 
     /**
@@ -146,8 +146,8 @@ public interface VFS extends Closeable {
      * @throws VFSIOException       当过程出现异常（如权限不足，给定路径不存在等），或给定的{@link VFile}不为文件夹时
      * @throws NullPointerException 当给定的{@link VFile}为空时
      */
-    default R<List<VFile>, Exception> tryLsDir(VFile file) {
-        return R.ofCallable(() -> lsDir(file));
+    default R<List<VFile>> tryLsDir(VFile file) {
+        return R.ofFnCallable(() -> lsDir(file));
     }
 
     /**
@@ -168,8 +168,8 @@ public interface VFS extends Closeable {
      * @param path 要创建文件夹的位置
      * @return {@link R.Ok}载荷被创建的文件夹 | {@link R.Err}载荷过程出现异常（如权限不足，给定目录上级目录不存在，位置已有实体等）
      */
-    default R<VFile, Exception> tryMkdir(VPath path) {
-        return R.ofCallable(() -> mkdir(path));
+    default R<VFile> tryMkdir(VPath path) {
+        return R.ofFnCallable(() -> mkdir(path));
     }
 
     /**
@@ -258,8 +258,8 @@ public interface VFS extends Closeable {
      *
      * @return {@link R.Ok}载荷文件字节流 | {@link R.Err}载荷异常
      */
-    default R<InputStream, Exception> tryGetFileInputStream(VFile file) {
-        return R.ofCallable(() -> getFileInputStream(file));
+    default R<InputStream> tryGetFileInputStream(VFile file) {
+        return R.ofFnCallable(() -> getFileInputStream(file));
     }
 
     /**
@@ -282,7 +282,7 @@ public interface VFS extends Closeable {
      * @param inputStream 填充要新建的文件的流
      * @return {@link R.Ok}载荷虚拟文件实体-表示被创建的文件 | {@link R.Err}载荷过程发生的异常
      */
-    default R<VFile, Exception> tryMkFile(VPath path, InputStream inputStream) {
-        return R.ofCallable(() -> mkFile(path, inputStream));
+    default R<VFile> tryMkFile(VPath path, InputStream inputStream) {
+        return R.ofFnCallable(() -> mkFile(path, inputStream));
     }
 }

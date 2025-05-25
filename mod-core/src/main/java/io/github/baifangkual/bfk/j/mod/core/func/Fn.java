@@ -1,10 +1,10 @@
 package io.github.baifangkual.bfk.j.mod.core.func;
 
-import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
 import io.github.baifangkual.bfk.j.mod.core.lang.R;
-import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToSafe;
 import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToUnSafe;
+import io.github.baifangkual.bfk.j.mod.core.panic.Err;
+import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
 
 import java.io.Serializable;
 import java.util.function.Function;
@@ -20,9 +20,9 @@ import java.util.function.Function;
  * @since 2024/7/15 v0.0.3
  */
 @FunctionalInterface
-public interface Fn<P, Result> extends Function<P, R<Result, Exception>>,
-        FnMutToSafe<Function<P, R<Result, Exception>>>,
-        FnMutToUnSafe<Function<P, Result>>,
+public interface Fn<P, R1> extends Function<P, R<R1>>,
+        FnMutToSafe<Function<P, R<R1>>>,
+        FnMutToUnSafe<Function<P, R1>>,
         Serializable {
     /**
      * 表示一个入参一个出参的函数，函数执行过程中允许抛出异常，包括运行时异常和预检异常
@@ -31,7 +31,7 @@ public interface Fn<P, Result> extends Function<P, R<Result, Exception>>,
      * @return 出参
      * @throws Exception 函数执行过程中可能抛出的异常
      */
-    Result unsafeApply(P p) throws Exception;
+    R1 unsafeApply(P p) throws Exception;
 
     /**
      * 执行函数，函数执行结果将被包装为{@link R}容器对象，函数执行过程抛出的异常也将被引用在{@link R}容器对象中
@@ -40,7 +40,7 @@ public interface Fn<P, Result> extends Function<P, R<Result, Exception>>,
      * @return {@link R}容器对象，对象中包含函数执行结果（正常执行时）或异常对象（发生异常时）
      */
     @Override
-    default R<Result, Exception> apply(P p) {
+    default R<R1> apply(P p) {
         return toSafe().apply(p);
     }
 
@@ -51,7 +51,7 @@ public interface Fn<P, Result> extends Function<P, R<Result, Exception>>,
      * @return {@link Function}
      */
     @Override
-    default Function<P, R<Result, Exception>> toSafe() {
+    default Function<P, R<R1>> toSafe() {
         return p -> {
             try {
                 return R.ofOk(this.unsafeApply(p));
@@ -67,7 +67,7 @@ public interface Fn<P, Result> extends Function<P, R<Result, Exception>>,
      * @return {@link Function}
      */
     @Override
-    default Function<P, Result> toUnsafe() {
+    default Function<P, R1> toUnsafe() {
         return (p) -> {
             try {
                 return this.unsafeApply(p);
@@ -83,7 +83,7 @@ public interface Fn<P, Result> extends Function<P, R<Result, Exception>>,
      * @return {@link Function}
      */
     @Override
-    default Function<P, Result> toSneaky() {
+    default Function<P, R1> toSneaky() {
         return (p) -> {
             try {
                 return this.unsafeApply(p);
