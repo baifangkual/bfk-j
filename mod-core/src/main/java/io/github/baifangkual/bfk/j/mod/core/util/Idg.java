@@ -1,7 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.util;
 
 import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
-import io.github.baifangkual.bfk.j.mod.core.mark.Default;
 
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
@@ -31,8 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author baifangkual
  * @since 2024/12/12 v0.0.3
  */
-@Default.prov(method = "defaultSingle")
-public final class Idg implements Default {
+public final class Idg {
 
     private static class SingleHolder {
         private static final Idg INSTANCE = new Idg();
