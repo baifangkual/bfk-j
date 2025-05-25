@@ -56,6 +56,7 @@
         <reversion.slf4j-api>2.0.13</reversion.slf4j-api>
         <reversion.slf4j-simple>2.0.13</reversion.slf4j-simple>
         <reversion.jupiter-api>5.10.2</reversion.jupiter-api>
+        <reversion.auto-service>1.1.1</reversion.auto-service> <!-- THIS USE TO SPI FILE AUTO GEN -->
         <!-- boot 与 cloud 版本有兼容性对应关系 -->
         <reversion.spring-boot-dependencies>3.2.7</reversion.spring-boot-dependencies>
         <reversion.spring-cloud-dependencies>2023.0.3</reversion.spring-cloud-dependencies>
@@ -99,6 +100,13 @@
                 <artifactId>junit-jupiter-api</artifactId>
                 <version>${reversion.jupiter-api}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.auto.service</groupId>
+                <artifactId>auto-service</artifactId>
+                <version>${reversion.auto-service}</version>
+                <scope>provided</scope>
+                <optional>true</optional>
             </dependency>
         </dependencies>
     </dependencyManagement>

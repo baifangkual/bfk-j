@@ -42,7 +42,6 @@
         <reversion.apache-common-net>3.11.1</reversion.apache-common-net>
         <reversion.minio>8.5.12</reversion.minio>
         <reversion.smbj>0.14.0</reversion.smbj>
-        <reversion.auto-service>1.1.1</reversion.auto-service>
     </properties>
 
     <modules>
