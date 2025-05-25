@@ -1,6 +1,5 @@
 package io.github.baifangkual.bfk.j.mod.vfs.ftp;
 
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.*;
 import org.junit.jupiter.api.Test;

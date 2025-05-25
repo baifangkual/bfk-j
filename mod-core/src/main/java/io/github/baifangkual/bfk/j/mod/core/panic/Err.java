@@ -1,6 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.panic;
 
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.core.func.FnGet;
 import io.github.baifangkual.bfk.j.mod.core.func.FnRun;
 
@@ -134,7 +134,7 @@ public final class Err {
     public static void realIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                               String msgTemp, Object... msgArgs) {
         if (expr) {
-            throwReal(trFn.apply(STF.f(msgTemp, msgArgs)));
+            throwReal(trFn.apply(Stf.f(msgTemp, msgArgs)));
         }
     }
 
@@ -155,7 +155,7 @@ public final class Err {
     public static void realIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                               String msgTemp, Supplier<? extends Object[]> msgArgsSup) {
         if (expr) {
-            throwReal(trFn.apply(STF.f(msgTemp, msgArgsSup.get())));
+            throwReal(trFn.apply(Stf.f(msgTemp, msgArgsSup.get())));
         }
     }
 
@@ -208,7 +208,7 @@ public final class Err {
     public static void panicIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                                String msgTemp, Object... msgArgs) {
         if (expr) {
-            throwPanic(trFn.apply(STF.f(msgTemp, msgArgs)));
+            throwPanic(trFn.apply(Stf.f(msgTemp, msgArgs)));
         }
     }
 
@@ -227,7 +227,7 @@ public final class Err {
     public static void panicIf(boolean expr, Function<? super String, ? extends Exception> trFn,
                                String msgTemp, Supplier<? extends Object[]> msgArgsSup) {
         if (expr) {
-            throwPanic(trFn.apply(STF.f(msgTemp, msgArgsSup.get())));
+            throwPanic(trFn.apply(Stf.f(msgTemp, msgArgsSup.get())));
         }
     }
 

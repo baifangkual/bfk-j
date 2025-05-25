@@ -16,7 +16,7 @@ import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
 import com.hierynomus.smbj.share.File;
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 import io.github.baifangkual.bfk.j.mod.vfs.*;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.IllegalVFSBuildParamsException;
@@ -246,7 +246,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
         DiskShare ds = this.singleConnPack.getShare();
         ds.mkdir(path.simplePath());
         // 勉强 可能逻辑重复冗余, 或直接创建VFile更好？
-        return getFile(path).orElseThrow(() -> new VFSIOException(STF.f("\"{}\" not exists", path)));
+        return getFile(path).orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not exists", path)));
     }
 
     @Override
@@ -300,7 +300,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
 
     @Override
     public InputStream getFileInputStream(VFile file) throws VFSIOException {
-        if (file.isDirectory()) throw new VFSIOException(STF.f("\"{}\" is a directory", file));
+        if (file.isDirectory()) throw new VFSIOException(Stf.f("\"{}\" is a directory", file));
         else if (file.isSimpleFile()) {
             DiskShare ds = this.singleConnPack.getShare();
             File openFile = ds.openFile(file.toPath().simplePath(),
@@ -313,7 +313,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
             InputStream inputStream = openFile.getInputStream();
             return new SMBJInputStreamDelegator(openFile, inputStream);
         } else {
-            throw new VFSIOException(STF.f("Not a simple file or directory: '{}'", file));
+            throw new VFSIOException(Stf.f("Not a simple file or directory: '{}'", file));
         }
     }
 
@@ -336,7 +336,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
         Objects.requireNonNull(path, "given path is null");
         Objects.requireNonNull(newFileData, "given input stream is null");
         if (getFile(path).isPresent()) {
-            throw new VFSIOException(STF.f("{}:\"{}\" already exists", this, path));
+            throw new VFSIOException(Stf.f("{}:\"{}\" already exists", this, path));
         }
         try (OutputStream out = createFile(path)) {
             newFileData.transferTo(out);

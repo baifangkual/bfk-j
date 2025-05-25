@@ -1,7 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.vfs;
 
 
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;
@@ -210,7 +210,7 @@ public interface VPath extends VEntity, Comparable<VPath> {
         }
         VFile dir = this.toFile().orElseThrow(() -> new VFSIOException("Can't create directory"));
         if (!dir.isDirectory()) {
-            throw new VFSIOException(STF
+            throw new VFSIOException(Stf
                     .f("Can't create directory, path '{}' already exists a non directory entity", simplePath()));
         }
         return dir;

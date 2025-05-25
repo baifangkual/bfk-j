@@ -1,32 +1,29 @@
-package io.github.baifangkual.bfk.j.mod.core.fmt;
+package io.github.baifangkual.bfk.j.mod.core.util;
 
 import io.github.baifangkual.bfk.j.mod.core.lang.Const;
 
 import java.util.Objects;
 
 /**
- * <b>格式化字符串工具类</b><br>
- * string formater util class
+ * <b>string formatter</b>
  * <pre>
  *  {@code
- *  String str = STF.f("a,b,{},d,e,\\{},\\\\g", "c");
+ *  String str = Stf.f("a,b,{},d,e,\\{},\\\\g", "c");
  *  Assert.eq("a,b,c,d,e,{},\\g", str);
- *  Assert.throwE(NullPointException.class, ()-> STF.f(null, "c"));
+ *  Assert.throwE(NullPointException.class, ()-> Stf.f(null, "c"));
  *  }
  * </pre>
- * 该类主要逻辑复制自 hutool-core 包下
- * {@code cn.hutool.core.text.StrFormatter.formatWith(String strPattern, String placeHolder, Object... argArray)} 方法，
- * 复制该工具方法而不添加hutool-core依赖目的是为了减小该模块的外部引用和大小，使该模块作为其他模块引用的依赖时，较为干净
+ * 该类主要逻辑参考 hutool-core 包下 StrFormatter
  *
  * @author baifangkual
  * @see #f(String, Object...)
  * @since 2024/6/19 v0.0.3
  */
-public final class STF {
+public final class Stf {
     /**
      * 不允许实例化
      */
-    private STF() {
+    private Stf() {
         throw new UnsupportedOperationException("Utility class");
     }
 
@@ -62,15 +59,14 @@ public final class STF {
      * 如果想输出占位符之前的 {@code \} ,使用双转义符 {@code \\\\} 即可<br>
      * <pre>
      *     {@code
-     *     STF.f("this is {} for {}", "a", "b");
+     *     Stf.f("this is {} for {}", "a", "b");
      *     // result: this is a for b
-     *     STF.f("this is \\{} for {}", "a", "b");
+     *     Stf.f("this is \\{} for {}", "a", "b");
      *     // result: this is {} for a
-     *     STF.f("this is \\\\{} for {}", "a", "b");
+     *     Stf.f("this is \\\\{} for {}", "a", "b");
      *     // result: this is \a for b
      *     }
      * </pre>
-     * 该方法大部分逻辑复制自 {@code cn.hutool.core.text.StrFormatter#formatWith(String, String, Object...)}
      *
      * @param temp 字符串模板
      * @param args 参数列表

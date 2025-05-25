@@ -1,7 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.vfs.ftp;
 
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.vfs.*;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSBuildingFailException;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;
@@ -79,7 +79,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
             this.supportCMDs = analysisSupportHelps();
             boolean basicSupport = FTPSupport.isBasicSupport(this.supportCMDs);
             if (!basicSupport) {
-                throw new VFSBuildingFailException(STF
+                throw new VFSBuildingFailException(Stf
                         .f("连接的FTP服务器不支持要求的基本的命令，无法构建FTPVirtualFileSystem，当前连接的FTP服务器支持的命令: {}",
                                 this.supportCMDs));
             }
@@ -217,7 +217,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
             // 后续或可将该的行为变更，要知道 tryGetFile在行为降级（不支持MLST时）走的是LIST，会查询两次，完全没必要
             Optional<VFile> fOpt = getFile(path);
             if (fOpt.isEmpty() || !fOpt.get().isDirectory()) {
-                throw new VFSIOException(STF.f("\"{}\" not a directory or not exists", path));
+                throw new VFSIOException(Stf.f("\"{}\" not a directory or not exists", path));
             }
             /*
             已知在部分ftp客户端上，使用 / 为开头，当非chroot时，可能指代了以文件系统为根的绝对路径
@@ -289,7 +289,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
                         this.mainControlCli.listFiles(qP, FTPSupport.NOT_NULL_AND_NOT_MAGIC_AND_NOT_LINK));
                 return convertF2(path, ftpF, this::convertF2F);
             } else {
-                throw new VFSIOException(STF.f("{} not a directory", file.toPath()));
+                throw new VFSIOException(Stf.f("{} not a directory", file.toPath()));
             }
         } finally {
             mainControlLock.unlock();
@@ -322,7 +322,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
         } else if (ftpFile.isSymbolicLink()) {
             ft = VFileType.link;
         } else {
-            throw new VFSIOException(STF.f("ftp file : {} type undefined, type: {}", ftpFile.getName(),
+            throw new VFSIOException(Stf.f("ftp file : {} type undefined, type: {}", ftpFile.getName(),
                     ftpFile.getType()));
         }
         if (ft == VFileType.simpleFile) {
@@ -357,13 +357,13 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
                     this.mainControlCli.makeDirectory(pathTranslate(path)));
             // 勉强 可能逻辑重复冗余, 或直接创建VFile更好？
             VFile fo = getFile(path)
-                    .orElseThrow(() -> new VFSIOException(STF
+                    .orElseThrow(() -> new VFSIOException(Stf
                             .f("\"{}\" not found directory, make directory unknown error", path)));
             if (!mkr) {
                 if (!fo.isDirectory()) {
-                    throw new VFSIOException(STF.f("\"{}\" already exists a simple file", path));
+                    throw new VFSIOException(Stf.f("\"{}\" already exists a simple file", path));
                 } else {
-                    throw new VFSIOException(STF.f("\"{}\" already exists a directory", path));
+                    throw new VFSIOException(Stf.f("\"{}\" already exists a directory", path));
                 }
             }
             return fo;
@@ -488,14 +488,14 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
                 Optional<VFile> fo = getFile(path);
                 if (fo.isPresent()) {
                     if (fo.get().isDirectory()) {
-                        throw new VFSIOException(STF
+                        throw new VFSIOException(Stf
                                 .f("\"{}\" already exists a directory, can't use rmFile to remove directory", path));
                     } else if (!fo.get().isDirectory()) {
-                        throw new VFSIOException(STF.f("\"{}\" already exists, delete file unknown error", path));
+                        throw new VFSIOException(Stf.f("\"{}\" already exists, delete file unknown error", path));
                     }
                 } else {
                     // 即不存在，结合上述的“当给定目录所在无文件，则返回false”，即这种情况表示该位置本来无一物，应抛出异常
-                    throw new VFSIOException(STF.f("\"{}\" not found", path));
+                    throw new VFSIOException(Stf.f("\"{}\" not found", path));
                 }
             }
         } finally {
@@ -537,14 +537,14 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
                     Optional<VFile> fo = getFile(path);
                     if (fo.isPresent()) {
                         if (fo.get().isDirectory()) {
-                            throw new VFSIOException(STF.f("\"{}\" already exists, directory is not empty", path));
+                            throw new VFSIOException(Stf.f("\"{}\" already exists, directory is not empty", path));
                         } else if (!fo.get().isDirectory()) {
-                            throw new VFSIOException(STF.f("\"{}\" already exists, not a directory", path));
+                            throw new VFSIOException(Stf.f("\"{}\" already exists, not a directory", path));
                         }
                     } else {
                         // 20250517 该方法表意已修改，没有结果一致性语义，即若位置本来无一物，则抛出异常，上述挂等号行为取消
                         // 这里即不存在，但删除标志位rmr又失败的情况
-                        throw new VFSIOException(STF.f("\"{}\" not found", path));
+                        throw new VFSIOException(Stf.f("\"{}\" not found", path));
                     }
                 }
             }
@@ -621,7 +621,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
                 // 这里尚不清楚是否需要调用 completePendingCommand
                 // 可能需要更多观察或测试才可确定
                 awaitRecyclingOneBusy(borCli);
-                throw new VFSIOException(STF.f("\"{}\" not found or not have inputStream", file));
+                throw new VFSIOException(Stf.f("\"{}\" not found or not have inputStream", file));
             }
             /*
             经查勘，Apache commons net 的 FTPClient 继承自 FTP类，
@@ -644,7 +644,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
              */
             return InputCompleteDelegation.accept(in, borCli, this);
         } else {
-            throw new VFSIOException(STF.f("\"{}\" is a directory", file));
+            throw new VFSIOException(Stf.f("\"{}\" is a directory", file));
         }
     }
 
@@ -653,7 +653,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
         Objects.requireNonNull(path, "given path is null");
         Objects.requireNonNull(newFileData, "given input stream is null");
         if (getFile(path).isPresent()) {
-            throw new VFSIOException(STF.f("{}:\"{}\" already exists", this, path));
+            throw new VFSIOException(Stf.f("{}:\"{}\" already exists", this, path));
         }
         BorrowableCliDelegation borCli = null;
         try {
@@ -667,9 +667,9 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
             /* fix 20240913 storeFile 方法无需调用 completePendingCommand 因为该方法末尾已自己调用了
              * 若再在外界调用 completePendingCommand，则线程会一直阻塞在此 */
             if (!success) {
-                throw new VFSIOException(STF.f("store file not success, unknown error"));
+                throw new VFSIOException(Stf.f("store file not success, unknown error"));
             }
-            return getFile(path).orElseThrow(() -> new VFSIOException(STF.f("\"{}\" not found", path)));
+            return getFile(path).orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not found", path)));
         } catch (CopyStreamException ce) {
             log.warn("传输文件时发生IO错误, err msg: {}", ce.getMessage());
             throw new VFSIOException(ce);

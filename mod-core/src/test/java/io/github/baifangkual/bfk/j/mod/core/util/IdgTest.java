@@ -1,6 +1,5 @@
 package io.github.baifangkual.bfk.j.mod.core.util;
 
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -182,20 +181,20 @@ public class IdgTest {
         allResults.clear();
         System.gc(); // help gc
         System.out.println("allThreadLoopTimes count = " + allThreadLoopTimes.get());
-        threadLoopTimes.forEach((key, value) -> System.out.println(STF
+        threadLoopTimes.forEach((key, value) -> System.out.println(Stf
                 .f("t: {}, LoopTimes count: {}", key, value.get())));
 
         System.out.println("========================");
-        threadIdRefThreadGenNum.forEach((k, v) -> System.out.println(STF.f("t: {}, genCount: {}", k, v)));
+        threadIdRefThreadGenNum.forEach((k, v) -> System.out.println(Stf.f("t: {}, genCount: {}", k, v)));
         System.out.println("========================");
 
         // 看看是否冲突
         int countSize = sorts.size();
         Set<Idg.Id> collect = sorts.stream().map(ShowBox::idr)
                 .collect(Collectors.toSet());
-        System.out.println(STF.
+        System.out.println(Stf.
                 f("bef去重: {}, after:{}", countSize, collect.size()));
-        System.out.println(STF.f("no重复: {}", countSize == collect.size()));
+        System.out.println(Stf.f("no重复: {}", countSize == collect.size()));
         Assertions.assertEquals(countSize, collect.size());
         // cupNum = 20
         //testTimeSeconds = 2

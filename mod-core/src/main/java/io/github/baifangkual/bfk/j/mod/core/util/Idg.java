@@ -1,7 +1,5 @@
 package io.github.baifangkual.bfk.j.mod.core.util;
 
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
-
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -165,11 +163,11 @@ public final class Idg {
             LocalDateTime deathOfTime = LocalDateTime
                     .ofInstant(Instant.ofEpochMilli(EPOCH_END), ZoneId.systemDefault());
             DateTimeFormatter dft = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss:SSS");
-            throw new IllegalStateException(STF.f("ID生成器初始化失败，不允许当前系统时间 '{}' 早于 '{}' 或晚于 '{}'",
+            throw new IllegalStateException(Stf.f("ID生成器初始化失败，不允许当前系统时间 '{}' 早于 '{}' 或晚于 '{}'",
                     now.format(dft), bigBang.format(dft), deathOfTime.format(dft)));
         }
         if (machineId > MAX_MACHINE_ID_VALUE || machineId < 0) {
-            throw new IllegalArgumentException(STF.f("machineId > {} or < 0", MAX_MACHINE_ID_VALUE));
+            throw new IllegalArgumentException(Stf.f("machineId > {} or < 0", MAX_MACHINE_ID_VALUE));
         }
         this.machineId = machineId;
         this.fnGenTimeMillis = fn;
@@ -210,7 +208,7 @@ public final class Idg {
                         TimeUnit.MILLISECONDS.sleep(offset << 1);  // 尝试休眠双倍差值后重新获取，再次校验
                         timestamp = nowSystemTime();
                         if (timestamp < lastTime) {  // 等待结束后，如果新获取的仍小于，则证明时间又发生回溯
-                            throw new IllegalStateException(STF
+                            throw new IllegalStateException(Stf
                                     .f("系统时间发生回溯，拒绝在 {} 毫秒内生成Id", lastTime - timestamp));
                         }
                     } catch (InterruptedException e) {
@@ -218,7 +216,7 @@ public final class Idg {
                         throw new IllegalStateException(e);
                     }
                 } else { // 大的回溯，直接他妈异常
-                    throw new IllegalStateException(STF.f("系统时间发生回溯，拒绝在 {} 毫秒内生成Id", offset));
+                    throw new IllegalStateException(Stf.f("系统时间发生回溯，拒绝在 {} 毫秒内生成Id", offset));
                 }
             }
 
@@ -259,7 +257,7 @@ public final class Idg {
         while (timestamp <= lastTimestamp) { // 这里，一个毫秒内，线程将会忙到下一个毫秒才会返回
             // fix: 更新小于判断，当小于，则证明在这种极小时间的自旋时发生了时间回溯，检查回溯毫秒数，若大于容错，则抛出异常
             if (lastTimestamp - timestamp > MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY) {
-                throw new IllegalStateException(STF
+                throw new IllegalStateException(Stf
                         .f("系统时间发生回溯，拒绝在 {} 毫秒内生成Id", lastTimestamp - timestamp));
             }
             timestamp = nowSystemTime();

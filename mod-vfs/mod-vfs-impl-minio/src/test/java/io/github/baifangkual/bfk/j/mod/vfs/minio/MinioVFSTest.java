@@ -1,6 +1,5 @@
 package io.github.baifangkual.bfk.j.mod.vfs.minio;
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
 import io.github.baifangkual.bfk.j.mod.vfs.VFile;
 import io.github.baifangkual.bfk.j.mod.vfs.VPath;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;

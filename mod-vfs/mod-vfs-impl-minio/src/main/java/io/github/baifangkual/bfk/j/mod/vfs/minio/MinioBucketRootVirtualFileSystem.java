@@ -1,7 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.vfs.minio;
 
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 import io.github.baifangkual.bfk.j.mod.vfs.*;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.IllegalVFSBuildParamsException;
@@ -135,7 +135,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
                 // 目录行为策略
                 this.isClosed.compareAndSet(true, false);
             } else {
-                throw new IllegalVFSBuildParamsException(STF.f("bucket \"{}\" not exists", buckN));
+                throw new IllegalVFSBuildParamsException(Stf.f("bucket \"{}\" not exists", buckN));
             }
         } catch (Exception e) {
             err = true;
@@ -237,10 +237,10 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
             if (vf.isDirectory()) {
                 return directoryAction.lsDir(path);
             } else {
-                throw new VFSIOException(STF.f("Not a directory: {}", path));
+                throw new VFSIOException(Stf.f("Not a directory: {}", path));
             }
         } else {
-            throw new VFSIOException(STF.f("\"{}\" not exists", path));
+            throw new VFSIOException(Stf.f("\"{}\" not exists", path));
         }
     }
 
@@ -258,16 +258,16 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
         // 实体存在
         Optional<StatObjectResponse> statObjectResponse = objStat(path);
         if (statObjectResponse.isPresent()) {
-            throw new VFSIOException(STF.f("位置已存在同名文件, bucket: '{}', path: '{}'", this.bucket, path.simplePath()));
+            throw new VFSIOException(Stf.f("位置已存在同名文件, bucket: '{}', path: '{}'", this.bucket, path.simplePath()));
         }
         // 文件夹存在
         if (directoryAction.directoryExists(path)) {
-            throw new VFSIOException(STF.f("Directory already exists, bucket: '{}', path: '{}'", this.bucket, path.simplePath()));
+            throw new VFSIOException(Stf.f("Directory already exists, bucket: '{}', path: '{}'", this.bucket, path.simplePath()));
         }
         // 创建其
         directoryAction.mkdir(path);
         // 勉强 可能逻辑重复冗余, 或直接创建VFile更好？
-        return getFile(path).orElseThrow(() -> new VFSIOException(STF.f("\"{}\" not exists", path)));
+        return getFile(path).orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not exists", path)));
     }
 
     @Override
@@ -276,16 +276,16 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
         Optional<VFile> f = path.toFile();
         if (f.isPresent()) {
             if (f.get().isDirectory()) {
-                throw new VFSIOException(STF.f("\"{}\" is a directory", path));
+                throw new VFSIOException(Stf.f("\"{}\" is a directory", path));
             } else if (f.get().isSimpleFile()) {
                 doRemoveObj(MinioPro.leftCleanPathSeparator(path.simplePath()));
             } else {
-                throw new VFSIOException(STF.f("\"{}\" is not a directory or simple file", path));
+                throw new VFSIOException(Stf.f("\"{}\" is not a directory or simple file", path));
             }
         } else {
             // 20250517 该方法表意已修改，没有结果一致性语义，即若位置本来无一物，则抛出异常
             // 20250517 无需纠正，该方法已修改，没有结果一致性语义,结果一致性与否，下发给下级原生行为
-            throw new VFSIOException(STF.f("\"{}\" not exists", path));
+            throw new VFSIOException(Stf.f("\"{}\" not exists", path));
         }
     }
 
@@ -293,7 +293,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
     public void rmdir(VPath path, boolean recursive) throws VFSIOException {
         Objects.requireNonNull(path, "given path is null");
         if ((!recursive) && (!lsDir(path).isEmpty())) {
-            throw new VFSIOException(STF.f("\"{}\" is not a empty directory", path));
+            throw new VFSIOException(Stf.f("\"{}\" is not a empty directory", path));
         }
         if (recursive) {
             rmChildren(path, recursive);
@@ -403,14 +403,14 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
     @Override
     public InputStream getFileInputStream(VFile file) throws VFSIOException {
         if (file.isDirectory()) {
-            throw new VFSIOException(STF.f("\"{}\" is a directory", file));
+            throw new VFSIOException(Stf.f("\"{}\" is a directory", file));
         } else if (file.isSimpleFile()) {
             return MinioPro.sneakyRun(() -> cli.getObject(GetObjectArgs.builder()
                     .bucket(bucket)
                     .object(MinioPro.leftCleanPathSeparator(file.toPath().simplePath()))
                     .build()));
         } else {
-            throw new VFSIOException(STF.f("Not a simple file or directory: '{}'", file));
+            throw new VFSIOException(Stf.f("Not a simple file or directory: '{}'", file));
         }
     }
 
@@ -428,13 +428,13 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
         Err.realIf(objStat(path).isPresent(), VFSIOException::new, "\"{}\" 已存在文件，无法创建", path);
         //to do fix me 使用第二种方式查看其，查看其内部是否有文件以确定其是否真的存在
         Err.realIf(directoryAction.directoryExists(path),
-                () -> new VFSIOException(STF.f("\"{}\" 已存在文件夹，无法创建同名文件", path)));
+                () -> new VFSIOException(Stf.f("\"{}\" 已存在文件夹，无法创建同名文件", path)));
         MinioPro.sneakyRun(() -> cli.putObject(PutObjectArgs.builder()
                 .bucket(bucket)
                 .object(MinioPro.leftCleanPathSeparator(path.simplePath()))
                 .stream(newFileData, -1, putObjectBufSize)
                 .build()));
-        return path.toFile().orElseThrow(() -> new VFSIOException(STF.f("\"{}\" not exists", path)));
+        return path.toFile().orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not exists", path)));
     }
 
     @Override

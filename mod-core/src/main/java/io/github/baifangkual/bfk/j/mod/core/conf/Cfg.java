@@ -1,6 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.conf;
 
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.core.lang.Tup2;
 import io.github.baifangkual.bfk.j.mod.core.mark.Iter;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
@@ -984,7 +984,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
         }
 
         static String buildErrMsgByOptionKey(String optionKey) {
-            return STF.f(EXISTS_MSG_TEMP, optionKey);
+            return Stf.f(EXISTS_MSG_TEMP, optionKey);
         }
     }
 
@@ -1043,10 +1043,10 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
                     .orElse(null);
             final Object nullableDefValue = option.defaultValue();
 
-            String msg = STF.f(NO_VALUE_ERR_MSG_TEMPLATE, key);
-            msg = nullableDefValue == null ? msg : msg + STF.f(APPEND_OPTION_DEFAULT_VALUE, nullableDefValue);
-            msg = nullableDescription == null ? msg : msg + STF.f(APPEND_OPTION_DESCRIPTION, nullableDescription);
-            msg = nullableNoValueMsg == null ? msg : msg + STF.f(APPEND_OPTION_VALUE_NOT_FOUND, nullableNoValueMsg);
+            String msg = Stf.f(NO_VALUE_ERR_MSG_TEMPLATE, key);
+            msg = nullableDefValue == null ? msg : msg + Stf.f(APPEND_OPTION_DEFAULT_VALUE, nullableDefValue);
+            msg = nullableDescription == null ? msg : msg + Stf.f(APPEND_OPTION_DESCRIPTION, nullableDescription);
+            msg = nullableNoValueMsg == null ? msg : msg + Stf.f(APPEND_OPTION_VALUE_NOT_FOUND, nullableNoValueMsg);
 
             if (!appendFallbackOptMsg) {
                 return msg;
@@ -1060,7 +1060,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
                 return msg;
             }
             List<String> fallbackOfOptKeys = fallbackOfOpt.stream().map(Option::key).toList();
-            msg = msg + STF.f(APPEND_OPTION_FAIL_BACK, fallbackOfOptKeys);
+            msg = msg + Stf.f(APPEND_OPTION_FAIL_BACK, fallbackOfOptKeys);
 
 
             for (Option<?> fbOpt : fallbackOfOpt) {

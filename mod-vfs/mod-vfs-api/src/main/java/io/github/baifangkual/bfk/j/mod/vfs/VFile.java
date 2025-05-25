@@ -1,7 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.vfs;
 
 
-import io.github.baifangkual.bfk.j.mod.core.fmt.STF;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;
 import io.github.baifangkual.bfk.j.mod.vfs.mark.VEntity;
@@ -120,7 +120,7 @@ public interface VFile extends VEntity {
         if (this.isSimpleFile()) {
             // 若当前为普通文件，并且给定的vPath为root，则这种非法情况应当抛出异常
             if (target.isVfsRoot()) {
-                throw new VFSIOException(STF.f("copy {}:\"{}\" to {}:\"{}\" fail, IOErr: " +
+                throw new VFSIOException(Stf.f("copy {}:\"{}\" to {}:\"{}\" fail, IOErr: " +
                                                "cannot overwrite directory '{}' with non-directory '{}'",
                         this.selfVfs(), this.toPath(), target.selfVfs(), target, target, this.toPath()));
             }
@@ -128,7 +128,7 @@ public interface VFile extends VEntity {
                 target.mkFile(input);
             } catch (IOException e) {
                 throw new VFSIOException(
-                        STF.f("copy {}:\"{}\" to {}:\"{}\" fail, IOErr: {}",
+                        Stf.f("copy {}:\"{}\" to {}:\"{}\" fail, IOErr: {}",
                                 this.selfVfs(),
                                 this.toPath(),
                                 target.selfVfs(),
@@ -147,7 +147,7 @@ public interface VFile extends VEntity {
                 sourceOne.copyTo(targetOne);
             }
         } else {
-            throw new UnsupportedOperationException(STF.f("尚未实现的类型的拷贝操作, 类型: {}", this.type()));
+            throw new UnsupportedOperationException(Stf.f("尚未实现的类型的拷贝操作, 类型: {}", this.type()));
         }
     }
 }
