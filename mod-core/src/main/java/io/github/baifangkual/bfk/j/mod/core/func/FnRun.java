@@ -1,24 +1,31 @@
 package io.github.baifangkual.bfk.j.mod.core.func;
 
 
-import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
+import io.github.baifangkual.bfk.j.mod.core.lang.Nil;
+import io.github.baifangkual.bfk.j.mod.core.lang.R;
+import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToSafe;
 import io.github.baifangkual.bfk.j.mod.core.mark.FnMutToUnSafe;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
+import io.github.baifangkual.bfk.j.mod.core.panic.PanicException;
 
 import java.io.Serializable;
+import java.util.function.Supplier;
 
 /**
- * <b>函数式接口</b><br>
- * 相较于{@link Runnable}，表示可能抛出异常的操作<br>
- * 表示函数，构成闭包，无入参出参，表示的函数可能带有预检异常或运行时异常声明，可以引用throwable方法<br>
- * {@code FnRun fn = () -> AtomicLong.getAndIncrement();}
+ * <b>函数式接口 (Function Runnable)</b><br>
+ * 表示函数: {@code () -> () | Err}<br>
+ * 相较于{@link Runnable} 表示可能抛出异常的操作<br>
+ * 表示的函数可能带有预检异常或运行时异常声明，可以引用throwable方法<br>
+ * 例如 {@code FnRun fn = () -> conn.close();}
  *
  * @author baifangkual
- * @see Runnable
+ * @apiNote call {@link #toSafe()} mut to {@code Supplier<R<Nil>>}<br>
+ * @implNote 无法统一该类型与 {@link Runnable} 返回值语义，遂该类型不扩展 {@code Runnable}
  * @since 2024/7/15 v0.0.4
  */
 @FunctionalInterface
-public interface FnRun extends Runnable,
+public interface FnRun extends
+        FnMutToSafe<Supplier<R<Nil>>>,
         FnMutToUnSafe<Runnable>,
         Serializable {
     /**
@@ -28,12 +35,17 @@ public interface FnRun extends Runnable,
      */
     void unsafeRun() throws Exception;
 
-    /**
-     * 执行函数，函数执行过程中的异常将被包装为{@link PanicException}并抛出，包括运行时和预检异常
-     */
+
     @Override
-    default void run() {
-        toUnsafe().run();
+    default Supplier<R<Nil>> toSafe() {
+        return () -> {
+            try {
+                this.unsafeRun();
+                return R.ofNil();
+            } catch (Exception e) {
+                return new R.Err<>(e);
+            }
+        };
     }
 
     /**

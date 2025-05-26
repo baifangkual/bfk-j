@@ -11,18 +11,23 @@ import java.io.Serializable;
 import java.util.function.BiFunction;
 
 /**
- * <b>函数式接口</b><br>
- * 相较于{@link BiFunction} 表示可能抛出异常的操作<br>
- * 表示函数，两个入参一个出参
+ * <b>函数式接口 (Function)</b><br>
+ * 表示函数: {@code (p1, p2) -> (v) | E}<br>
+ * 相较于{@link BiFunction}，表示可能抛出异常的操作<br>
+ * 表示的函数可能带有预检异常或运行时异常声明，可以引用throwable方法<br>
  *
+ * @param <P1> 入参一类型
+ * @param <P2> 入参二类型
+ * @param <V>  出参类型
  * @author baifangkual
+ * @apiNote call {@link #toSafe()} mut to {@code BiFunction<P1, P2, R<V>>}<br>
  * @see BiFunction
  * @since 2024/7/15 v0.0.3
  */
 @FunctionalInterface
-public interface BiFn<P1, P2, R1> extends BiFunction<P1, P2, R<R1>>,
-        FnMutToSafe<BiFunction<P1, P2, R<R1>>>,
-        FnMutToUnSafe<BiFunction<P1, P2, R1>>,
+public interface Fn2<P1, P2, V> extends BiFunction<P1, P2, R<V>>,
+        FnMutToSafe<BiFunction<P1, P2, R<V>>>,
+        FnMutToUnSafe<BiFunction<P1, P2, V>>,
         Serializable {
     /**
      * 表示两入参一出参且可能发生异常的函数
@@ -32,7 +37,7 @@ public interface BiFn<P1, P2, R1> extends BiFunction<P1, P2, R<R1>>,
      * @return 函数执行结果
      * @throws Exception 可能的异常
      */
-    R1 unsafeApply(P1 p1, P2 p2) throws Exception;
+    V unsafeApply(P1 p1, P2 p2) throws Exception;
 
     /**
      * 执行函数，并将函数执行结果和异常包装至{@link R}容器对象
@@ -42,7 +47,7 @@ public interface BiFn<P1, P2, R1> extends BiFunction<P1, P2, R<R1>>,
      * @return 函数执行结果和可能发生异常的容器对象
      */
     @Override
-    default R<R1> apply(P1 p1, P2 p2) {
+    default R<V> apply(P1 p1, P2 p2) {
         return toSafe().apply(p1, p2);
     }
 
@@ -52,7 +57,7 @@ public interface BiFn<P1, P2, R1> extends BiFunction<P1, P2, R<R1>>,
      * @return 安全函数
      */
     @Override
-    default BiFunction<P1, P2, R<R1>> toSafe() {
+    default BiFunction<P1, P2, R<V>> toSafe() {
         return (p1, p2) -> {
             try {
                 return R.ofOk(this.unsafeApply(p1, p2));
@@ -68,7 +73,7 @@ public interface BiFn<P1, P2, R1> extends BiFunction<P1, P2, R<R1>>,
      * @return 静默抛出可能的异常的非安全函数
      */
     @Override
-    default BiFunction<P1, P2, R1> toSneaky() {
+    default BiFunction<P1, P2, V> toSneaky() {
         return (p1, p2) -> {
             try {
                 return this.unsafeApply(p1, p2);
@@ -86,7 +91,7 @@ public interface BiFn<P1, P2, R1> extends BiFunction<P1, P2, R<R1>>,
      * @return 以PanicException形式抛出可能的异常的非安全函数
      */
     @Override
-    default BiFunction<P1, P2, R1> toUnsafe() {
+    default BiFunction<P1, P2, V> toUnsafe() {
         return (p1, p2) -> {
             try {
                 return this.unsafeApply(p1, p2);
