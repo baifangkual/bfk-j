@@ -1,12 +1,16 @@
 package io.github.baifangkual.bfk.j.mod.core.lang;
 
 import io.github.baifangkual.bfk.j.mod.core.func.Fn;
+import io.github.baifangkual.bfk.j.mod.core.func.FnAcc;
+import io.github.baifangkual.bfk.j.mod.core.func.FnRun;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -149,7 +153,113 @@ public sealed interface R<T> extends Serializable
     }
 
     /**
-     * 尝试创建"正常结果"<br>
+     * 尝试从给定的 {@link Optional} 中获取值，若成功，返回 {@code R.Ok(T)}，
+     * 否则，返回 {@code R.Err(NullPointException)}
+     * <pre>
+     *     {@code
+     *     Optional<T> opt = ...;
+     *     R<T> r = R.ofOptional(opt);
+     *     if (opt.isEmpty()) {
+     *         Assert.eq(r.err().getClass(), NullPointException.class);
+     *     } else {
+     *         Assert.eq(opt.get(), r.unwrap());
+     *     }
+     *     }
+     * </pre>
+     *
+     * @param optional 可能存在的值
+     * @param <T>      正常结果类型
+     * @return {@code R.Ok(T)} | {@code R.Err(NullPointException)}
+     * @apiNote 虽然给定该方法一个 {@code null} 并不会抛出异常，但 {@link Optional} 引用最好永不为 {@code null}
+     */
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    static <T> R<T> ofOptional(Optional<? extends T> optional) {
+        //noinspection OptionalAssignedToNull
+        if (optional == null) return new Err<>(new NullPointerException("'optional' is null"));
+        return ofFnCallable(optional::get);
+    }
+
+    /**
+     * 尝试从给定的 {@link Future} 中获取值，创建“正常结果”，当其为异常完成，则获取其异常err返回 {@code R.Err(err}
+     *
+     * @param future future-当该为 {@code null} 时立即返回 {@code R.Err(NullPointException)}
+     * @param <T>    正常结果类型
+     * @return {@code R.Ok(T)} | {@code R.Err(err)} | {@code R.Err(NullPointException)}
+     * @apiNote 如果给定的 {@link Future} 为 {@code Future<Void>}，则总是返回 {@code R.Err(NullPointException)}
+     */
+    static <T> R<T> ofFuture(Future<? extends T> future) {
+        if (future == null) return new Err<>(new NullPointerException("'future' is null"));
+        return ofFnCallable(() -> {
+            try {
+                final T t = future.get();
+                if (t == null) throw new NullPointerException("'future' return null");
+                return t;
+            } catch (InterruptedException interruptedException) {
+                Thread.currentThread().interrupt(); // reset interrupt
+                throw interruptedException;
+            }
+        });
+    }
+
+    /**
+     * 返回 {@link CompletableFuture}<br>
+     * 若当前为 {@code R.Ok}, 则返回 “成功完成的”，否则，返回 “异常完成的”
+     *
+     * @return {@code CompletedFuture} | {@code FailedFuture}
+     */
+    default CompletableFuture<T> future() {
+        if (isOk()) {
+            return CompletableFuture.completedFuture(ok());
+        } else {
+            return CompletableFuture.failedFuture(err());
+        }
+    }
+
+    /**
+     * 执行给定函数，若发生异常，发生的异常在返回的 {@code R.err()}
+     *
+     * @param fnRun 函数
+     * @return {@code R.Ok(Nil)} | {@code R.Err(err)} | {@code R.Err(NullPointException)}
+     */
+    static R<Nil> ofFnRun(FnRun fnRun) {
+        if (fnRun == null) return new Err<>(new NullPointerException("'fnRun' is null"));
+        return fnRun.toSafe().get();
+    }
+
+    /**
+     * 执行给定函数，若发生异常，发生的异常在返回的 {@code R.err()}
+     *
+     * @param runnable 函数
+     * @return {@code R.Ok(Nil)} | {@code R.Err(err)} | {@code R.Err(NullPointException)}
+     */
+    static R<Nil> ofRunnable(Runnable runnable) {
+        if (runnable == null) return new Err<>(new NullPointerException("'runnable' is null"));
+        return ofFnRun(runnable::run);
+    }
+
+    /**
+     * 表示“无返回值”
+     *
+     * @return {@code R.Ok(Nil)}
+     */
+    static R<Nil> ofNil() {
+        return new Ok<>(Nil.self());
+    }
+
+    /**
+     * 以入参执行给定函数，若发生异常，发生的异常在返回的 {@code R.err()}
+     *
+     * @param p     函数入参
+     * @param fnAcc 函数
+     * @return {@code R.Ok(Nil)} | {@code R.Err(err)} | {@code R.Err(NullPointException)}
+     */
+    static <P> R<Nil> ofFnAcc(FnAcc<? super P> fnAcc, P p) {
+        if (fnAcc == null) return new Err<>(new NullPointerException("'fnAcc' is null"));
+        return fnAcc.toSafe().apply(p);
+    }
+
+    /**
+     * 尝试执行函数创建"正常结果"<br>
      * 给定“正常结果值提供函数”，若“正常结果值提供函数”不为 {@code null}，则执行其，
      * 若其执行后返回值不为 {@code null}，返回 {@code R.Ok(ok)}，
      * 若“正常结果值提供函数”为 {@code null} 或其执行过程发生异常，或其执行后返回 {@code null} ，
@@ -190,7 +300,7 @@ public sealed interface R<T> extends Serializable
     }
 
     /**
-     * 尝试创建"正常结果"<br>
+     * 尝试执行函数创建"正常结果"<br>
      * 给定“正常结果值提供函数”，若“正常结果值提供函数”不为 {@code null}，则执行其，
      * 若其执行后返回值不为 {@code null}，返回 {@code R.Ok(ok)}，
      * 若“正常结果值提供函数”为 {@code null} 或其执行过程发生异常，或其执行后返回 {@code null} ，
@@ -242,7 +352,7 @@ public sealed interface R<T> extends Serializable
     }
 
     /**
-     * 尝试创建"正常结果"<br>
+     * 尝试执行函数创建"正常结果"<br>
      * 执行给定的函数，当函数执行过程中发生异常err时，该方法将返回 {@code R.Err(err)}，否则返回 {@code R.Ok(ok)},
      * 若给定的函数为 {@code null} 或函数执行结果为 {@code null}, 则返回 {@code R.Err(NullPointException)}
      *
