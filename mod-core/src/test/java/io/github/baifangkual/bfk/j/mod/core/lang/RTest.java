@@ -5,7 +5,9 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -13,6 +15,7 @@ import java.util.stream.Stream;
  * @author baifangkual
  * @since 2025/5/3
  */
+@SuppressWarnings({"OptionalGetWithoutIsPresent", "OptionalAssignedToNull", "ConstantValue", "DataFlowIssue", "ThrowableNotThrown"})
 public class RTest {
 
     @Test
@@ -89,6 +92,57 @@ public class RTest {
         List<Integer> list = integerStream.toList();
         Assertions.assertEquals(List.of(1, 2, 3, 5), list);
     }
+
+    @Test
+    public void test10() {
+        Optional<Integer> i = Optional.of(1);
+        R<Integer> r = R.ofOptional(i);
+        Assertions.assertTrue(r.isOk());
+        Assertions.assertEquals(1, r.toOptional().get());
+        Assertions.assertEquals(1, r.unwrap());
+    }
+
+    @Test
+    public void test11() {
+        Optional<String> sOpt = Optional.empty();
+        R<String> r = R.ofOptional(sOpt);
+        Assertions.assertTrue(r.isErr());
+        Assertions.assertThrows(R.UnwrapException.class, r::unwrap);
+        Assertions.assertEquals(NoSuchElementException.class, r.err().getClass());
+    }
+
+    @Test
+    public void test12() {
+        Optional<String> selfNull = null;
+        R<String> r = R.ofOptional(selfNull);
+        Assertions.assertTrue(r.isErr());
+        Assertions.assertEquals(NullPointerException.class, r.err().getClass());
+    }
+
+    @Test
+    public void test13() {
+        CompletableFuture<String> fOk = CompletableFuture.completedFuture("ok");
+        CompletableFuture<String> fErr = CompletableFuture.failedFuture(new IllegalStateException("err"));
+        CompletableFuture<String> fSelfNull = null;
+        CompletableFuture<String> fRNull = CompletableFuture.completedFuture(null);
+        R<String> rOk = R.ofFuture(fOk);
+        R<String> rErr = R.ofFuture(fErr);
+        R<String> rSelfNull = R.ofFuture(fSelfNull);
+        R<String> rRNull = R.ofFuture(fRNull);
+        Assertions.assertEquals("ok", rOk.unwrap());
+        Assertions.assertThrows(R.UnwrapException.class, rErr::unwrap);
+        //System.out.println(rErr.unwrap());
+        Assertions.assertEquals(IllegalStateException.class, rErr.err().getCause().getClass());
+        //System.out.println(rSelfNull.unwrap());
+        Assertions.assertThrows(NullPointerException.class, () -> {
+            throw rSelfNull.err();
+        });
+        //System.out.println(rRNull.unwrap());
+        Assertions.assertEquals(NullPointerException.class, rRNull.err().getClass());
+
+    }
+
+
 
 
 }

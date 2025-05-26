@@ -13,15 +13,34 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
  * <b>结果（Result）</b><br>
- * 一个不可变容器 线程安全，表达可能操作失败的逻辑的结果，
+ * 一个不可变容器，线程安全，表达可能操作失败的逻辑的结果<br>
+ * <b>语义约定：</b>
+ * <ul>
+ *     <li>任何对 {@link R} 实例进行的操作导致 {@link R} 状态需发生变更时，都会返回新的 {@link R} 实例</li>
+ *     <li>一个 {@link R} 实例仅应形容某一个操作的结果（一个操作是指能够被 {@code R.ofXXX()} 系列方法描述的操作，应可以理解为构建 {@link R} 实例这个过程本身），
+ *     当 {@link R} 实例被构建后，其绑定的系列成员方法应仅是对其载荷的可能存在的“正常结果”或“错误结果”进行某操作的“语法糖”，
+ *     即一系列成员方法提供的逻辑及操作都应该能够转换为：
+ *     <pre>
+ *         {@code
+ *         if (r.isOk()) {// do something...}
+ *         else {// do something...}
+ *         }
+ *     </pre>
+ *     即当外界提供的这些操作本身“不合法”（例如提供函数，但函数引用为{@code null}）时，应在提供这些操作的上下文中抛出异常，
+ *     即除了进行 {@code R.ofXXX(...)} 系列构建实例的操作外，其他操作并不能避免（也不应该避免）在上下文中产生异常
+ *     </li>
+ *     <li>若通过 {@link R} 的系列实例方法对 {@link R} 实例进行不符合 {@link R} 类型本身描述的语义的操作时（见上条）发生异常（并不代指R变为Err，而是代指在操作R的当前上下文发生异常）
+ *     则说明外界给定的操作本身不合法（比如给定的函数为 {@code null}）</li>
+ * </ul>
  * 该类型实例要么为“正常结果”({@link R.Ok})携带“正常结果值”({@link T})，
  * 要么为“错误结果”({@link R.Err})携带“错误结果值”({@link Exception})，
- * 该类内缺省主语的方法签名主语默认形容的是{@link T}<br>
+ * 该类内缺省主语的方法签名主语默认应形容 {@link T}<br>
  * 进行某操作后返回该类型实例，若操作成功，则{@link #isOk()}为true，{@link #isErr()}为false,
  * 调用{@link #ok()}将返回“正常结果”，而调用{@link #err()}则抛出异常，
  * 若操作失败，则{@link #isOk()}为false，{@link #isErr()}为true,
@@ -37,7 +56,7 @@ import java.util.stream.Stream;
  * 即使能够得知其可能抛出的异常，上层调用方也可选择不处理该异常，则异常仍会根据调用栈向上层传递，以这个角度来说，
  * 该异常的传递其实是游离在方法的返回值声明之外的单独通道，若方法声明为{@code R<T, XXException> method(...)},
  * 则调用方可立即清楚该方法为“可能产生异常”的方法，且调用方在获取结果时，必要对该结果对象进行“解包”操作，
- * 以显式以某种方式对结果对象进行处理，这样可以避免异常从调用栈底一直传递到上层。<br>
+ * 以显式以某种方式对结果对象进行处理，这样可以避免异常从调用栈一直传递到上层。<br>
  * （20250525更新说明：该Class已被重写，因为java中无法对泛型进行条件限定，遂当 R 为 {@code R<Integer, String>} 时，
  * 无法处理当调用map方法执行给定函数过程抛出异常而被 R 持有的情况：假设有步骤1、2，步骤1返回R.Ok，步骤2能够处理R中的“正常结果值”，
  * 则在原有设计中，使用map操作，若进行步骤2的时候发生异常，则操作中断，发生的异常还是按照java的原有异常逻辑向上层抛出了，
@@ -534,6 +553,44 @@ public sealed interface R<T> extends Serializable
     Stream<T> stream();
 
     /**
+     * 尝试对当前可能存在的 {@code Ok} 做判定，若函数为 {@code null}、判定未通过、判定过程发生异常,
+     * 返回 {@code R.Err(...)}，否则返回 {@code this}<br>
+     * 若当前为 {@code Err}，则不会调用判定函数<br>
+     * 任何导致判定函数不能返回 {@code true} 或无法达到返回 {@code true} 的状态都会使该方法返回 {@code R.Err(...)}
+     *
+     * @param fnTest 判定函数
+     * @return {@code this} | {@code R.Err(...)}
+     * @throws NullPointerException 当当前为 {@code R.Ok} 且给定的函数为 {@code null}
+     */
+    default R<T> filter(Predicate<? super T> fnTest) {
+        if (isOk()) {
+            Objects.requireNonNull(fnTest, "'fnTest' is null");
+            try {
+                boolean test = fnTest.test(ok());
+                if (!test) throw new IllegalStateException("'fnTest' test failed");
+                return this;
+            } catch (Exception e) {
+                return new Err<>(e);
+            }
+        } else {
+            return this;
+        }
+    }
+
+    /*
+    不应当有：
+    default boolean test(Predicate<? super T> fnTest)
+    filter方法形容的主语是 R 本身，即：不符合/异常/则变为 R.Err，
+    而 test 返回的 二值（true/false）无法完整描述当前 R 状态（可能符合/不符合/异常/不存在），
+    需以某种手段或约定归约才可有此，其次，该test也像是语法糖，遂废弃，不应有该
+    20250526: 这也启发了--- 应有约定：
+    若对R类型实例进行不符合R类型本身语义的操作时（R仅应形容其载荷的Ok）发生异常（并不代指R变为Err，而是代指在操作R的当前上下文发生异常）
+    则说明外界给定的操作不合法（比如给定的函数为null）？--- 该已记录在 R class doc 里，作为约定。
+    是否实现 recover match peek consume 需后续再做观察
+     */
+
+
+    /**
      * 根据给定函数，尝试转换“正常结果值”并返回新的 {@link R} 对象<br>
      * 当前实体为“正常结果”时，给定的函数将被执行以进行“正常结果值”的转换，
      * 当前实体为“错误结果”时，给定的函数将不会被执行<br>
@@ -542,13 +599,14 @@ public sealed interface R<T> extends Serializable
      *
      * @param fn  正常结果值转换函数
      * @param <U> 新的“正常结果值”类型
-     * @return 新的结果对象
-     * @throws NullPointerException 当给定的函数为空时
+     * @return {@code R.Ok(U)} | {@code R.Err(...)} (this)
+     * @throws NullPointerException 当当前为 {@code R.Ok} 且给定的函数为 {@code null}
      */
     default <U> R<U> map(Fn<? super T, ? extends U> fn) {
         if (isOk()) {
+            Objects.requireNonNull(fn, "'fn' is null");
             try {
-                return ofOk(Objects.requireNonNull(fn, "'fn' is null").unsafeApply(ok()));
+                return ofOk(fn.unsafeApply(ok()));
             } catch (Exception e) { // catch maybe fn is null or on apply exception
                 return new Err<>(e);
             }
@@ -568,13 +626,13 @@ public sealed interface R<T> extends Serializable
      *
      * @param fn  正常结果值到 {@link R} 的转换函数
      * @param <U> 新的“正常结果值”类型
-     * @return 新的结果对象
-     * @throws NullPointerException 当给定的函数为空时
+     * @return {@code R.Ok(U)} | {@code R.Err(...)} (this)
+     * @throws NullPointerException 当当前为 {@code R.Ok} 且给定的函数为 {@code null}
      */
     @SuppressWarnings("unchecked")
     default <U> R<U> flatmap(Fn<? super T, ? extends R<? extends U>> fn) {
         if (isOk()) {
-            Objects.requireNonNull(fn, "fn is null");
+            Objects.requireNonNull(fn, "'fn' is null");
             try {
                 R<U> apply = (R<U>) fn.unsafeApply(ok());
                 if (apply == null) return new Err<>(new NullPointerException("flatmap fn return null"));
@@ -595,7 +653,9 @@ public sealed interface R<T> extends Serializable
      *
      * @param fn 错误结果值转换函数
      * @return 新的结果对象
-     * @throws NullPointerException 当给定的函数为空时
+     * @throws NullPointerException 当当前为 {@code R.Err} 且给定的函数为 {@code null}
+     * @apiNote 因为该方法语义是明确的将原有 R 内的异常转为新的异常类型，
+     * 遂当给定的函数转换过程 抛出异常时，该异常不会被 R 持有，而是直接抛出
      */
     default R<T> mapErr(Function<? super Exception, ? extends Exception> fn) {
         if (isErr()) { // to do? maybe on apply will exception?
@@ -603,26 +663,6 @@ public sealed interface R<T> extends Serializable
         } else {
             return this;
         }
-    }
-
-    /**
-     * 根据给定函数，尝试转换“错误结果值”到“{@link R} 对象”，并返回该对象<br>
-     * 当前实体为“错误结果”时，给定的函数将被执行以进行“错误结果值”到“结果对象”的转换，
-     * 当前实体为“正常结果”时，给定的函数将不会被执行
-     *
-     * @param fn 错误结果值到 {@link R} 的转换函数
-     * @return 新的结果对象
-     * @throws NullPointerException 当给定的函数为空时
-     */
-    default R<T> flatmapErr(Function<? super Exception, ? extends R<? extends T>> fn) {
-        if (isErr()) {
-            Objects.requireNonNull(fn, "fn is null");
-            @SuppressWarnings("unchecked")
-            R<T> apply = (R<T>) fn.apply(err()); // to do? maybe on apply will exception?
-            if (apply == null) return new Err<>(new NullPointerException("flatmapErr fn return null"));
-            else return apply;
-        }
-        return this;
     }
 
     @Override
@@ -722,7 +762,7 @@ public sealed interface R<T> extends Serializable
      */
     record Err<T>(Exception err) implements R<T>, Serializable {
         @Serial
-        private static final long serialVersionUID = 33L;
+        private static final long serialVersionUID = 333L;
 
         public Err {
             Objects.requireNonNull(err, "'err' is null");
