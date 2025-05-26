@@ -10,19 +10,23 @@ import java.io.Serializable;
 import java.util.function.Function;
 
 /**
- * <b>函数式接口</b><br>
+ * <b>函数式接口 (Function)</b><br>
+ * 表示函数: {@code (p) -> (v) | E}<br>
  * 相较于{@link Function}，表示可能抛出异常的操作<br>
- * 表示函数,一个入参一个出参，表示的函数可能带有预检异常或运行时异常声明，可以引用throwable方法<br>
- * {@code Fn<Path, byte[]> fn = Files::readAllBytes;}
+ * 表示的函数可能带有预检异常或运行时异常声明，可以引用throwable方法<br>
+ * 例如 {@code Fn<Path, byte[]> fn = Files::readAllBytes;}
  *
+ * @param <P> 入参类型
+ * @param <V> 出参类型
  * @author baifangkual
+ * @apiNote call {@link #toSafe()} mut to {@code Function<P, R<V>>}<br>
  * @see Function
  * @since 2024/7/15 v0.0.3
  */
 @FunctionalInterface
-public interface Fn<P, R1> extends Function<P, R<R1>>,
-        FnMutToSafe<Function<P, R<R1>>>,
-        FnMutToUnSafe<Function<P, R1>>,
+public interface Fn<P, V> extends Function<P, R<V>>,
+        FnMutToSafe<Function<P, R<V>>>,
+        FnMutToUnSafe<Function<P, V>>,
         Serializable {
     /**
      * 表示一个入参一个出参的函数，函数执行过程中允许抛出异常，包括运行时异常和预检异常
@@ -31,7 +35,7 @@ public interface Fn<P, R1> extends Function<P, R<R1>>,
      * @return 出参
      * @throws Exception 函数执行过程中可能抛出的异常
      */
-    R1 unsafeApply(P p) throws Exception;
+    V unsafeApply(P p) throws Exception;
 
     /**
      * 执行函数，函数执行结果将被包装为{@link R}容器对象，函数执行过程抛出的异常也将被引用在{@link R}容器对象中
@@ -40,7 +44,7 @@ public interface Fn<P, R1> extends Function<P, R<R1>>,
      * @return {@link R}容器对象，对象中包含函数执行结果（正常执行时）或异常对象（发生异常时）
      */
     @Override
-    default R<R1> apply(P p) {
+    default R<V> apply(P p) {
         return toSafe().apply(p);
     }
 
@@ -51,7 +55,7 @@ public interface Fn<P, R1> extends Function<P, R<R1>>,
      * @return {@link Function}
      */
     @Override
-    default Function<P, R<R1>> toSafe() {
+    default Function<P, R<V>> toSafe() {
         return p -> {
             try {
                 return R.ofOk(this.unsafeApply(p));
@@ -67,7 +71,7 @@ public interface Fn<P, R1> extends Function<P, R<R1>>,
      * @return {@link Function}
      */
     @Override
-    default Function<P, R1> toUnsafe() {
+    default Function<P, V> toUnsafe() {
         return (p) -> {
             try {
                 return this.unsafeApply(p);
@@ -83,7 +87,7 @@ public interface Fn<P, R1> extends Function<P, R<R1>>,
      * @return {@link Function}
      */
     @Override
-    default Function<P, R1> toSneaky() {
+    default Function<P, V> toSneaky() {
         return (p) -> {
             try {
                 return this.unsafeApply(p);

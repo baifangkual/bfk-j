@@ -12,19 +12,22 @@ import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 /**
- * <b>函数式接口</b><br>
+ * <b>函数式接口 (Function Get | Callable)</b><br>
+ * 表示函数: {@code () -> (v) | E}<br>
  * 相较于{@link Supplier}，表示可能抛出异常的操作<br>
- * 表示函数，生产者函数，无入参一个出参，表示的函数可能带有预检异常或运行时异常声明，可以引用throwable方法<br>
- * {@code FnGet<File> fn = File::getCanonicalFile;}
+ * 表示的函数可能带有预检异常或运行时异常声明，可以引用throwable方法<br>
+ * 例如 {@code FnGet<File> fn = File::getCanonicalFile;}
  *
  * @author baifangkual
+ * @apiNote call {@link #toSafe()} mut to {@code Supplier<R<V>>}<br>
  * @see Supplier
  * @since 2024/7/15 v0.0.4
  */
 @FunctionalInterface
-public interface FnGet<R1> extends Supplier<R<R1>>, Callable<R1>,
-        FnMutToSafe<Supplier<R<R1>>>,
-        FnMutToUnSafe<Supplier<R1>>,
+public interface FnGet<V> extends Supplier<R<V>>,
+        Callable<V>,
+        FnMutToSafe<Supplier<R<V>>>,
+        FnMutToUnSafe<Supplier<V>>,
         Serializable {
     /**
      * 表示无入参一个出参的函数，函数运行过程中允许抛出运行时或预检异常
@@ -33,7 +36,7 @@ public interface FnGet<R1> extends Supplier<R<R1>>, Callable<R1>,
      * @throws Exception 函数运行过程中允许抛出运行时或预检异常
      * @see #call()
      */
-    R1 unsafeGet() throws Exception;
+    V unsafeGet() throws Exception;
 
     /**
      * 执行函数，并返回{@link R}类型的容器对象表示结果，函数执行过程中的异常将在返回结果的容器对象中
@@ -41,7 +44,7 @@ public interface FnGet<R1> extends Supplier<R<R1>>, Callable<R1>,
      * @return 函数执行结果容器对象
      */
     @Override
-    default R<R1> get() {
+    default R<V> get() {
         return toSafe().get();
     }
 
@@ -54,7 +57,7 @@ public interface FnGet<R1> extends Supplier<R<R1>>, Callable<R1>,
      * @see #unsafeGet()
      */
     @Override
-    default R1 call() throws Exception {
+    default V call() throws Exception {
         return unsafeGet();
     }
 
@@ -64,12 +67,12 @@ public interface FnGet<R1> extends Supplier<R<R1>>, Callable<R1>,
      * @return {@link Supplier}
      */
     @Override
-    default Supplier<R<R1>> toSafe() {
+    default Supplier<R<V>> toSafe() {
         return () -> {
             try {
                 return R.ofOk(this.unsafeGet());
             } catch (Exception e) {
-                return R.ofErr(e);
+                return new R.Err<>(e);
             }
         };
     }
@@ -80,7 +83,7 @@ public interface FnGet<R1> extends Supplier<R<R1>>, Callable<R1>,
      * @return {@link Supplier}
      */
     @Override
-    default Supplier<R1> toSneaky() {
+    default Supplier<V> toSneaky() {
         return () -> {
             try {
                 return this.unsafeGet();
@@ -98,7 +101,7 @@ public interface FnGet<R1> extends Supplier<R<R1>>, Callable<R1>,
      * @return {@link Supplier}
      */
     @Override
-    default Supplier<R1> toUnsafe() {
+    default Supplier<V> toUnsafe() {
         return () -> {
             try {
                 return this.unsafeGet();
