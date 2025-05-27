@@ -53,7 +53,7 @@ import java.util.stream.Collectors;
  * @see #displayString()
  * @since 2023/8/18 v0.0.6
  */
-public final class Tree<T> implements Iter<T>, Cloneable<Tree<T>> {
+public final class Tree<T> implements Iter<T> {
 
     // ref emptyTree
     private static final Tree<?> EMPTY_TREE_IMMUTABLE = new Tree<>(); // emptyTree，immutable
@@ -1677,19 +1677,6 @@ public final class Tree<T> implements Iter<T>, Cloneable<Tree<T>> {
     public String toString() {
         return Stf.f("Tree({})[count: {}, depth: {}]@{}",
                 nodeType, nodeCount, depth, Integer.toHexString(this.hashCode()));
-    }
-
-
-    @SuppressWarnings("MethodDoesntCallSuperMethod")
-    @Override
-    @Deprecated(forRemoval = true)
-    public Tree<T> clone() {
-        // 不行啊，部分 final 的属性弄不进去啊，也就是没有 这些东西，
-        // 还有 同一个父的子的顺序 不一样，这些不一样，不符合clone语义啊
-        // 该需废弃啊
-        Tree<T> newTree = Tree.ofNodes(this.root, this.nodeType).unwrap();
-        newTree.modifyCount = this.modifyCount;
-        return newTree;
     }
 
     /*
