@@ -233,15 +233,14 @@ public final class Tree<T> implements Iter<T>, Cloneable<Tree<T>> {
         // 允许没有元素的树，若是，则无需下构建树子
         if (maxDepth == -1 || rootCollector.isEmpty()) {
             rootCollector.clear(); // 因为内部的List由ListFactory控制，遂该即使为空树，roots也不应引用Collections.emptyList
-            this.root = rootCollector;
         } else {
             this.nodeCount = rootCollector.size();
             buildingTree(rootCollector, listFactory, fnCompGetChild, fnPreFilter,
                     listFactory.get(), // 复用临时存储直接child的，通常直接child不会太多
                     identityHashSet, // 直接地址，验证是否存在环或多个父
                     fnNSort, maxDepth - 1, 0);
-            this.root = rootCollector;
         }
+        this.root = rootCollector;
 
     }
 
@@ -926,21 +925,21 @@ public final class Tree<T> implements Iter<T>, Cloneable<Tree<T>> {
     /**
      * 非递归-BFS遍历
      *
-     * @param fnGetNodes              树节点提供函数，提供n个树节点，这些节点应是同一深度的，
-     *                                否则可能会导致一个实体被遍历不止一次
-     * @param fnPreAcc                函数，一定对node执行
-     * @param fnAfterChildAddQueueAcc 函数，仅对有子节点的node执行，在被遍历的node的子添加到bfs队列后执行
-     * @param fnPostAcc               函数，一定对node执行
+     * @param fnGetNodes               树节点提供函数，提供n个树节点，这些节点应是同一深度的，
+     *                                 否则可能会导致一个实体被遍历不止一次
+     * @param fnPreAcc                 函数，一定对node执行
+     * @param fnOnPostChildAddQueueAcc 函数，仅对有子节点的node执行，在被遍历的node的子添加到bfs队列后执行
+     * @param fnPostAcc                函数，一定对node执行
      * @throws NullPointerException 给定的节点为空或函数为空时
      */
     private void bfs(Supplier<? extends Iterable<Node<T>>> fnGetNodes,
                      Consumer<? super Node<T>> fnPreAcc,
-                     Consumer<? super Node<T>> fnAfterChildAddQueueAcc,
+                     Consumer<? super Node<T>> fnOnPostChildAddQueueAcc,
                      Consumer<? super Node<T>> fnPostAcc) {
         Objects.requireNonNull(fnGetNodes, "fnGetNodes is null");
         Objects.requireNonNull(fnPreAcc, "fnPreAcc is null");
         Objects.requireNonNull(fnPostAcc, "fnPostAcc is null");
-        Objects.requireNonNull(fnAfterChildAddQueueAcc, "fnAfterChildAddQueueAcc is null");
+        Objects.requireNonNull(fnOnPostChildAddQueueAcc, "fnOnPostChildAddQueueAcc is null");
         Queue<Node<T>> queue = new LinkedList<>();
         fnGetNodes.get().forEach(queue::add);
         while (!queue.isEmpty()) {
@@ -949,10 +948,25 @@ public final class Tree<T> implements Iter<T>, Cloneable<Tree<T>> {
             // 将当前节点的所有子节点加入队列
             if (!current.isLeaf()) {
                 queue.addAll(this.fnUnsafeGetChild.getNullableChild(current));
-                fnAfterChildAddQueueAcc.accept(current);
+                fnOnPostChildAddQueueAcc.accept(current);
             }
             fnPostAcc.accept(current); // 最后对current执行
         }
+    }
+
+    /**
+     * 使用给定函数以BFS方式排序当前树中同属一个父的所有子<br>
+     * 这会改变树中同属一个父的存储子的List中元素顺序
+     *
+     * @param fnSort 排序函数
+     */
+    public void sort(Comparator<? super T> fnSort) {
+        Objects.requireNonNull(fnSort, "fnSort is null");
+        Comparator<Node<T>> comparator = compNSortFn(fnSort);
+        this.root.sort(comparator);
+        this.bfs(() -> root, FN_ACC_DO_NOTHING,
+                (n) -> fnUnsafeGetChild.getNullableChild(n).sort(comparator),
+                FN_ACC_DO_NOTHING);
     }
 
     /**
@@ -1668,8 +1682,14 @@ public final class Tree<T> implements Iter<T>, Cloneable<Tree<T>> {
 
     @SuppressWarnings("MethodDoesntCallSuperMethod")
     @Override
+    @Deprecated(forRemoval = true)
     public Tree<T> clone() {
-        return Tree.ofNodes(this.root, this.nodeType).unwrap();
+        // 不行啊，部分 final 的属性弄不进去啊，也就是没有 这些东西，
+        // 还有 同一个父的子的顺序 不一样，这些不一样，不符合clone语义啊
+        // 该需废弃啊
+        Tree<T> newTree = Tree.ofNodes(this.root, this.nodeType).unwrap();
+        newTree.modifyCount = this.modifyCount;
+        return newTree;
     }
 
     /*

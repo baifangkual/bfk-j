@@ -12,7 +12,13 @@ import java.util.stream.IntStream;
  * @author baifangkual
  * @since 2025/5/18
  */
-@SuppressWarnings({"CommentedOutCode", "Convert2MethodRef", "UnnecessaryLocalVariable", "StringOperationCanBeSimplified"})
+@SuppressWarnings({
+        "CommentedOutCode",
+        "Convert2MethodRef",
+        "UnnecessaryLocalVariable",
+        "StringOperationCanBeSimplified",
+        "MismatchedQueryAndUpdateOfCollection"
+})
 public class TreeTest {
 
     @Test
@@ -483,6 +489,7 @@ public class TreeTest {
             if (callIterCount > 99) break;
             deletedNodeRefList.clear();
             iterPeeked.clear();
+            callIterCount += 1;
             Iterator<Tree.Node<Integer>> iter = tree.nodeIterator();
             int befCount = tree.nodeCount();
             while (iter.hasNext()) {
@@ -797,5 +804,168 @@ public class TreeTest {
 
     }
 
+
+    private Tup2<List<Line<Integer>>, Tree<Integer>> genBigTree(int nodeCountOrigin,
+                                                                int nodeCountBound,
+                                                                int rootCountOrigin,
+                                                                int rootCountBound) {
+
+        // 生成一个大的随机树，节点数在1000-2000之间
+        int nodeCount = (int) Rng.rollLong(nodeCountOrigin, nodeCountBound);
+
+        // 生成节点值列表，确保值唯一
+        Set<Integer> values = new HashSet<>();
+        while (values.size() < nodeCount) {
+            values.add((int) Rng.rollLong(1, Integer.MAX_VALUE));
+        }
+        List<Integer> nodeValues = new ArrayList<>(values);
+
+        // 随机选择1-5个根节点
+        int rootCount = (int) Rng.rollLong(rootCountOrigin, rootCountBound);
+        List<Integer> roots = new ArrayList<>();
+        for (int i = 0; i < rootCount; i++) {
+            roots.add(nodeValues.remove(0));
+        }
+        // 构建边的关系
+        List<Line<Integer>> lines = new ArrayList<>();
+        List<Integer> availableParents = new ArrayList<>(roots);
+
+        while (!nodeValues.isEmpty()) {
+            // 随机选择一个父节点
+            int parentIndex = (int) Rng.rollLong(availableParents.size());
+            int parent = availableParents.get(parentIndex);
+
+            // 随机决定当前父节点要添加多少个子节点(1-5个)
+            int childCount = (int) Rng.rollLong(1, Math.min(6, nodeValues.size() + 1));
+
+            for (int i = 0; i < childCount && !nodeValues.isEmpty(); i++) {
+                int child = nodeValues.remove(0);
+                lines.add(Line.of(parent, child));
+                availableParents.add(child);
+            }
+        }
+        // 构建树
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
+        return Tup2.of(lines, tree);
+    }
+
+
+    @Test
+    public void testGenerateLargeRandomTree() {
+
+        int nodeCountOrigin = 1000;
+        int nodeCountBound = 2000;
+        int rootCountOrigin = 1;
+        int rootCountBound = 5;
+        Tup2<List<Line<Integer>>, Tree<Integer>> lineAndTree = genBigTree(
+                nodeCountOrigin, nodeCountBound, rootCountOrigin, rootCountBound);
+        List<Line<Integer>> lines = lineAndTree.l();
+        Tree<Integer> tree = lineAndTree.r();
+//        System.out.println(tree);
+//        System.out.println(tree.displayString());
+
+        // 验证树的属性
+        Assertions.assertTrue(tree.nodeCount() >= nodeCountOrigin);
+        Assertions.assertTrue(tree.nodeCount() <= nodeCountBound);
+
+        // 验证树的结构
+        // 1. 将树转换回边的关系
+        List<Line<Integer>> convertedLines = tree.toLines(ArrayList::new, Tree.Node::data).unwrap();
+
+        // 2. 排序后比较原始边和转换后的边是否相等
+        Comparator<Line<Integer>> lineComparator = Comparator
+                .<Line<Integer>, Integer>comparing(Line::begin)
+                .thenComparing(Line::end);
+
+        List<Line<Integer>> sortedOriginalLines = lines.stream()
+                .sorted(lineComparator)
+                .toList();
+        List<Line<Integer>> sortedConvertedLines = convertedLines.stream()
+                .sorted(lineComparator)
+                .toList();
+
+        Assertions.assertEquals(sortedOriginalLines, sortedConvertedLines);
+
+        // 3. 测试树的遍历
+        Set<Integer> bfsNodes = new HashSet<>();
+        tree.bfs(node -> bfsNodes.add(node.data()));
+        Assertions.assertEquals(tree.nodeCount(), bfsNodes.size());
+
+        // 4. 测试迭代器
+        Set<Integer> iteratorNodes = new HashSet<>();
+        for (Integer value : tree) {
+            iteratorNodes.add(value);
+        }
+        Assertions.assertEquals(tree.nodeCount(), iteratorNodes.size());
+        Assertions.assertEquals(bfsNodes, iteratorNodes);
+
+        // 5. 测试节点删除
+        Iterator<Tree.Node<Integer>> nodeIterator = tree.nodeIterator();
+        int initialCount = tree.nodeCount();
+        int deletedCount = 0;
+
+        while (nodeIterator.hasNext()) {
+            Tree.Node<Integer> node = nodeIterator.next();
+            // 随机删除节点(50%概率)
+            if (Rng.rollBoolean()) {
+                int beforeDelete = tree.nodeCount();
+                nodeIterator.remove();
+                int afterDelete = tree.nodeCount();
+                int delta = beforeDelete - afterDelete;
+                Assertions.assertTrue(delta > 0);
+                deletedCount += delta;
+            }
+        }
+
+        Assertions.assertEquals(initialCount - tree.nodeCount(), deletedCount);
+    }
+
+    @Test
+    public void testLargeTreeProcess() {
+
+        int nodeCountOrigin = 1000;
+        int nodeCountBound = 3000;
+        int rootCountOrigin = 10;
+        int rootCountBound = 20;
+        Tup2<List<Line<Integer>>, Tree<Integer>> listTreeTup2 = genBigTree(
+                nodeCountOrigin, nodeCountBound, rootCountOrigin, rootCountBound);
+        Tree<Integer> tree = listTreeTup2.r();
+        List<Tree<Integer>> spTree = tree.split();
+        Tree<Integer> tree1 = Tree.ofNodes(spTree.stream()
+                .map(Tree::root)
+                .flatMap(List::stream)
+                .toList(), tree.nodeType()).unwrap();
+        //System.out.println(Stf.f("tree: {}", tree));
+        //spTree.forEach(t -> System.out.println(Stf.f("sp_tree: {}", t)));
+        //System.out.println(Stf.f("tree1: {}", tree1));
+        Assertions.assertEquals(tree1.nodeCount(), tree.nodeCount());
+        Assertions.assertEquals(tree1.depth(), tree.depth());
+
+        List<Integer> t1Collector = new ArrayList<>();
+        List<Integer> t2Collector = new ArrayList<>();
+        tree.forEach(t -> t1Collector.add(t));
+        tree1.forEach(t -> t2Collector.add(t));
+        Assertions.assertEquals(t1Collector.size(), t2Collector.size());
+        Collections.sort(t1Collector);
+        Collections.sort(t2Collector);
+        Assertions.assertEquals(t1Collector, t2Collector);
+
+        // 排序
+        tree.sort(Integer::compareTo);
+        tree1.sort(Integer::compareTo);
+
+        // try 一个一个比较
+        int nCount = tree.nodeCount();
+        int idx = 0;
+        Iterator<Integer> tIt = tree.iterator();
+        Iterator<Integer> t1It = tree1.iterator();
+        while (++idx <= nCount) {
+            Integer next = tIt.next();
+            Integer next1 = t1It.next();
+            Assertions.assertEquals(next, next1);
+        }
+
+
+    }
 
 }
