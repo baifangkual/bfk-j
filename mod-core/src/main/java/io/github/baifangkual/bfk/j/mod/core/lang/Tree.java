@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * @since 2023/8/18 v0.0.6
  */
 public final class Tree<T> implements Iter<T> {
-
+    // todo tree doc
     // ref emptyTree
     private static final Tree<?> EMPTY_TREE_IMMUTABLE = new Tree<>(); // emptyTree，immutable
     private static final Consumer<Object> FN_ACC_DO_NOTHING = (n) -> { /*do nothing...*/};
@@ -872,14 +872,12 @@ public final class Tree<T> implements Iter<T> {
                 node.data = null;
                 node.childNodes = null; // 不调用CNs的clear方法，因为其可能为空
                 node.depth = DESTROY_DEPTH;
-                node.owner = null; // 断开与树的引用
             };
             case unidirectionalNode -> (n) -> {
                 UnidirectionalNode<T> node = (UnidirectionalNode<T>) n;
                 node.data = null;
                 node.childNodes = null; // 不调用CNs的clear方法，因为其可能为空
                 node.depth = DESTROY_DEPTH;
-                node.owner = null; // 断开与树的引用
             };
         };
     }
@@ -1069,12 +1067,6 @@ public final class Tree<T> implements Iter<T> {
      * @see BidirectionalNode
      */
     public sealed interface Node<T> permits BidirectionalNode, UnidirectionalNode {
-        /**
-         * 返回当前树节点所属的树
-         *
-         * @return 所属树
-         */
-        Tree<T> owner();
 
         /**
          * 当前节点类型
@@ -1184,23 +1176,15 @@ public final class Tree<T> implements Iter<T> {
      * @param <T> 节点载荷
      */
     static final class BidirectionalNode<T> implements Node<T> {
-        // 20250527 mod to mutable
-        private Tree<T> owner;
         private int depth;
         private T data;
         private Node<T> parentNode;
         private List<Node<T>> childNodes;
 
         BidirectionalNode(Tree<T> owner, int depth, T data, Node<T> parentNode) {
-            this.owner = owner;
             this.depth = depth;
             this.data = data;
             this.parentNode = parentNode;
-        }
-
-        @Override
-        public Tree<T> owner() {
-            return owner;
         }
 
         @Override
@@ -1241,7 +1225,7 @@ public final class Tree<T> implements Iter<T> {
             // 这里可能会有问题：使用isLeaf判定是否返回，虽说初始构建树后不会有empty的List，
             // 但调用方可获取List引用并删除元素或clear，当该List为empty时，
             // 方法将不会返回这个空的List了，可能会有问题，但先暂定如此
-            return childNodes;
+            return Collections.unmodifiableList(childNodes); // 返回不可变List包裹
         }
 
         @Override
@@ -1249,7 +1233,8 @@ public final class Tree<T> implements Iter<T> {
             // 这里可能会有问题：使用isLeaf判定是否返回，虽说初始构建树后不会有empty的List，
             // 但调用方可获取List引用并删除元素或clear，当该List为empty时，
             // 方法将不会返回这个空的List了，可能会有问题，但先暂定如此
-            return isLeaf() ? Optional.empty() : Optional.of(childNodes);
+            return isLeaf() ? Optional.empty() : Optional.of(Collections.unmodifiableList(childNodes));
+            // 返回不可变List包裹
         }
 
     }
@@ -1260,21 +1245,13 @@ public final class Tree<T> implements Iter<T> {
      * @param <T> 节点载荷
      */
     static final class UnidirectionalNode<T> implements Node<T> {
-        // 20250527 mod to mutable
-        private Tree<T> owner;
         private int depth;
         private T data;
         private List<Node<T>> childNodes;
 
         UnidirectionalNode(Tree<T> owner, int depth, T data, Node<T> ignore) {
-            this.owner = owner;
             this.depth = depth;
             this.data = data;
-        }
-
-        @Override
-        public Tree<T> owner() {
-            return owner;
         }
 
         @Override
@@ -1314,7 +1291,7 @@ public final class Tree<T> implements Iter<T> {
             // 这里可能会有问题：使用isLeaf判定是否返回，虽说初始构建树后不会有empty的List，
             // 但调用方可获取List引用并删除元素或clear，当该List为empty时，
             // 方法将不会返回这个空的List了，可能会有问题，但先暂定如此
-            return childNodes;
+            return Collections.unmodifiableList(childNodes); // 返回不可变List包裹
         }
 
         @Override
@@ -1322,7 +1299,8 @@ public final class Tree<T> implements Iter<T> {
             // 这里可能会有问题：使用isLeaf判定是否返回，虽说初始构建树后不会有empty的List，
             // 但调用方可获取List引用并删除元素或clear，当该List为empty时，
             // 方法将不会返回这个空的List了，可能会有问题，但先暂定如此
-            return isLeaf() ? Optional.empty() : Optional.of(childNodes);
+            return isLeaf() ? Optional.empty() : Optional.of(Collections.unmodifiableList(childNodes));
+            // 返回不可变List包裹
         }
     }
 
