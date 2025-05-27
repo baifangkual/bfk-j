@@ -74,7 +74,7 @@ public class MinioPro {
 
     public static void sneakyRun(FnRun process) {
         sneakyRun(() -> {
-            process.run();
+            process.unsafeRun();
             return null;
         });
     }
