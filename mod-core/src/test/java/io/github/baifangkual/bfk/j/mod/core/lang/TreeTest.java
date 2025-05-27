@@ -1,6 +1,5 @@
 package io.github.baifangkual.bfk.j.mod.core.lang;
 
-import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.core.util.Rng;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -13,7 +12,7 @@ import java.util.stream.IntStream;
  * @author baifangkual
  * @since 2025/5/18
  */
-@SuppressWarnings({"CommentedOutCode", "Convert2MethodRef"})
+@SuppressWarnings({"CommentedOutCode", "Convert2MethodRef", "UnnecessaryLocalVariable", "StringOperationCanBeSimplified"})
 public class TreeTest {
 
     @Test
@@ -36,7 +35,7 @@ public class TreeTest {
                 Tree.NodeType.bidirectionalNode,
                 LinkedList::new
         );
-        Tree<Integer> integerTree1 = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> integerTree1 = Tree.ofLines(lines).unwrap();
         Assertions.assertEquals(integerTree.displayString(), integerTree1.displayString());
         //System.out.println(integerTree.displayString(0));
         //System.out.println("====================");
@@ -101,8 +100,8 @@ public class TreeTest {
                 Line.of(2, 35),
                 Line.of(2, 49)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
-        List<Line<Integer>> unwrap = tree.tryToLines(LinkedList::new, Tree.Node::data).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
+        List<Line<Integer>> unwrap = tree.toLines(LinkedList::new, Tree.Node::data).unwrap();
         Assertions.assertEquals(lines.size(), unwrap.size());
         // sort
         Comparator<Line<Integer>> lc = Comparator.comparingInt(Line::begin);
@@ -136,8 +135,8 @@ public class TreeTest {
                 Line.of(int2, int35),
                 Line.of(int2, int49)
         );
-        Tree<NoEqAndHash<Integer>> tree = Tree.tryOfLines(lines).unwrap();
-        List<Line<NoEqAndHash<Integer>>> unwrap = tree.tryToLines(LinkedList::new, Tree.Node::data).unwrap();
+        Tree<NoEqAndHash<Integer>> tree = Tree.ofLines(lines).unwrap();
+        List<Line<NoEqAndHash<Integer>>> unwrap = tree.toLines(LinkedList::new, Tree.Node::data).unwrap();
         Assertions.assertEquals(lines.size(), unwrap.size());
         // sort
         Comparator<Line<NoEqAndHash<Integer>>> lc = Comparator.comparingInt(l -> l.begin().value);
@@ -164,8 +163,8 @@ public class TreeTest {
                 Line.of(NoEqAndHash.ofValue(2), NoEqAndHash.ofValue(35)),
                 Line.of(NoEqAndHash.ofValue(2), NoEqAndHash.ofValue(49))
         );
-        Tree<NoEqAndHash<Integer>> tree = Tree.tryOfLines(lines).unwrap();
-        List<Line<NoEqAndHash<Integer>>> unwrap = tree.tryToLines(LinkedList::new, Tree.Node::data).unwrap();
+        Tree<NoEqAndHash<Integer>> tree = Tree.ofLines(lines).unwrap();
+        List<Line<NoEqAndHash<Integer>>> unwrap = tree.toLines(LinkedList::new, Tree.Node::data).unwrap();
         Assertions.assertEquals(lines.size(), unwrap.size());
         // sort
         Comparator<Line<NoEqAndHash<Integer>>> lc = Comparator.comparingInt(l -> l.begin().value);
@@ -196,7 +195,7 @@ public class TreeTest {
                 Tree.NodeType.bidirectionalNode,
                 LinkedList::new
         );
-        Tree<Integer> integerTree1 = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> integerTree1 = Tree.ofLines(lines).unwrap();
         Assertions.assertEquals(tree.displayString(), integerTree1.displayString());
         //System.out.println(tree.displayString());
     }
@@ -225,7 +224,7 @@ public class TreeTest {
                 Line.of(1, 5),
                 Line.of(5, 6)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         String beforeIter = tree.displayString();
         Iterator<Tree.Node<Integer>> it = tree.nodeIterator();
         while (it.hasNext()) {
@@ -247,7 +246,7 @@ public class TreeTest {
                 Line.of(1, 5),
                 Line.of(5, 6)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         String beforeIter = tree.displayString();
         Iterator<Tree.Node<Integer>> it = tree.nodeIterator();
         while (it.hasNext()) {
@@ -260,7 +259,7 @@ public class TreeTest {
         List<Line<Integer>> newNo4And6EndList = lines.stream()
                 .filter(l -> (!l.end().equals(4)) && (!l.end().equals(6)))
                 .toList();
-        Tree<Integer> newTree = Tree.tryOfLines(newNo4And6EndList).unwrap();
+        Tree<Integer> newTree = Tree.ofLines(newNo4And6EndList).unwrap();
         String newIter = newTree.displayString();
         Assertions.assertNotEquals(beforeIter, afterIter);
         Assertions.assertEquals(afterIter, newIter);
@@ -278,7 +277,7 @@ public class TreeTest {
                 Line.of(1, 5),
                 Line.of(5, 6)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         String beforeIter = tree.displayString();
         Iterator<Tree.Node<Integer>> it = tree.nodeIterator();
         while (it.hasNext()) {
@@ -292,7 +291,7 @@ public class TreeTest {
                 Line.of(1, 5),
                 Line.of(5, 6)
         );
-        Tree<Integer> newTree = Tree.tryOfLines(newNo234List).unwrap();
+        Tree<Integer> newTree = Tree.ofLines(newNo234List).unwrap();
         String newIter = newTree.displayString();
         Assertions.assertNotEquals(beforeIter, afterIter);
         Assertions.assertEquals(afterIter, newIter);
@@ -310,7 +309,7 @@ public class TreeTest {
                 Line.of(1, 5),
                 Line.of(5, 6)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         Tree<Integer> emptyTree = Tree.empty();
         Iterator<Tree.Node<Integer>> iter = tree.nodeIterator();
         while (iter.hasNext()) {
@@ -336,7 +335,7 @@ public class TreeTest {
                 Line.of(888, 333),
                 Line.of(333, 555)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         Tree<Integer> emptyTree = Tree.empty();
         Iterator<Tree.Node<Integer>> iter = tree.nodeIterator();
         //System.out.println(tree.displayString());
@@ -364,7 +363,7 @@ public class TreeTest {
                 Line.of(888, 333),
                 Line.of(333, 555)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         Tree<Integer> emptyTree = Tree.empty();
 //        System.out.println(STF.f("tree: nodeCount: {}, depth: {}", tree.nodeCount(), tree.depth()));
 //        System.out.println(tree.displayString());
@@ -413,7 +412,7 @@ public class TreeTest {
                 Line.of(888, 333),
                 Line.of(333, 555)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         List<Integer> treeStreamList = tree.stream()
                 .distinct().sorted().toList();
         List<Integer> lineStreamList = lines.stream()
@@ -437,7 +436,7 @@ public class TreeTest {
                 Line.of(888, 333),
                 Line.of(333, 555)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         List<Integer> lIterForEach = new ArrayList<>();
         List<Integer> lBFS = new ArrayList<>();
         StringJoiner sbIterForEach = new StringJoiner(", ");
@@ -472,10 +471,10 @@ public class TreeTest {
                 Line.of(888, 333),
                 Line.of(333, 555)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         Tree<Integer> emptyTree = Tree.empty();
-        System.out.println(Stf.f("tree: nodeCount: {}, depth: {}", tree.nodeCount(), tree.depth()));
-        System.out.println(tree.displayString());
+        //System.out.println(Stf.f("tree: nodeCount: {}, depth: {}", tree.nodeCount(), tree.depth()));
+        //System.out.println(tree.displayString());
 
         int callIterCount = 0;
         List<Tree.Node<Integer>> deletedNodeRefList = new ArrayList<>();
@@ -494,9 +493,9 @@ public class TreeTest {
                 long test = num % 2;
                 boolean randomDelete = test == 0;
                 if (randomDelete) {
-                    System.out.println(Stf
-                            .f("RandomBoolean({}/2==0) is {}，currNodeData: {}, add to deletedList",
-                                    num, test, n.data()));
+//                    System.out.println(Stf
+//                            .f("RandomBoolean({}/2==0) is {}，currNodeData: {}, add to deletedList",
+//                                    num, test, n.data()));
                     deletedNodeRefList.add(n);
                     iter.remove();
                 }
@@ -504,15 +503,15 @@ public class TreeTest {
             // todo 生成大随机树，并测试
             int aftCount = tree.nodeCount();
             String peek = iterPeeked.stream().map(Object::toString).collect(Collectors.joining(" -> "));
-            System.out.println(Stf.f("callIterCount: {}, result: ", ++callIterCount));
-            System.out.println(Stf.f("peek: {}", peek));
-            System.out.println(Stf.f("直接删除的个数: {}", deletedNodeRefList.size()));
-            System.out.println(Stf.f("tree: nodeCount: {}, depth: {}", tree.nodeCount(), tree.depth()));
-            System.out.println(tree.displayString());
+//            System.out.println(Stf.f("callIterCount: {}, result: ", ++callIterCount));
+//            System.out.println(Stf.f("peek: {}", peek));
+//            System.out.println(Stf.f("直接删除的个数: {}", deletedNodeRefList.size()));
+//            System.out.println(Stf.f("tree: nodeCount: {}, depth: {}", tree.nodeCount(), tree.depth()));
+//            System.out.println(tree.displayString());
             Assertions.assertTrue(befCount >= aftCount);
-            System.out.println(Stf
-                    .f("IterPeeked size: {}, beforeCount: {}, afterCount: {}",
-                            iterPeeked.size(), befCount, aftCount));
+//            System.out.println(Stf
+//                    .f("IterPeeked size: {}, beforeCount: {}, afterCount: {}",
+//                            iterPeeked.size(), befCount, aftCount));
         }
         Assertions.assertEquals(emptyTree.displayString(), tree.displayString());
     }
@@ -625,9 +624,13 @@ public class TreeTest {
 
             // 将下一层元素推入队列中(如果有）
             List<Integer> next2QueueNullable = collect.get(current);
-            if (next2QueueNullable != null){
+            if (next2QueueNullable != null) {
                 for (Integer nextInt : next2QueueNullable) {
-                    if (queue.contains(nextInt)) {continue;} else {queue.add(nextInt);}
+                    if (queue.contains(nextInt)) {
+                        continue;
+                    } else {
+                        queue.add(nextInt);
+                    }
                 }
             }
             // 若已经到这层最后一个，则更新该层最大偏移量为下一层的最大，当前偏移量更新为0
@@ -658,7 +661,7 @@ public class TreeTest {
                 Line.of(1, 5),
                 Line.of(5, 6)
         );
-        Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
+        Tree<Integer> tree = Tree.ofLines(lines).unwrap();
 //        System.out.println(tree.displayString());
         Iterator<Integer> it1 = tree.iterator();
         Iterator<Integer> it2 = tree.iterator();
@@ -666,6 +669,131 @@ public class TreeTest {
         it2.next();
         it1.remove();
         Assertions.assertThrows(ConcurrentModificationException.class, it2::remove);
+
+    }
+
+    @Test
+    public void test20() {
+        // no IdHash eq roots test
+        NoEqAndHash<Integer> n1 = NoEqAndHash.ofValue(1);
+        NoEqAndHash<Integer> n2 = n1;
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            Tree.ofRoots(List.of(n1, n2), (e) -> null);
+        });
+
+    }
+
+    @Test
+    public void test21() {
+        NoEqAndHash<Integer> n1 = NoEqAndHash.ofValue(1);
+        NoEqAndHash<Integer> n2 = NoEqAndHash.ofValue(2);
+        NoEqAndHash<Integer> n3 = NoEqAndHash.ofValue(3);
+        Map<NoEqAndHash<Integer>, List<NoEqAndHash<Integer>>> getChild = Map.of(
+                n1, List.of(n2),
+                n2, List.of(n3),
+                n3, List.of(n1)
+        );
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            Tree.ofRoots(List.of(n1), (e) -> getChild.get(e));
+        });
+
+        String sA = new String("a");
+        String sB = new String("b");
+        String sC = new String("c");
+        String sD = new String("d");
+        String sE = new String("e");
+        Map<String, List<String>> mapGetChild = Map.of(
+                sA, List.of(sB),
+                sB, List.of(sC),
+                sC, List.of(sD),
+                sD, List.of(sE),
+                sE, List.of(sA)
+        );
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            Tree.ofRoots(List.of(sA), (e) -> mapGetChild.get(e));
+        });
+
+        Map<String, List<String>> mapGetChild2 = Map.of(
+                sA, List.of(sB),
+                sB, List.of(sC),
+                sC, List.of(sD, sE),
+                sD, List.of(sE)
+        );
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            Tree.ofRoots(List.of(sA), (e) -> mapGetChild2.get(e));
+        });
+
+    }
+
+    @Test
+    public void test22() {
+        // overwrite eq and hash obj
+        String sA = new String("a");
+        String sB = new String("b");
+        String sC = new String("c");
+        String sD = new String("d");
+        String sE = new String("e");
+        Map<String, List<String>> mapGetChild = Map.of(
+                sA, List.of(sB),
+                sB, List.of(sC),
+                sC, List.of(sD),
+                sD, List.of(sE)
+        );
+        var tree = Tree.ofRoots(List.of(sA), (e) -> mapGetChild.get(e));
+        //System.out.println(tree.displayString());
+        Map<String, List<String>> mapGetChild2 = Map.of(
+                "a", List.of("b"),
+                "b", List.of("c"),
+                "c", List.of("d"),
+                "d", List.of("e")
+        );
+        var tree2 = Tree.ofRoots(List.of(sA), (e) -> mapGetChild.get(e));
+        //System.out.println(tree2.displayString());
+        // ===================================
+        // no overwrite eq and hash obj
+        NoEqAndHash<Integer> n1 = NoEqAndHash.ofValue(1);
+        Map<NoEqAndHash<Integer>, List<NoEqAndHash<Integer>>> getChild = Map.of(
+                NoEqAndHash.ofValue(1), List.of(NoEqAndHash.ofValue(2)),
+                NoEqAndHash.ofValue(2), List.of(NoEqAndHash.ofValue(3))
+        );
+        Assertions.assertDoesNotThrow(() -> {
+            var tree3 = Tree.ofRoots(List.of(n1), e -> getChild.get(e));
+            //System.out.println(tree3.displayString());
+        });
+    }
+
+    @Test
+    public void test23() {
+        // use ofNodes test
+        Map<String, List<String>> sGetChild = Map.of(
+                "a", List.of("b"),
+                "b", List.of("c"),
+                "c", List.of("d"),
+                "d", List.of("e")
+        );
+        var tree1 = Tree.ofRoots(List.of("a"), (e) -> sGetChild.get(e));
+        Tree.Node<String> root = tree1.root().get(0);
+        Tree.Node<String> nc = null;
+        Iterator<Tree.Node<String>> iter = tree1.nodeIterator();
+        while (iter.hasNext()) {
+            var n = iter.next();
+            if (n.data().equals("c")) {
+                nc = n;
+                break;
+            }
+        }
+        Assertions.assertNotNull(nc);
+        Tree.Node<String> finalNc = nc; // lambda final
+        Assertions.assertThrows(R.UnwrapException.class, () -> {
+            Tree<String> tree2 = Tree.ofNodes(List.of(root, finalNc), Tree.NodeType.bidirectionalNode).unwrap();
+        });
+
+        Assertions.assertDoesNotThrow(() -> {
+            Tree<String> tree3 = Tree.ofNodes(List.of(finalNc), Tree.NodeType.bidirectionalNode).unwrap();
+            //System.out.println(tree3.displayString());
+            //System.out.println(tree3);
+        });
+
 
     }
 
