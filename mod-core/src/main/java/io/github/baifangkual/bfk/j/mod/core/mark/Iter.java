@@ -197,12 +197,12 @@ public interface Iter<T> extends Iterable<T> {
      * @param <E> 映射前类型
      * @param <T> 映射后类型
      */
-    class ETMIterDecorator<E, T> implements Iterator<T> {
+    class ETMProxyIter<E, T> implements Iterator<T> {
         private final Iterator<E> it;
         private final Function<? super E, ? extends T> fn;
 
-        private ETMIterDecorator(Iterator<E> it,
-                                 Function<? super E, ? extends T> fn) {
+        private ETMProxyIter(Iterator<E> it,
+                             Function<? super E, ? extends T> fn) {
             this.it = Objects.requireNonNull(it, "it(Iterator) is null");
             this.fn = Objects.requireNonNull(fn, "fn(Function) is null");
         }
@@ -219,7 +219,7 @@ public interface Iter<T> extends Iterable<T> {
          */
         public static <E, T> Iterator<T> of(Iterator<E> it,
                                             Function<? super E, ? extends T> fn) {
-            return new ETMIterDecorator<>(it, fn);
+            return new ETMProxyIter<>(it, fn);
         }
 
         @Override
@@ -229,6 +229,7 @@ public interface Iter<T> extends Iterable<T> {
 
         @Override
         public T next() {
+            // 不需要阻止 null 进入函数，因为函数提供者可能准许 null 并返回默认值，也可能被包装的迭代器不会有null
             return fn.apply(it.next());
         }
 

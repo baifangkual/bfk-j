@@ -520,7 +520,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
     @Override
     public Iterator<Tup2<String, Object>> iterator() {
         Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
-        return Iter.ETMIterDecorator.of(
+        return ETMProxyIter.of(
                 it, (en) -> Tup2.of(en.getKey(), en.getValue())
         );
     }
