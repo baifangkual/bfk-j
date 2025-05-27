@@ -195,7 +195,7 @@ class FTPSupport {
 
     static void sneakyRun(FnRun fn) {
         sneakyRun(() -> {
-            fn.run();
+            fn.unsafeRun();
             return null;
         });
     }
