@@ -630,7 +630,7 @@ public sealed interface R<T> extends Serializable
      * @throws NullPointerException 当当前为 {@code R.Ok} 且给定的函数为 {@code null}
      */
     @SuppressWarnings("unchecked")
-    default <U> R<U> flatmap(Fn<? super T, ? extends R<? extends U>> fn) {
+    default <U> R<U> flatMap(Fn<? super T, ? extends R<? extends U>> fn) {
         if (isOk()) {
             Objects.requireNonNull(fn, "'fn' is null");
             try {

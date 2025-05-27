@@ -160,6 +160,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
         List<P> findAllPoint = Iter.toStream(all).toList();
         Err.realIf(findAllPoint.isEmpty(), IllegalStateException::new, "not found any node");
         List<Line<P>> findAllLines = Iter.toStream(lines).toList();
+        // 20250528 because eq & hash. change to use IdentityHashMap?
         Map<P, Integer> inDegree = findAllPoint.stream()
                 //.distinct() // fix IllegalStateException: Duplicate toMap时key相同 该问题直接抛出异常，不处理其
                 .collect(Collectors.toMap(p -> p, p -> 0));
@@ -208,6 +209,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * 也被认为是头节点
      */
     public static <P> Set<P> findHeaderNodes(Iterable<Line<P>> lines, Iterable<P> all) {
+        // 20250528 because eq & hash. change to use IdentityHashMap?
         Objects.requireNonNull(all, "all is null");
         Objects.requireNonNull(lines, "lines is null");
         // mut result 可变集合，不可操作入参集合
@@ -249,6 +251,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      */
     public static <P> Set<P> findAllNode(Iterable<Line<P>> lines) {
         Objects.requireNonNull(lines, "lines is null");
+        // 20250528 because eq & hash. change to use IdentityHashMap?
         final Set<P> points = new HashSet<>();
         for (Line<P> l : lines) {
             for (P point : l) {
@@ -277,6 +280,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
     public static <P> LinkedList<List<P>> orderDAGQueue(Iterable<Line<P>> lines,
                                                         Iterable<P> all,
                                                         Iterable<P> headers) {
+        // 20250528 because eq & hash. change to use IdentityHashMap?
         List<Line<P>> findLines = Iter.toStream(lines).toList();
         List<P> findAll = Iter.toStream(all).toList();
         List<P> findHeaders = Iter.toStream(headers).toList();
@@ -357,6 +361,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      */
     public static <P> LinkedList<List<P>> orderDAGQueue(Iterable<Line<P>> lines,
                                                         Iterable<P> all) {
+        // 20250528 because eq & hash. change to use IdentityHashMap?
         return orderDAGQueue(lines, all, findHeaderNodes(lines, all));
     }
 
@@ -379,6 +384,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      * @see #findAllNode(Iterable)
      */
     public static <P> R<LinkedList<List<P>>> orderDAGQueue(Iterable<Line<P>> lines) {
+        // 20250528 because eq & hash. change to use IdentityHashMap?
         return R.ofFnCallable(() -> {
             Set<P> all = findAllNode(lines);
             Err.realIf(!isDirectedAcyclicGraph(lines, all),
@@ -389,7 +395,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
 
     /**
      * 给定n个线段，判断这些线段能否构成树（可能不是一颗）<br>
-     * 即所有{@link Line#end()}均有且只有一个父节点
+     * 即所有{@link Line#end()}均有且只有一个父节点且没有循环边
      *
      * @param lines n个线段
      * @param <P>   节点类型
@@ -401,7 +407,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
     public static <P> boolean isTree(Iterable<Line<P>> lines) {
         if (isNoLoop(lines)) {
             List<Line<P>> all = Iter.toStream(lines).toList();
-            // 入度初始化全0
+            // 入度初始化全0 // 20250528 because eq & hash. change to use IdentityHashMap?
             Map<P, Integer> inDegree = all.stream()
                     .map(Line::end)
                     .distinct()
@@ -447,6 +453,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
         Objects.requireNonNull(lines, "lines is null");
         List<Line<P>> allLines = Iter.toStream(lines).toList();
         Err.realIf(allLines.isEmpty(), IllegalStateException::new, "not found any line");
+        // 20250528 because eq & hash. change to use IdentityHashMap?
         Map<P, List<P>> graph = new HashMap<>();
         Map<P, Integer> inDegree = new HashMap<>();
         // 构建图和入度表
@@ -489,6 +496,7 @@ public class Line<P> implements Iter<P>, Serializable, Cloneable<Line<P>> {
      *
      * @return 迭代器
      */
+    @SuppressWarnings("NullableProblems")
     @Override
     public Iterator<P> iterator() {
         return new Iterator<>() {
