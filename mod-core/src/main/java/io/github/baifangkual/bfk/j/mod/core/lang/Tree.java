@@ -3,7 +3,6 @@ package io.github.baifangkual.bfk.j.mod.core.lang;
 
 import io.github.baifangkual.bfk.j.mod.core.mark.Iter;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
-import io.github.baifangkual.bfk.j.mod.core.trait.Cloneable;
 import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 
 import java.util.*;
@@ -50,7 +49,7 @@ import java.util.stream.Collectors;
  * @see #bfs(Consumer)
  * @see #dfsPreOrder(Consumer)
  * @see #dfsPostOrder(Consumer)
- * @see #displayString()
+ * @see #toDisplayStr()
  * @since 2023/8/18 v0.0.6
  */
 public final class Tree<T> implements Iter<T> {
@@ -156,7 +155,8 @@ public final class Tree<T> implements Iter<T> {
      *                           该方法一定要有穷，即一定能够找到逻辑上的叶子节点，否则可能会造成栈内存溢出</b>
      * @param nodeType           树中节点使用什么类型的实现（{@link BidirectionalNode} or {@link UnidirectionalNode}）
      * @param fnSort             函数-实体排序的函数<b>(该函数仅在Tree构造时使用，Tree构造完成便被丢弃）</b>
-     * @param listFactory        函数-List构造方法引用
+     * @param listFactory        函数-List构造方法引用，返回的List用以装载 {@code root} 和 {@code Node.childNode},
+     *                           函数返回的List一定要可读可写，否则构造树时会抛出异常
      * @param fnPreCheckHasChild 函数(nullable)，要求给定一个实体，返回布尔值标识该实体是否有子，
      *                           这在lsChildFn过重时是一种优化<b>(该函数仅在Tree构造时使用，将与函数fnGetChild组合）</b>
      * @param fnPreFilter        函数，预先处理树中实体，要求给定一个实体，当返回的布尔值为false时，
@@ -260,7 +260,8 @@ public final class Tree<T> implements Iter<T> {
      *                           该方法一定要有穷，即一定能够找到逻辑上的叶子节点，否则可能会造成栈内存溢出</b>
      * @param type               树中节点使用什么类型的实现（{@link BidirectionalNode} or {@link UnidirectionalNode}）
      * @param fnSort             函数-实体排序的函数<b>(该函数仅在Tree构造时使用，Tree构造完成便被丢弃）</b>
-     * @param listFactory        函数-List构造方法引用
+     * @param listFactory        函数-List构造方法引用，返回的List用以装载 {@code root} 和 {@code Node.childNode},
+     *                           函数返回的List一定要可读可写，否则构造树时会抛出异常
      * @param fnPreCheckHasChild 函数(nullable)，要求给定一个实体，返回布尔值标识该实体是否有子，
      *                           这在lsChildFn过重时是一种优化<b>(该函数仅在Tree构造时使用，将与函数fnGetChild组合）</b>
      * @param fnPreFilter        函数，预先处理树中实体，要求给定一个实体，当返回的布尔值为false时，
@@ -290,7 +291,8 @@ public final class Tree<T> implements Iter<T> {
      * @param fnGetChild  函数，<b>要求给定一个实体，返回这个实体的子实体，返回的可迭代对象可以为null，也可以没有元素，
      *                    该方法一定要有穷，即一定能够找到逻辑上的叶子节点，否则可能会造成栈内存溢出</b>
      * @param type        树中节点使用什么类型的实现（{@link BidirectionalNode} or {@link UnidirectionalNode}）
-     * @param listFactory 函数-List构造方法引用
+     * @param listFactory 函数-List构造方法引用，返回的List用以装载 {@code root} 和 {@code Node.childNode},
+     *                    函数返回的List一定要可读可写，否则构造树时会抛出异常
      * @throws NullPointerException     当不允许为空的参数给定空时
      * @throws IllegalArgumentException 当给定的最大停止深度小于 -1 时
      * @throws IllegalArgumentException 当构建树的过程发现循环边/循环引用/存在节点大于1个入度时
@@ -1213,8 +1215,8 @@ public final class Tree<T> implements Iter<T> {
      *             Line.of(1, 5),
      *             Line.of(5, 6)
      *     );
-     *     Tree<Integer> tree = Tree.tryOfLines(lines).unwrap();
-     *     System.out.println(tree.displayString());
+     *     Tree<Integer> tree = Tree.ofLines(lines).unwrap();
+     *     System.out.println(tree.toDisplayStr());
      *     // out:
      *     // │/
      *     // │└─ 1
@@ -1227,10 +1229,10 @@ public final class Tree<T> implements Iter<T> {
      * </pre>
      *
      * @return 显示树的字符串
-     * @see #displayString(int, Function)
+     * @see #toDisplayStr(int, Function)
      */
-    public String displayString() {
-        return displayString(depth(), n -> Objects.toString(n.data()));
+    public String toDisplayStr() {
+        return toDisplayStr(depth(), n -> Objects.toString(n.data()));
     }
 
     /**
@@ -1238,8 +1240,8 @@ public final class Tree<T> implements Iter<T> {
      * <pre>
      *     {@code
      *     Tree<T> tree = ...;
-     *     String defaultDisplay = tree.displayString();
-     *     String customDisplay = tree.displayString(tree.depth(), n -> n.data().toString());
+     *     String defaultDisplay = tree.toDisplayStr();
+     *     String customDisplay = tree.toDisplayStr(tree.depth(), n -> n.data().toString());
      *     Assert.eq(defaultDisplay, customDisplay);
      *     }
      * </pre>
@@ -1249,10 +1251,10 @@ public final class Tree<T> implements Iter<T> {
      * @return 显示树的字符串
      * @throws IllegalArgumentException 当给定的截止深度小于-1时
      * @throws NullPointerException     给定的函数为空时
-     * @see #displayString()
+     * @see #toDisplayStr()
      */
-    public String displayString(int displayDepth,
-                                Function<? super Node<T>, ? extends CharSequence> fnNodeDisplayFmt) {
+    public String toDisplayStr(int displayDepth,
+                               Function<? super Node<T>, ? extends CharSequence> fnNodeDisplayFmt) {
         Objects.requireNonNull(fnNodeDisplayFmt, "fnNodeDisplayFmt is null");
         Err.realIf(displayDepth < -1, IllegalArgumentException::new, "displayDepth < -1");
         if (displayDepth == -1 || isEmpty()) return Const.String.SLASH; // -1 display depth and empty tree display :"/"
@@ -1313,22 +1315,7 @@ public final class Tree<T> implements Iter<T> {
 
     }
 
-    /**
-     * 树的节点<br>
-     *
-     * @param <T> 节点载荷类型 {@code node.data()}
-     * @implSpec 注意，该类型因为可能带有对父节点的引用 {@link #parentNode()}，
-     * 以及节点中含有的从当前节点直到叶子节点的一连串引用 {@link #childNode()} ，
-     * 遂该类型不应当实现/重写 {@code equals},{@code hashcode} 方法，
-     * 否则，在调用 {@code equals} 和 {@code hashcode} 这两个方法时将导致无限递归（因为父节点又指向自己的循环引用）从而造成栈内存溢出，
-     * 即使该类型的实现类为{@link UnidirectionalNode}（没有对父节点的引用），
-     * 也因为直到叶子节点的一连串引用， {@code equals} 和 {@code hashcode} 方法也会是低效的。
-     * 遂该类型的 {@code node1.equals(node2)} 语义就是 {@code node1 == node2}
-     * @see UnidirectionalNode
-     * @see BidirectionalNode
-     */
-    public sealed interface Node<T> permits BidirectionalNode, UnidirectionalNode {
-
+    public interface NView<T> {
         /**
          * 当前节点类型
          *
@@ -1348,6 +1335,100 @@ public final class Tree<T> implements Iter<T> {
          *
          * @return 节点载荷
          */
+        T data();
+
+        /**
+         * 当前节点是否为叶子节点<br>
+         * 叶子节点一定没有子节点
+         *
+         * @return true 是，反之则不是
+         */
+        boolean isLeaf();
+
+        /**
+         * 当前节点是否为根节点<br>
+         * 根节点一定没有父节点
+         *
+         * @return true 是，反之则不是
+         */
+        default boolean isRoot() {
+            return depth() == 0;
+        }
+
+        /**
+         * 返回当前节点的直接子节点个数
+         *
+         * @return 子节点个数
+         */
+        int childCount();
+
+        /**
+         * 返回当前节点父节点的 {@code Node.data()}<br>
+         * 若没有父节点，则一定返回 {@link Optional#empty()}
+         *
+         * @return Optional父节点 {@code Node.data()} | Optional.empty()
+         */
+        Optional<T> parent();
+
+        /**
+         * 返回当前节点直接子节点的 {@code Node.data()}<br>
+         * 若没有子节点，则抛出异常<br>
+         * 返回的 List 的类型是 {@code unmodifiableList}
+         *
+         * @return 子节点 {@code Node.data()}
+         * @throws NoSuchElementException 当没有子节点时
+         */
+        List<T> child() throws NoSuchElementException;
+
+        /**
+         * 返回当前节点直接子节点的 {@code Node.data()}<br>
+         * 若没有子节点，则一定返回 {@link Optional#empty()}<br>
+         * 返回的 List 的类型是 {@code unmodifiableList}
+         *
+         * @return Optional子节点 {@code Node.data()} | Optional.empty()
+         */
+        Optional<List<T>> tryChild();
+
+    }
+
+    /**
+     * 树的节点<br>
+     *
+     * @param <T> 节点载荷类型 {@code node.data()}
+     * @implSpec 注意，该类型因为可能带有对父节点的引用 {@link #parentNode()}，
+     * 以及节点中含有的从当前节点直到叶子节点的一连串引用 {@link #childNode()} ，
+     * 遂该类型不应当实现/重写 {@code equals},{@code hashcode} 方法，
+     * 否则，在调用 {@code equals} 和 {@code hashcode} 这两个方法时将导致无限递归（因为父节点又指向自己的循环引用）从而造成栈内存溢出，
+     * 即使该类型的实现类为{@link UnidirectionalNode}（没有对父节点的引用），
+     * 也因为直到叶子节点的一连串引用， {@code equals} 和 {@code hashcode} 方法也会是低效的。
+     * 遂该类型的 {@code node1.equals(node2)} 语义就是 {@code node1 == node2}
+     * @see UnidirectionalNode
+     * @see BidirectionalNode
+     */
+    public interface Node<T> extends NView<T> {
+
+        /**
+         * 当前节点类型
+         *
+         * @return 节点类型
+         */
+        @Override
+        NodeType type();
+
+        /**
+         * 当前节点深度（边数计算法）
+         *
+         * @return 当前节点深度
+         */
+        @Override
+        int depth();
+
+        /**
+         * 当前节点载荷
+         *
+         * @return 节点载荷
+         */
+        @Override
         T data();
 
         /**
@@ -1376,17 +1457,8 @@ public final class Tree<T> implements Iter<T> {
          * @return true 是，反之则不是
          * @see #childNode()
          */
+        @Override
         boolean isLeaf();
-
-        /**
-         * 当前节点是否为根节点<br>
-         * 根节点一定没有父节点
-         *
-         * @return true 是，反之则不是
-         */
-        default boolean isRoot() {
-            return depth() == 0;
-        }
 
         /**
          * 当前节点是否已从树中被删除<br>
@@ -1453,6 +1525,7 @@ public final class Tree<T> implements Iter<T> {
          *
          * @return 子节点个数
          */
+        @Override
         int childCount();
 
         /**
@@ -1462,6 +1535,7 @@ public final class Tree<T> implements Iter<T> {
          * @return Optional父节点 {@code Node.data()} | Optional.empty()
          * @see #parentNode()
          */
+        @Override
         Optional<T> parent();
 
         /**
@@ -1472,6 +1546,7 @@ public final class Tree<T> implements Iter<T> {
          * @return 子节点 {@code Node.data()}
          * @throws NoSuchElementException 当没有子节点时
          */
+        @Override
         List<T> child() throws NoSuchElementException;
 
         /**
@@ -1481,7 +1556,19 @@ public final class Tree<T> implements Iter<T> {
          *
          * @return Optional子节点 {@code Node.data()} | Optional.empty()
          */
+        @Override
         Optional<List<T>> tryChild();
+
+        /**
+         * 返回子节点列表的直接引用，可能为 {@code null}<br>
+         * 返回的List类型为 {@link #listFactory} 提供的类型
+         */
+        List<Node<T>> unsafeGetChildNode();
+
+        /**
+         * 返回父节点的直接引用，可能为 {@code null}
+         */
+        Node<T> unsafeGetParentNode();
     }
 
     /**
@@ -1576,6 +1663,16 @@ public final class Tree<T> implements Iter<T> {
             return isLeaf() ? Optional.empty() : Optional.of(childNodes.stream().map(Node::data).toList());
         }
 
+        @Override
+        public List<Node<T>> unsafeGetChildNode() {
+            return childNodes;
+        }
+
+        @Override
+        public Node<T> unsafeGetParentNode() {
+            return parentNode;
+        }
+
     }
 
     /**
@@ -1665,18 +1762,91 @@ public final class Tree<T> implements Iter<T> {
             // unmodifiableList
             return isLeaf() ? Optional.empty() : Optional.of(childNodes.stream().map(Node::data).toList());
         }
+
+        @Override
+        public List<Node<T>> unsafeGetChildNode() {
+            return childNodes;
+        }
+
+        @Override
+        public Node<T> unsafeGetParentNode() {
+            return null;
+        }
     }
 
     /**
      * tree的toString<br>
-     * 在树过大时使用 {@link #displayString()} 并不好，遂仅显示基本信息
+     * 在树过大时使用 {@link #toDisplayStr()} 并不好，遂仅显示基本信息
      *
-     * @see #displayString()
+     * @see #toDisplayStr()
      */
     @Override
     public String toString() {
         return Stf.f("Tree({})[count: {}, depth: {}]@{}",
                 nodeType, nodeCount, depth, Integer.toHexString(this.hashCode()));
+    }
+
+
+    public String toJson(String selfName,
+                         String childGroupName,
+                         int toJsonDepth,
+                         Function<? super Node<T>, ? extends CharSequence> fnNode2Json) {
+        // 给定函数对每个元素执行
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        List<Node<T>> nodes = this.root;
+        for (int i = 0, nodesSize = nodes.size(); i < nodesSize; i++) {
+            Node<T> rt = nodes.get(i);
+            recursiveBuildJsonString(sb, rt, fnNode2Json, selfName,
+                    childGroupName, toJsonDepth - 1, 1);
+            if (i < nodesSize - 1) {
+                sb.append(",");
+            }
+        }
+        sb.append("\n]");
+        return sb.toString();
+    }
+
+    private void recursiveBuildJsonString(StringBuilder sb,
+                                          Node<T> node,
+                                          Function<? super Node<T>, ? extends CharSequence> fnNode2Json,
+                                          String selfName,
+                                          String childGroupName,
+                                          int toJsonDepth,
+                                          int indent) {
+        if (toJsonDepth == 0) return;
+        // todo 优化 sb append 过程
+        sb.append("\n");
+        sb.append("  ".repeat(indent));
+        sb.append("{\n");
+        sb.append("  ".repeat(indent));
+        sb.append("\"").append(selfName).append("\": ");
+        sb.append(fnNode2Json.apply(node));
+        sb.append(",");
+        sb.append("\n");
+
+        sb.append("  ".repeat(indent));
+        sb.append("\"").append(childGroupName).append("\": [");
+        if (!node.isLeaf()) {
+            sb.append("  ".repeat(indent));
+            List<Node<T>> child = this.fnUnsafeGetChild.getNullableChild(node);
+            for (int i = 0, childSize = child.size(); i < childSize; i++) {
+                Node<T> c = child.get(i);
+                recursiveBuildJsonString(sb, c, fnNode2Json, selfName,
+                        childGroupName, toJsonDepth - 1, indent + 1);
+                if (i < childSize - 1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append("\n");
+            sb.append("  ".repeat(indent));
+            sb.append("]\n");
+        } else {
+            sb.append("]\n");
+        }
+        sb.append("  ".repeat(indent));
+        sb.append("}");
+
     }
 
     /*

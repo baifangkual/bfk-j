@@ -1,6 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.core.lang;
 
 import io.github.baifangkual.bfk.j.mod.core.util.Rng;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +43,7 @@ public class TreeTest {
                 LinkedList::new
         );
         Tree<Integer> integerTree1 = Tree.ofLines(lines).unwrap();
-        Assertions.assertEquals(integerTree.displayString(), integerTree1.displayString());
+        Assertions.assertEquals(integerTree.toDisplayStr(), integerTree1.toDisplayStr());
         //System.out.println(integerTree.displayString(0));
         //System.out.println("====================");
         //System.out.println(integerTree1.displayString(integerTree1.depth()));
@@ -202,7 +203,7 @@ public class TreeTest {
                 LinkedList::new
         );
         Tree<Integer> integerTree1 = Tree.ofLines(lines).unwrap();
-        Assertions.assertEquals(tree.displayString(), integerTree1.displayString());
+        Assertions.assertEquals(tree.toDisplayStr(), integerTree1.toDisplayStr());
         //System.out.println(tree.displayString());
     }
 
@@ -231,13 +232,13 @@ public class TreeTest {
                 Line.of(5, 6)
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
-        String beforeIter = tree.displayString();
+        String beforeIter = tree.toDisplayStr();
         Iterator<Tree.Node<Integer>> it = tree.nodeIterator();
         while (it.hasNext()) {
             Tree.Node<Integer> n = it.next();
             if (n == null) throw new IllegalStateException(); // do nothing...
         }
-        String afterIter = tree.displayString();
+        String afterIter = tree.toDisplayStr();
         Assertions.assertEquals(beforeIter, afterIter);
 //        System.out.println(tree.displayString());
     }
@@ -253,7 +254,7 @@ public class TreeTest {
                 Line.of(5, 6)
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
-        String beforeIter = tree.displayString();
+        String beforeIter = tree.toDisplayStr();
         Iterator<Tree.Node<Integer>> it = tree.nodeIterator();
         while (it.hasNext()) {
             Tree.Node<Integer> n = it.next();
@@ -261,12 +262,12 @@ public class TreeTest {
                 it.remove(); // will remove 4 and 6
             }
         }
-        String afterIter = tree.displayString();
+        String afterIter = tree.toDisplayStr();
         List<Line<Integer>> newNo4And6EndList = lines.stream()
                 .filter(l -> (!l.end().equals(4)) && (!l.end().equals(6)))
                 .toList();
         Tree<Integer> newTree = Tree.ofLines(newNo4And6EndList).unwrap();
-        String newIter = newTree.displayString();
+        String newIter = newTree.toDisplayStr();
         Assertions.assertNotEquals(beforeIter, afterIter);
         Assertions.assertEquals(afterIter, newIter);
 //        System.out.println(beforeIter);
@@ -284,7 +285,7 @@ public class TreeTest {
                 Line.of(5, 6)
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
-        String beforeIter = tree.displayString();
+        String beforeIter = tree.toDisplayStr();
         Iterator<Tree.Node<Integer>> it = tree.nodeIterator();
         while (it.hasNext()) {
             Tree.Node<Integer> n = it.next();
@@ -292,13 +293,13 @@ public class TreeTest {
                 it.remove(); // will 2 and childNodes: 3,4
             }
         }
-        String afterIter = tree.displayString();
+        String afterIter = tree.toDisplayStr();
         List<Line<Integer>> newNo234List = List.of(
                 Line.of(1, 5),
                 Line.of(5, 6)
         );
         Tree<Integer> newTree = Tree.ofLines(newNo234List).unwrap();
-        String newIter = newTree.displayString();
+        String newIter = newTree.toDisplayStr();
         Assertions.assertNotEquals(beforeIter, afterIter);
         Assertions.assertEquals(afterIter, newIter);
 //        System.out.println(beforeIter);
@@ -323,7 +324,7 @@ public class TreeTest {
             iter.next();
             iter.remove();
         }
-        Assertions.assertEquals(emptyTree.displayString(), tree.displayString());
+        Assertions.assertEquals(emptyTree.toDisplayStr(), tree.toDisplayStr());
     }
 
     @Test
@@ -351,7 +352,7 @@ public class TreeTest {
             //System.out.println(n);
             iter.remove();
         }
-        Assertions.assertEquals(emptyTree.displayString(), tree.displayString());
+        Assertions.assertEquals(emptyTree.toDisplayStr(), tree.toDisplayStr());
     }
 
     @Test
@@ -400,7 +401,7 @@ public class TreeTest {
 //            System.out.println(STF.f("tree: nodeCount: {}, depth: {}", tree.nodeCount(), tree.depth()));
 //            System.out.println(tree.displayString());
         }
-        Assertions.assertEquals(emptyTree.displayString(), tree.displayString());
+        Assertions.assertEquals(emptyTree.toDisplayStr(), tree.toDisplayStr());
     }
 
     @Test
@@ -520,7 +521,7 @@ public class TreeTest {
 //                    .f("IterPeeked size: {}, beforeCount: {}, afterCount: {}",
 //                            iterPeeked.size(), befCount, aftCount));
         }
-        Assertions.assertEquals(emptyTree.displayString(), tree.displayString());
+        Assertions.assertEquals(emptyTree.toDisplayStr(), tree.toDisplayStr());
     }
 
     @Test
@@ -964,6 +965,23 @@ public class TreeTest {
             Integer next1 = t1It.next();
             Assertions.assertEquals(next, next1);
         }
+
+
+    }
+
+    @Test
+    public void testToJson() {
+
+        Map<String, List<String>> sGetChild = Map.of(
+                "a", List.of("b"),
+                "b", List.of("c"),
+                "c", List.of("d"),
+                "d", List.of("e")
+        );
+        var tree1 = Tree.ofRoots(List.of("a"), (e) -> sGetChild.get(e));
+        String sub = tree1.toJson("node", "child", 10, n -> Stf.f("{\"depth\": {}, \"data\": \"{}\"}",
+                n.depth(), n.data()));
+        System.out.println(sub);
 
 
     }
