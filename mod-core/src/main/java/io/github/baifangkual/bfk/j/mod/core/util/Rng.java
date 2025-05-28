@@ -119,5 +119,19 @@ public final class Rng {
         return ThreadLocalRandom.current().nextDouble();
     }
 
+    /**
+     * 返回一个伪随机选择的 int 值，区间为 {@code [0, bound)}
+     */
+    public static int rollInt(int bound) {
+        return ThreadLocalRandom.current().nextInt(bound);
+    }
+
+    /**
+     * 返回一个伪随机选择的 int 值，区间为 {@code [origin, bound)}
+     */
+    public static int rollInt(int origin, int bound) {
+        return ThreadLocalRandom.current().nextInt(origin, bound);
+    }
+
 
 }

@@ -20,11 +20,9 @@ public class FnTest {
     public void test01() {
         Fn<String, String> fn = (s) -> "fnMod: " + s;
         R<String> abc = fn.apply("abc");
-//        System.out.println(abc);
         Assertions.assertEquals(R.ofOk("fnMod: abc"), abc);
         Function<String, R<String>> safe = fn.toSafe();
         R<String> def = safe.apply("def");
-//        System.out.println(def);
         Assertions.assertEquals(R.ofOk("fnMod: def"), def);
     }
 
@@ -96,6 +94,15 @@ public class FnTest {
         };
         Optional<String> optional = fn.toSafe().apply("abc").toOptional();
         Assertions.assertEquals(Optional.empty(), optional);
+    }
+
+    @Test
+    public void test07() {
+        R<R<Integer>> rr = R.ofFnCallable(() -> R.ofOk(1));
+        R<Integer> r = rr.flatMap(Fn.it());
+        Assertions.assertEquals(1, r.unwrap());
+        R<Integer> map = rr.map(R::unwrap);
+        Assertions.assertEquals(1, map.unwrap());
     }
 
 }

@@ -13,7 +13,7 @@ import java.io.Serializable;
 public final class Nil implements Serializable {
     @Serial
     private static final long serialVersionUID = 0L;
-    private static final Nil INSTANCE = new Nil();
+    private static final Nil nil = new Nil();
 
     private Nil() {/* nil*/}
 
@@ -22,8 +22,8 @@ public final class Nil implements Serializable {
      *
      * @return nil
      */
-    public static Nil self() {
-        return INSTANCE;
+    public static Nil nil() {
+        return nil;
     }
 
     @Override

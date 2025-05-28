@@ -262,7 +262,7 @@ public sealed interface R<T> extends Serializable
      * @return {@code R.Ok(Nil)}
      */
     static R<Nil> ofNil() {
-        return new Ok<>(Nil.self());
+        return new Ok<>(Nil.nil());
     }
 
     /**

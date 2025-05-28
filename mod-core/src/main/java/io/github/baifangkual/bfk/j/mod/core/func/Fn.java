@@ -99,5 +99,16 @@ public interface Fn<P, V> extends Function<P, R<V>>,
         };
     }
 
+    /**
+     * identity function<br>
+     * 返回一个恒等函数 {@code (p) -> p}
+     *
+     * @param <P> 入参和出参类型
+     * @return 恒等函数
+     */
+    static <P> Fn<P, P> it() {
+        return p -> p;
+    }
+
 
 }
