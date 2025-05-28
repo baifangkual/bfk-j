@@ -55,6 +55,7 @@
         <reversion.lombok>1.18.32</reversion.lombok>
         <reversion.slf4j-api>2.0.13</reversion.slf4j-api>
         <reversion.slf4j-simple>2.0.13</reversion.slf4j-simple>
+        <reversion.jackson>2.17.2</reversion.jackson>
         <reversion.jupiter-api>5.10.2</reversion.jupiter-api>
         <reversion.auto-service>1.1.1</reversion.auto-service> <!-- THIS USE TO SPI FILE AUTO GEN -->
         <!-- boot 与 cloud 版本有兼容性对应关系 -->
@@ -91,9 +92,19 @@
                 <optional>true</optional>
             </dependency>
             <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${reversion.jackson}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${reversion.slf4j-api}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${reversion.slf4j-simple}</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>

@@ -79,6 +79,12 @@
             <version>${reversion.jupiter-api}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${reversion.slf4j-simple}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

@@ -118,6 +118,10 @@ public final class Const {
          * 字符串常量：中括号（右） {@code "]"}
          */
         public static final java.lang.String BRACKET_END = "]";
+        /**
+         * empty 的 数组
+         */
+        public static final java.lang.String ARRAY_EMPTY = "[]";
 
         /**
          * 字符串常量：冒号 {@code ":"}

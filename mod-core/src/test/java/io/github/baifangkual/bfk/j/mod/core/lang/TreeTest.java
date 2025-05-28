@@ -1,11 +1,14 @@
 package io.github.baifangkual.bfk.j.mod.core.lang;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.baifangkual.bfk.j.mod.core.util.Rng;
 import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -233,10 +236,8 @@ public class TreeTest {
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         String beforeIter = tree.toDisplayStr();
-        Iterator<Tree.Node<Integer>> it = tree.nodeIterator();
-        while (it.hasNext()) {
-            Tree.Node<Integer> n = it.next();
-            if (n == null) throw new IllegalStateException(); // do nothing...
+        for (Tree.Node<Integer> n : tree) {
+            if (n.data() == null) throw new IllegalStateException(); // do nothing...
         }
         String afterIter = tree.toDisplayStr();
         Assertions.assertEquals(beforeIter, afterIter);
@@ -255,7 +256,7 @@ public class TreeTest {
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         String beforeIter = tree.toDisplayStr();
-        Iterator<Tree.Node<Integer>> it = tree.nodeIterator();
+        Iterator<Tree.Node<Integer>> it = tree.iterator();
         while (it.hasNext()) {
             Tree.Node<Integer> n = it.next();
             if (n.isLeaf()) {
@@ -286,7 +287,7 @@ public class TreeTest {
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         String beforeIter = tree.toDisplayStr();
-        Iterator<Tree.Node<Integer>> it = tree.nodeIterator();
+        Iterator<Tree.Node<Integer>> it = tree.iterator();
         while (it.hasNext()) {
             Tree.Node<Integer> n = it.next();
             if (n.data().equals(2)) {
@@ -318,7 +319,7 @@ public class TreeTest {
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         Tree<Integer> emptyTree = Tree.empty();
-        Iterator<Tree.Node<Integer>> iter = tree.nodeIterator();
+        Iterator<Tree.Node<Integer>> iter = tree.iterator();
         while (iter.hasNext()) {
             // fix tree nodeCount and depth modify
             iter.next();
@@ -344,7 +345,7 @@ public class TreeTest {
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         Tree<Integer> emptyTree = Tree.empty();
-        Iterator<Tree.Node<Integer>> iter = tree.nodeIterator();
+        Iterator<Tree.Node<Integer>> iter = tree.iterator();
         //System.out.println(tree.displayString());
         while (iter.hasNext()) {
             // fix tree nodeCount and depth modify
@@ -380,7 +381,7 @@ public class TreeTest {
         while (!tree.isEmpty()) {
             deleted.clear();
             iterPeeked.clear();
-            Iterator<Tree.Node<Integer>> iter = tree.nodeIterator();
+            Iterator<Tree.Node<Integer>> iter = tree.iterator();
             int befCount = tree.nodeCount();
             while (iter.hasNext()) {
                 // fix tree nodeCount and depth modify
@@ -421,6 +422,7 @@ public class TreeTest {
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
         List<Integer> treeStreamList = tree.stream()
+                .map(Tree.Node::data)
                 .distinct().sorted().toList();
         List<Integer> lineStreamList = lines.stream()
                 .flatMap(Line::stream).distinct().sorted().toList();
@@ -448,9 +450,9 @@ public class TreeTest {
         List<Integer> lBFS = new ArrayList<>();
         StringJoiner sbIterForEach = new StringJoiner(", ");
         StringJoiner sbBFS = new StringJoiner(", ");
-        for (Integer i : tree) {
-            lIterForEach.add(i);
-            sbIterForEach.add(i.toString());
+        for (Tree.Node<Integer> i : tree) {
+            lIterForEach.add(i.data());
+            sbIterForEach.add(i.data().toString());
         }
         tree.bfs(n -> {
             lBFS.add(n.data());
@@ -491,7 +493,7 @@ public class TreeTest {
             deletedNodeRefList.clear();
             iterPeeked.clear();
             callIterCount += 1;
-            Iterator<Tree.Node<Integer>> iter = tree.nodeIterator();
+            Iterator<Tree.Node<Integer>> iter = tree.iterator();
             int befCount = tree.nodeCount();
             while (iter.hasNext()) {
                 // fix tree nodeCount and depth modify
@@ -575,6 +577,7 @@ public class TreeTest {
         return max.orElseThrow(RuntimeException::new);
     }
 
+    @SuppressWarnings("UnnecessaryContinue")
     @Test
     public void test18() {
         // test17问题的动态规划解法
@@ -671,12 +674,14 @@ public class TreeTest {
         );
         Tree<Integer> tree = Tree.ofLines(lines).unwrap();
 //        System.out.println(tree.displayString());
-        Iterator<Integer> it1 = tree.iterator();
-        Iterator<Integer> it2 = tree.iterator();
-        it1.next();
-        it2.next();
-        it1.remove();
-        Assertions.assertThrows(ConcurrentModificationException.class, it2::remove);
+        Iterator<Integer> it1 = tree.nodeDataIterator();
+        Assertions.assertThrows(UnsupportedOperationException.class, it1::remove);
+        Iterator<Tree.Node<Integer>> tIt1 = tree.iterator();
+        Iterator<Tree.Node<Integer>> tIt2 = tree.iterator();
+        tIt1.next();
+        tIt2.next();
+        tIt1.remove();
+        Assertions.assertThrows(ConcurrentModificationException.class, tIt2::next);
 
     }
 
@@ -782,7 +787,7 @@ public class TreeTest {
         var tree1 = Tree.ofRoots(List.of("a"), (e) -> sGetChild.get(e));
         Tree.Node<String> root = tree1.root().get(0);
         Tree.Node<String> nc = null;
-        Iterator<Tree.Node<String>> iter = tree1.nodeIterator();
+        Iterator<Tree.Node<String>> iter = tree1.iterator();
         while (iter.hasNext()) {
             var n = iter.next();
             if (n.data().equals("c")) {
@@ -894,14 +899,14 @@ public class TreeTest {
 
         // 4. 测试迭代器
         Set<Integer> iteratorNodes = new HashSet<>();
-        for (Integer value : tree) {
-            iteratorNodes.add(value);
+        for (Tree.Node<Integer> value : tree) {
+            iteratorNodes.add(value.data());
         }
         Assertions.assertEquals(tree.nodeCount(), iteratorNodes.size());
         Assertions.assertEquals(bfsNodes, iteratorNodes);
 
         // 5. 测试节点删除
-        Iterator<Tree.Node<Integer>> nodeIterator = tree.nodeIterator();
+        Iterator<Tree.Node<Integer>> nodeIterator = tree.iterator();
         int initialCount = tree.nodeCount();
         int deletedCount = 0;
 
@@ -944,8 +949,8 @@ public class TreeTest {
 
         List<Integer> t1Collector = new ArrayList<>();
         List<Integer> t2Collector = new ArrayList<>();
-        tree.forEach(t -> t1Collector.add(t));
-        tree1.forEach(t -> t2Collector.add(t));
+        tree.forEach(t -> t1Collector.add(t.data()));
+        tree1.forEach(t -> t2Collector.add(t.data()));
         Assertions.assertEquals(t1Collector.size(), t2Collector.size());
         Collections.sort(t1Collector);
         Collections.sort(t2Collector);
@@ -958,8 +963,8 @@ public class TreeTest {
         // try 一个一个比较
         int nCount = tree.nodeCount();
         int idx = 0;
-        Iterator<Integer> tIt = tree.iterator();
-        Iterator<Integer> t1It = tree1.iterator();
+        Iterator<Integer> tIt = tree.nodeDataIterator();
+        Iterator<Integer> t1It = tree1.nodeDataIterator();
         while (++idx <= nCount) {
             Integer next = tIt.next();
             Integer next1 = t1It.next();
@@ -969,6 +974,7 @@ public class TreeTest {
 
     }
 
+    @SuppressWarnings("unused")
     @Test
     public void testToJson() {
 
@@ -979,11 +985,91 @@ public class TreeTest {
                 "d", List.of("e")
         );
         var tree1 = Tree.ofRoots(List.of("a"), (e) -> sGetChild.get(e));
-        String sub = tree1.toJson("node", "child", 10, n -> Stf.f("{\"depth\": {}, \"data\": \"{}\"}",
-                n.depth(), n.data()));
-        System.out.println(sub);
+        String sub = tree1.toJsonStr(10, "node", "child",
+                n -> Stf.f("{\"depth\": {}, \"data\": \"{}\"}",
+                        n.depth(), n.data()));
+        //System.out.println(sub);
+
+    }
 
 
+    @Test
+    public void testToJson2() {
+    record Obj(int id, String name) {
+        static Obj ofId(int id) {
+            return new Obj(id, String.valueOf(id));
+        }
+    }
+    List<Obj> objs = List.of(
+            Obj.ofId(0), Obj.ofId(1), Obj.ofId(2),
+            Obj.ofId(3), Obj.ofId(4), Obj.ofId(5)
+    );
+    Map<Obj, List<Obj>> getChild = Map.of(
+            objs.get(0), List.of(objs.get(1)),
+            objs.get(1), List.of(objs.get(2), objs.get(3)),
+            objs.get(3), List.of(objs.get(4)),
+            objs.get(4), List.of(objs.get(5))
+    );
+    Tree<Obj> treeObj = Tree.ofRoots(List.of(objs.get(0)),
+            getChild::get,
+            Tree.NodeType.unidirectionalNode,
+            Comparator.comparingInt(Obj::id),
+            ArrayList::new,
+            getChild::containsKey,
+            Predicate.isEqual(null).negate(),
+            Integer.MAX_VALUE);
+    String displayStr = treeObj.toDisplayStr();
+    System.out.println(displayStr);
+
+
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonStr = treeObj.toJsonStr(2, "n", "c",
+                n -> {
+                    try {
+                        return mapper.writeValueAsString(n.data());
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        //System.out.println(jsonStr);
+
+        Tree<Obj2> tree = Tree.ofLines(
+                List.of(
+                        Line.of(
+                                new Obj2(1, "a"),
+                                new Obj2(2, "b")
+                        )
+                )
+        ).unwrap();
+        String json = tree.toJsonStr(tree.depth(),
+                "obj",
+                "child",
+                node -> {
+                    try {
+                        return mapper.writeValueAsString(node.data());
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        //System.out.println(json);
+
+        Tree<Obj2> emptyTree = Tree.empty();
+        String emptyTreeJson = emptyTree.toJsonStr(Integer.MAX_VALUE,
+                "objSelf",
+                "objChild",
+                node -> {
+                    try {
+                        return mapper.writeValueAsString(node.data());
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        Assertions.assertEquals("[]", emptyTreeJson);
+
+
+    }
+
+    record Obj2(int id, String name) {
     }
 
 }
