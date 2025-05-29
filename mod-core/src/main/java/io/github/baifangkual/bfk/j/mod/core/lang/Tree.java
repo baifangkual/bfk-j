@@ -175,7 +175,10 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * @param listFactory        函数-List构造方法引用（形如 {@code ArrayList::new}），
      *                           返回的List用以装载 {@code root} 和 {@code Node.childNode},
      *                           函数返回的List一定要可读可写，否则构造树时会抛出异常
-     * @param fnPreCheckHasChild 函数(nullable)，要求给定一个实体，返回布尔值标识该实体是否有子，
+     * @param fnPreNeedFindChild 函数(nullable)，要求给定一个实体，返回布尔值标识该实体是否需要寻找直接子实体，
+     *                           该函数仅在对元素执行 {@code fnGetChild} 前执行，当该函数返回 {@code false}，
+     *                           则 {@code fnGetChild} 函数一定不会对当前元素执行，否则，
+     *                           函数 {@code fnGetChild} 一定会对当前元素执行，
      *                           这在 {@code fnGetChild} 过重时是一种优化<b>(该函数仅在Tree构造时使用）</b>
      * @param fnPreFilter        函数，预先处理树中实体，要求给定一个实体，当返回的布尔值为false时，
      *                           表示实体不加入树<b>(该函数仅在Tree构造时使用，Tree构造完成便被丢弃）</b>
@@ -191,7 +194,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
          NodeType nodeType,
          Comparator<? super T> fnSort,
          Supplier<? extends List<UnsafeNode<T>>> listFactory,
-         Predicate<? super T> fnPreCheckHasChild,
+         Predicate<? super T> fnPreNeedFindChild,
          Predicate<? super T> fnPreFilter,
          int maxDepth) {
 
@@ -213,7 +216,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
         // compose fnHasChild and fnGetChild
         final Function<? super T, ? extends Iterable<T>> fnCompGetChild =
-                compGetChildFn(fnPreCheckHasChild, fnGetChild);
+                compGetChildFn(fnPreNeedFindChild, fnGetChild);
         // node comp
         final Comparator<Node<T>> fnNSort = compNSortFn(fnSort);
         // 需隔绝外界给定的roots的Iter
@@ -313,7 +316,10 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * @param listFactory        函数-List构造方法引用（形如 {@code ArrayList::new}），
      *                           返回的List用以装载 {@code root} 和 {@code Node.childNode},
      *                           函数返回的List一定要可读可写，否则构造树时会抛出异常
-     * @param fnPreCheckHasChild 函数(nullable)，要求给定一个实体，返回布尔值标识该实体是否有子，
+     * @param fnPreNeedFindChild 函数(nullable)，要求给定一个实体，返回布尔值标识该实体是否需要寻找直接子实体，
+     *                           该函数仅在对元素执行 {@code fnGetChild} 前执行，当该函数返回 {@code false}，
+     *                           则 {@code fnGetChild} 函数一定不会对当前元素执行，否则，
+     *                           函数 {@code fnGetChild} 一定会对当前元素执行，
      *                           这在 {@code fnGetChild} 过重时是一种优化<b>(该函数仅在Tree构造时使用）</b>
      * @param fnPreFilter        函数，预先处理树中实体，要求给定一个实体，当返回的布尔值为false时，
      *                           表示实体不加入树<b>(该函数仅在Tree构造时使用，Tree构造完成便被丢弃）</b>
@@ -329,10 +335,10 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
                                       NodeType type,
                                       Comparator<? super E> fnSort,
                                       Supplier<? extends List<UnsafeNode<E>>> listFactory,
-                                      Predicate<? super E> fnPreCheckHasChild,
+                                      Predicate<? super E> fnPreNeedFindChild,
                                       Predicate<? super E> fnPreFilter,
                                       int maxDepth) {
-        return new Tree<>(roots, fnGetChild, type, fnSort, listFactory, fnPreCheckHasChild, fnPreFilter, maxDepth);
+        return new Tree<>(roots, fnGetChild, type, fnSort, listFactory, fnPreNeedFindChild, fnPreFilter, maxDepth);
     }
 
     /**
@@ -1070,9 +1076,11 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * compose nullable hasChildFn and getChildFn
      */
     private Function<? super T, ? extends Iterable<T>>
-    compGetChildFn(Predicate<? super T> nullableFnHasChild,
+    compGetChildFn(Predicate<? super T> nullableFnPreNeedFindChild,
                    Function<? super T, ? extends Iterable<T>> fnGetChild) {
-        return nullableFnHasChild == null ? fnGetChild : (e) -> nullableFnHasChild.test(e) ? fnGetChild.apply(e) : null;
+        return nullableFnPreNeedFindChild == null ?
+                fnGetChild :
+                (e) -> nullableFnPreNeedFindChild.test(e) ? fnGetChild.apply(e) : null;
     }
 
     /**
