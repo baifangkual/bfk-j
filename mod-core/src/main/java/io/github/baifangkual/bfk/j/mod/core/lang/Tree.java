@@ -112,6 +112,17 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     }
 
     /**
+     * 返回指定的根节点<br>
+     *
+     * @param idx 下标
+     * @return root node
+     */
+    public Optional<Node<T>> root(int idx) {
+        return rootCount() <= idx ? Optional.empty() : Optional.of(root.get(idx));
+
+    }
+
+    /**
      * 根节点个数
      *
      * @return 根节点个数
@@ -630,10 +641,18 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         UnsafeNode<E> current; // 当前被next的node的引用，用以从currentParentChildNodesRef中remove时使用
 
         TreeIter(Tree<E> tree) {
-            List<UnsafeNode<E>> roots = tree.root;
+            this(tree, tree.root);
+        }
+
+        /*
+        20250529 增加该方法，将树的迭代器的开始迭代的Node与Tree.root分离，
+        从给定的 iterStartNodes 开始迭代，这些Node应当是同一层（depth eq）（可以不是共同父），
+        否则可能造成Node被反复迭代到
+         */
+        TreeIter(Tree<E> tree, List<UnsafeNode<E>> iterStartNodes) {
             this.treeRef = tree;
-            this.currentParentChildNodesRef = roots;
-            this.queue.addAll(roots);
+            this.queue.addAll(iterStartNodes);
+            this.currentParentChildNodesRef = iterStartNodes;
             // 初始化
             this.beforeNodeRef = null;
             this.currentParentNodeRef = null; //root no parent
