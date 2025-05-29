@@ -176,7 +176,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
 
     @Override
     public boolean exists(VPath path) throws VFSIOException {
-        if (path.isVfsRoot()) {
+        if (path.isRoot()) {
              /*
              to do 如果 path 为 root 则应该使用 bucketExists
              不能为root做操作，遂直接true
@@ -231,7 +231,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
 
     @Override
     public List<VPath> lsDir(VPath path) throws VFSIOException {
-        Optional<VFile> file = getFile(path);
+        Optional<VFile> file = file(path);
         if (file.isPresent()) {
             VFile vf = file.get();
             if (vf.isDirectory()) {
@@ -252,7 +252,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
         20250517 该方法已取消结果一致性保证，方法语义更严格，遂若为root，抛出异常，因为root一定已经存在了
          */
         Objects.requireNonNull(path, "given path is null");
-        if (path.isVfsRoot()) {
+        if (path.isRoot()) {
             throw new VFSIOException("directory already exists");
         }
         // 实体存在
@@ -267,7 +267,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
         // 创建其
         directoryAction.mkdir(path);
         // 勉强 可能逻辑重复冗余, 或直接创建VFile更好？
-        return getFile(path).orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not exists", path)));
+        return file(path).orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not exists", path)));
     }
 
     @Override
@@ -383,9 +383,9 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
 
 
     @Override
-    public Optional<VFile> getFile(VPath path) throws VFSIOException {
+    public Optional<VFile> file(VPath path) throws VFSIOException {
         Objects.requireNonNull(path, "given path is null");
-        if (path.isVfsRoot()) {
+        if (path.isRoot()) {
             return Optional.of(new DefaultVFile(this, root, VFileType.directory, 0));
         }
         Optional<StatObjectResponse> statOpt = objStat(path);
@@ -401,7 +401,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
     }
 
     @Override
-    public InputStream getFileInputStream(VFile file) throws VFSIOException {
+    public InputStream fileInputStream(VFile file) throws VFSIOException {
         if (file.isDirectory()) {
             throw new VFSIOException(Stf.f("\"{}\" is a directory", file));
         } else if (file.isSimpleFile()) {

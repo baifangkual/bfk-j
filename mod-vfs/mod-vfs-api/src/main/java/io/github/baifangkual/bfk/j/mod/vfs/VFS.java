@@ -227,7 +227,7 @@ public interface VFS extends Closeable {
      */
     default boolean exists(VPath path) throws VFSIOException {
         Objects.requireNonNull(path, "given path is null");
-        return getFile(path).isPresent();
+        return file(path).isPresent();
     }
 
     /**
@@ -239,7 +239,7 @@ public interface VFS extends Closeable {
      * @throws VFSIOException       当过程出现异常，如访问权限不足等
      * @throws NullPointerException 当给定的参数为空时
      */
-    Optional<VFile> getFile(VPath path) throws VFSIOException;
+    Optional<VFile> file(VPath path) throws VFSIOException;
 
     /**
      * 获取该虚拟文件实体的字节流inputStream<br>
@@ -250,7 +250,7 @@ public interface VFS extends Closeable {
      * @throws NullPointerException 当给定的参数为空时
      * @apiNote 该方法要么返回一个文件字节流，要么抛出异常，一定不会返回{@code null}
      */
-    InputStream getFileInputStream(VFile file) throws VFSIOException;
+    InputStream fileInputStream(VFile file) throws VFSIOException;
 
     /**
      * 获取该虚拟文件实体的字节流inputStream<br>
@@ -258,8 +258,8 @@ public interface VFS extends Closeable {
      *
      * @return {@link R.Ok}载荷文件字节流 | {@link R.Err}载荷异常
      */
-    default R<InputStream> tryGetFileInputStream(VFile file) {
-        return R.ofFnCallable(() -> getFileInputStream(file));
+    default R<InputStream> tryFileInputStream(VFile file) {
+        return R.ofFnCallable(() -> fileInputStream(file));
     }
 
     /**

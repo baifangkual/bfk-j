@@ -240,13 +240,13 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
         20250517 该方法已取消结果一致性保证，方法语义更严格，遂若为root，抛出异常，因为root一定已经存在了
          */
         Objects.requireNonNull(path, "given path is null");
-        if (path.isVfsRoot()) {
+        if (path.isRoot()) {
             throw new VFSIOException("directory already exists");
         }
         DiskShare ds = this.singleConnPack.getShare();
         ds.mkdir(path.simplePath());
         // 勉强 可能逻辑重复冗余, 或直接创建VFile更好？
-        return getFile(path).orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not exists", path)));
+        return file(path).orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not exists", path)));
     }
 
     @Override
@@ -271,7 +271,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
 
     @Override
     public boolean exists(VPath path) throws VFSIOException {
-        if (path.isVfsRoot()) {
+        if (path.isRoot()) {
             return true;
         }
         DiskShare ds = singleConnPack.getShare();
@@ -280,9 +280,9 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     }
 
     @Override
-    public Optional<VFile> getFile(VPath path) throws VFSIOException {
+    public Optional<VFile> file(VPath path) throws VFSIOException {
         Objects.requireNonNull(path, "given path is null");
-        if (path.isVfsRoot()) {
+        if (path.isRoot()) {
             return Optional.of(new DefaultVFile(this, vfsRoot, VFileType.directory, 0));
         }
         if (exists(path)) {
@@ -299,7 +299,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     }
 
     @Override
-    public InputStream getFileInputStream(VFile file) throws VFSIOException {
+    public InputStream fileInputStream(VFile file) throws VFSIOException {
         if (file.isDirectory()) throw new VFSIOException(Stf.f("\"{}\" is a directory", file));
         else if (file.isSimpleFile()) {
             DiskShare ds = this.singleConnPack.getShare();
@@ -335,7 +335,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     public VFile mkFile(VPath path, InputStream newFileData) throws VFSIOException {
         Objects.requireNonNull(path, "given path is null");
         Objects.requireNonNull(newFileData, "given input stream is null");
-        if (getFile(path).isPresent()) {
+        if (file(path).isPresent()) {
             throw new VFSIOException(Stf.f("{}:\"{}\" already exists", this, path));
         }
         try (OutputStream out = createFile(path)) {

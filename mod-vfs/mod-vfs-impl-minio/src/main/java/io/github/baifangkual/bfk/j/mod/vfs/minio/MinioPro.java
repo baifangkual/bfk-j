@@ -12,9 +12,6 @@ import io.minio.errors.*;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * minio相关api工具类
@@ -80,7 +77,7 @@ public class MinioPro {
     }
 
     public static String listObjPrefixVPathTranslate(VPath path) {
-        if (path.isVfsRoot()) return null;
+        if (path.isRoot()) return null;
         String har = path.simplePath();
         har = har.substring(VFSDefaultConst.PATH_SEPARATOR.length());
         return rightAddPathSeparator(har);

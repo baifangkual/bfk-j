@@ -100,12 +100,12 @@ public class DefaultSliceAbsolutePath implements VPath {
     }
 
     @Override
-    public VFS selfVfs() {
+    public VFS vfs() {
         return vfs;
     }
 
     @Override
-    public boolean isVfsRoot() {
+    public boolean isRoot() {
         return pathSlice.length == 0;
     }
 
@@ -130,7 +130,7 @@ public class DefaultSliceAbsolutePath implements VPath {
 
     @Override
     public String name() {
-        if (isVfsRoot()) {
+        if (isRoot()) {
             return PATH_SEPARATOR;
         } else {
             return pathSlice[pathSlice.length - 1];

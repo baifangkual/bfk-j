@@ -44,7 +44,7 @@ public class DefaultVFile implements VFile {
     }
 
     @Override
-    public VFS selfVfs() {
+    public VFS vfs() {
         return vfs;
     }
 

@@ -63,8 +63,8 @@ public interface VPath extends VEntity, Comparable<VPath> {
      */
     default Optional<VFile> toFile() {
         //noinspection resource
-        VFS vfs = selfVfs();
-        return vfs.getFile(this);
+        VFS vfs = vfs();
+        return vfs.file(this);
     }
 
     /**
@@ -79,7 +79,7 @@ public interface VPath extends VEntity, Comparable<VPath> {
      */
     default VPath back(int numberOfBack) {
         Err.realIf(numberOfBack < 0, IllegalArgumentException::new, "Back number cannot be negative");
-        if (this.isVfsRoot()) {
+        if (this.isRoot()) {
             return this;
         }
         VPath ref = this;
@@ -115,14 +115,14 @@ public interface VPath extends VEntity, Comparable<VPath> {
      *
      * @return 虚拟文件系统
      */
-    VFS selfVfs();
+    VFS vfs();
 
     /**
      * 该虚拟目录实体是否为所在{@link VFS}的表示的根目录
      *
      * @return true: 是，反之则否
      */
-    boolean isVfsRoot();
+    boolean isRoot();
 
     /**
      * 获取该目录实体的 path 简单表现形式
@@ -169,9 +169,9 @@ public interface VPath extends VEntity, Comparable<VPath> {
      */
     default VFile mkFile(InputStream newFileData) throws VFSIOException {
         Objects.requireNonNull(newFileData, "newFileData is null");
-        if (this.isVfsRoot()) throw new VFSIOException("directory already exists");
+        if (this.isRoot()) throw new VFSIOException("directory already exists");
         //noinspection resource
-        return this.selfVfs().mkFile(this, newFileData);
+        return this.vfs().mkFile(this, newFileData);
     }
 
     /**
@@ -203,10 +203,10 @@ public interface VPath extends VEntity, Comparable<VPath> {
         遂当self为root时，跳过创建目录的过程即可
         20250517 该方法已取消结果一致性保证，方法语义更严格
          */
-        if (this.isVfsRoot()) throw new VFSIOException("directory already exists");
+        if (this.isRoot()) throw new VFSIOException("directory already exists");
         else {
             //noinspection resource
-            this.selfVfs().mkdir(this);
+            this.vfs().mkdir(this);
         }
         VFile dir = this.toFile().orElseThrow(() -> new VFSIOException("Can't create directory"));
         if (!dir.isDirectory()) {

@@ -39,7 +39,7 @@ import java.util.function.BiFunction;
  *     <li>不支持FTP的ASCII模式，即使服务器启动ASCII模式支持，因其ASCII模式下 SIZE /big/file 可进行DOS攻击且可能对部分字节字符有更改 </li>
  *     <li>当ftp客户端空闲时间超过给定时间段，ftp服务器可能会选择提前关闭连接，该设置了控制空闲发送NOOP重置空闲定时器，默认值为{@link FTPCfgOptions#controlKeepAliveTimeoutSec}</li>
  *     <li>参数{@link FTPCfgOptions#transformQueueMaxSize}控制了可同时读+写的流数量，当超过该值的其他线程要读/写文件流时，将会阻塞，直到另一个线程读/写流完成并关闭流</li>
- *     <li>该实现中{@link #getFile(VPath)}方法优先使用FTP的MLST命令，当连接的FTP服务器不支持该命令时，将会降级使用LIST命令，相对MLST命令，该命令较为低效</li>
+ *     <li>该实现中{@link #file(VPath)}方法优先使用FTP的MLST命令，当连接的FTP服务器不支持该命令时，将会降级使用LIST命令，相对MLST命令，该命令较为低效</li>
  *     <li>该实现中许多方法未进行前置的{@link #ifClosedThrowVFSRtIOE()}校验，遂当该VFS关闭后，部分行为会抛出不明确的异常，依赖底层实现</li>
  *     <li>在该实现连接FTP服务器时将会检查FTP服务器支持的命令，当驱动该VFS的基础命令不支持时，该VFS将会构造失败，抛出异常</li>
  * </ul>
@@ -215,7 +215,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
         try {
             // to do 必须其可ls 已知 ftpCli在 path 不存在时不会抛出异常，该情况应该暴露
             // 后续或可将该的行为变更，要知道 tryGetFile在行为降级（不支持MLST时）走的是LIST，会查询两次，完全没必要
-            Optional<VFile> fOpt = getFile(path);
+            Optional<VFile> fOpt = file(path);
             if (fOpt.isEmpty() || !fOpt.get().isDirectory()) {
                 throw new VFSIOException(Stf.f("\"{}\" not a directory or not exists", path));
             }
@@ -241,7 +241,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
     private boolean simpleFIleExistsUseMDTMCMD(VPath path) {
         mainControlLock.lock();
         try {
-            if (path.isVfsRoot()) return false;
+            if (path.isRoot()) return false;
             String modificationTime = FTPSupport.sneakyRun(() ->
                     this.mainControlCli.getModificationTime(pathTranslate(path)));
             return modificationTime != null;
@@ -258,7 +258,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
     private boolean simpleFileExistsUseSIZECMD(VPath path) {
         mainControlLock.lock();
         try {
-            if (path.isVfsRoot()) return false;
+            if (path.isRoot()) return false;
             String size = FTPSupport.sneakyRun(() ->
                     this.mainControlCli.getSize(pathTranslate(path)));
             return size != null;
@@ -272,7 +272,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
      * 在 FTP LIST 命令中，LIST 命令 不追加目录表示本身，否则表示追加的目录，遂当为root时，为null即可
      */
     private String pathTranslate(VPath path) {
-        if (path.isVfsRoot()) {
+        if (path.isRoot()) {
             return null;
         }
         return VFSDefaultConst.CURR_PATH + path.simplePath();
@@ -339,7 +339,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
         20250517 该方法已取消结果一致性保证，方法语义更严格，遂若为root，抛出异常，因为root一定已经存在了
          */
         Objects.requireNonNull(path, "given path is null");
-        if (path.isVfsRoot()) {
+        if (path.isRoot()) {
             throw new VFSIOException("directory already exists");
         }
         mainControlLock.lock();
@@ -356,7 +356,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
             Boolean mkr = FTPSupport.sneakyRun(() ->
                     this.mainControlCli.makeDirectory(pathTranslate(path)));
             // 勉强 可能逻辑重复冗余, 或直接创建VFile更好？
-            VFile fo = getFile(path)
+            VFile fo = file(path)
                     .orElseThrow(() -> new VFSIOException(Stf
                             .f("\"{}\" not found directory, make directory unknown error", path)));
             if (!mkr) {
@@ -485,7 +485,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
             Boolean rmr = FTPSupport.sneakyRun(() ->
                     this.mainControlCli.deleteFile(pathTranslate(path)));
             if (!rmr) {
-                Optional<VFile> fo = getFile(path);
+                Optional<VFile> fo = file(path);
                 if (fo.isPresent()) {
                     if (fo.get().isDirectory()) {
                         throw new VFSIOException(Stf
@@ -534,7 +534,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
                 Boolean rmr = FTPSupport.sneakyRun(() ->
                         this.mainControlCli.removeDirectory(pathTranslate(path)));
                 if (!rmr) {
-                    Optional<VFile> fo = getFile(path);
+                    Optional<VFile> fo = file(path);
                     if (fo.isPresent()) {
                         if (fo.get().isDirectory()) {
                             throw new VFSIOException(Stf.f("\"{}\" already exists, directory is not empty", path));
@@ -554,7 +554,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
     }
 
     @Override
-    public Optional<VFile> getFile(VPath path) throws VFSIOException {
+    public Optional<VFile> file(VPath path) throws VFSIOException {
         Objects.requireNonNull(path, "given path is null");
         /*
         cli.mlistFile()方法将使用ftp MLST 命令，已知vsftpd 3.0.5及以下版本不支持该，遂应另谋他法
@@ -562,7 +562,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
         https://stackoverflow.com/questions/52032468/does-vsftpd-supports-mlsd-command
         https://stackoverflow.com/questions/10482204/checking-file-existence-on-ftp-server
          */
-        if (path.isVfsRoot()) {
+        if (path.isRoot()) {
             return Optional.of(new DefaultVFile(this, root, VFileType.directory, 0));
         } else {
             /*
@@ -605,7 +605,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
     }
 
     @Override
-    public InputStream getFileInputStream(VFile file) throws VFSIOException {
+    public InputStream fileInputStream(VFile file) throws VFSIOException {
         if (file.isSimpleFile()) { // 只有 普通文件可有流，符号链接？ 不要符号链接追实际文件
             BorrowableCliDelegation borCli = awaitBorrowOneFree();
             InputStream in;
@@ -652,7 +652,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
     public VFile mkFile(VPath path, InputStream newFileData) throws VFSIOException {
         Objects.requireNonNull(path, "given path is null");
         Objects.requireNonNull(newFileData, "given input stream is null");
-        if (getFile(path).isPresent()) {
+        if (file(path).isPresent()) {
             throw new VFSIOException(Stf.f("{}:\"{}\" already exists", this, path));
         }
         BorrowableCliDelegation borCli = null;
@@ -669,7 +669,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
             if (!success) {
                 throw new VFSIOException(Stf.f("store file not success, unknown error"));
             }
-            return getFile(path).orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not found", path)));
+            return file(path).orElseThrow(() -> new VFSIOException(Stf.f("\"{}\" not found", path)));
         } catch (CopyStreamException ce) {
             log.warn("传输文件时发生IO错误, err msg: {}", ce.getMessage());
             throw new VFSIOException(ce);

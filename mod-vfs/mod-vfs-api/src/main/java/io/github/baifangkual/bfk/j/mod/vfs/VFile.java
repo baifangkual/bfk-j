@@ -57,9 +57,9 @@ public interface VFile extends VEntity {
      * @return 文件字节流
      * @throws VFSIOException 当该实体为文件夹/无字节流/无法获取字节流等时
      */
-    default InputStream getInputStream() throws VFSIOException {
+    default InputStream inputStream() throws VFSIOException {
         //noinspection resource
-        return selfVfs().getFileInputStream(this);
+        return vfs().fileInputStream(this);
     }
 
     /**
@@ -67,9 +67,9 @@ public interface VFile extends VEntity {
      *
      * @return 文件字节流 | 获取文件字节流过程中的异常
      */
-    default R<InputStream> tryGetInputStream() {
+    default R<InputStream> tryInputStream() {
         //noinspection resource
-        return selfVfs().tryGetFileInputStream(this);
+        return vfs().tryFileInputStream(this);
     }
 
     /**
@@ -98,7 +98,7 @@ public interface VFile extends VEntity {
      *
      * @return 虚拟文件系统
      */
-    VFS selfVfs();
+    VFS vfs();
 
     /**
      * 给定一个虚拟目录实体，将当前虚拟文件所代指的实体拷贝至给定的虚拟目录实体所在位置<br>
@@ -119,26 +119,26 @@ public interface VFile extends VEntity {
     default void copyTo(VPath target) throws VFSIOException {
         if (this.isSimpleFile()) {
             // 若当前为普通文件，并且给定的vPath为root，则这种非法情况应当抛出异常
-            if (target.isVfsRoot()) {
+            if (target.isRoot()) {
                 throw new VFSIOException(Stf.f("copy {}:\"{}\" to {}:\"{}\" fail, IOErr: " +
                                                "cannot overwrite directory '{}' with non-directory '{}'",
-                        this.selfVfs(), this.toPath(), target.selfVfs(), target, target, this.toPath()));
+                        this.vfs(), this.toPath(), target.vfs(), target, target, this.toPath()));
             }
-            try (InputStream input = this.getInputStream()) {
+            try (InputStream input = this.inputStream()) {
                 target.mkFile(input);
             } catch (IOException e) {
                 throw new VFSIOException(
                         Stf.f("copy {}:\"{}\" to {}:\"{}\" fail, IOErr: {}",
-                                this.selfVfs(),
+                                this.vfs(),
                                 this.toPath(),
-                                target.selfVfs(),
+                                target.vfs(),
                                 target,
                                 e.getMessage()), e);
             }
         } else if (this.isDirectory()) {
             VFile targetDir = target.mkDir();
             //noinspection resource
-            List<VFile> sourceItems = this.selfVfs().lsDir(this);
+            List<VFile> sourceItems = this.vfs().lsDir(this);
             for (VFile sourceOne : sourceItems) {
                 // 这里last不会异常，因为该为source的子级，遂一定不为root
                 String sLast = sourceOne.toPath().name();
