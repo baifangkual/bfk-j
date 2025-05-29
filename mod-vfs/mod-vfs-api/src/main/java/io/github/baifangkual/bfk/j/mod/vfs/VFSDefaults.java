@@ -2,15 +2,17 @@ package io.github.baifangkual.bfk.j.mod.vfs;
 
 import io.github.baifangkual.bfk.j.mod.core.lang.Const;
 
+import java.util.Comparator;
+
 /**
  * VFS相关常量、默认值等，引用在此
  *
  * @author baifangkual
  * @since 2024/9/5 v0.0.5
  */
-public class VFSDefaultConst {
+public class VFSDefaults {
 
-    private VFSDefaultConst() {
+    private VFSDefaults() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
@@ -33,4 +35,20 @@ public class VFSDefaultConst {
      * 父级目录引用
      */
     public static final String PARENT_PATH = Const.String.DOUBLE_DOT;
+
+    /**
+     * 比较VFile函数，文件夹优先
+     */
+    public static final Comparator<VFile> F_COMP_JUST_DIR_FIRST = Comparator
+            .comparingInt(f -> f.isDirectory() ? 0 : 1);
+    /**
+     * 比较VFile函数，字典序（中文无法
+     */
+    public static final Comparator<VFile> F_COMP_JUST_NAME_SORT = Comparator.comparing(VFile::name);
+    /**
+     * 比较VFile函数，优先文件夹，其次字典序
+     */
+    public static final Comparator<VFile> F_COMP_DIR_FIRST_THEN_NAME_SORT = F_COMP_JUST_DIR_FIRST
+            .thenComparing(F_COMP_JUST_NAME_SORT);
+
 }

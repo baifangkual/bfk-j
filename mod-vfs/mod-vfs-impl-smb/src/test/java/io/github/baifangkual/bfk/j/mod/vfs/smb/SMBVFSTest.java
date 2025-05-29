@@ -1,13 +1,12 @@
 package io.github.baifangkual.bfk.j.mod.vfs.smb;
+
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.vfs.VFS;
-import io.github.baifangkual.bfk.j.mod.vfs.VFile;
-import io.github.baifangkual.bfk.j.mod.vfs.VPath;
+import io.github.baifangkual.bfk.j.mod.core.lang.Tree;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
+import io.github.baifangkual.bfk.j.mod.vfs.*;
 import io.github.baifangkual.bfk.j.mod.vfs.smb.conf.SMBCfgOptions;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 /**
@@ -16,6 +15,51 @@ import java.util.List;
  */
 @SuppressWarnings({"CommentedOutCode", "unused"})
 public class SMBVFSTest {
+
+//    @Test
+//    public void test55() throws Exception {
+//        Cfg smbCfg = Cfg.newCfg();
+//        smbCfg.set(SMBCfgOptions.host, "bfk-pi5.local");
+//        smbCfg.set(SMBCfgOptions.user, "baifangkual");
+//        smbCfg.set(SMBCfgOptions.passwd, "");
+//        smbCfg.set(SMBCfgOptions.share, "");
+//
+//        try (VFS vfs = VFSFactory.of(VFSType.smb).orElseThrow().build(smbCfg)) {
+//            VFile root = vfs.root().toFile().orElseThrow();
+//            System.out.println(root);
+//
+//            List<VFile> vFiles = root.lsDir();
+//            //vFiles.forEach(System.out::println);
+//
+//            Tree<VFile> dirTree = root.toPath().join("/hentai")
+//                    .toFile()
+//                    .map(VFile::tree)
+//                    .orElseThrow();
+//            int count = dirTree.nodeCount();
+//            VFile maxFile = null;
+//            for (Tree.Node<VFile> fNode : dirTree) {
+//                VFile f = fNode.data();
+//                VPath p = f.toPath();
+//                maxFile = maxFile == null ?
+//                        f : f.sizeOfBytes() > maxFile.sizeOfBytes() ? f : maxFile;
+//                String fString = Stf.f("n: depth: {}, f: name: {}, path: {}, type: {}, size: {}",
+//                        fNode.depth(), f.name(), f.toPath(), f.type(), f.sizeOfBytes());
+//                //System.out.println(fString);
+//            }
+//            System.out.println(Stf.f("count: {}", count - 1));
+//            final String dir = "dir";
+//            final String file = "file";
+//            System.out.println(dirTree.toDisplayStr(Integer.MAX_VALUE,
+//                    (n) -> {
+//                        VFile f = n.data();
+//                        return Stf.f("[name: {}, type: {}, size: {}]",
+//                                f.name(), f.type() == VFileType.directory ? dir : file, f.sizeOfBytes());
+//                    }));
+//            System.out.println("maxFile: " + maxFile);
+//        }
+//
+//    }
+
 
 //    private static final Cfg vfsConf = Cfg.ofNew()
 //            .set(SMBCfgOptions.share, "")

@@ -1,6 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.vfs.minio.action;
 
-import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst;
+import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaults;
 import io.github.baifangkual.bfk.j.mod.vfs.VPath;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;
 import io.github.baifangkual.bfk.j.mod.vfs.minio.MinioDirectoryAction;
@@ -102,7 +102,7 @@ public class NativeDirectoryAction
                 // fix ed 20241021 minio cli API 创建的异常实体的判断
                 //  该else内为 minio cli API 创建的文件夹内部的非文件夹和非文件的实体的判断逻辑
                 //  该异常的标志实体的行为：isDir属性为 false，并且 objectName以 / 结尾，并且其 objectName eq path full
-                if (decodeName.endsWith(VFSDefaultConst.PATH_SEPARATOR)) {
+                if (decodeName.endsWith(VFSDefaults.PATH_SEPARATOR)) {
                     // 执行至此，即该item属性 isDir为false，且 objectName 以 “/” 结尾，抓到你了小逼崽子，跳过该
                     continue;
                 }

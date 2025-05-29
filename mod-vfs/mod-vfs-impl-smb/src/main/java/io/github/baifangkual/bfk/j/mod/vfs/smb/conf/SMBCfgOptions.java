@@ -1,7 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.vfs.smb.conf;
 
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst;
+import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaults;
 import io.github.baifangkual.bfk.j.mod.vfs.VFSFactory;
 
 /**
@@ -49,7 +49,7 @@ public class SMBCfgOptions {
             .build();
     public static final Cfg.Option<Integer> bufSize = Cfg.Option.of("vfs.smb.buf.size")
             .intType()
-            .defaultValue(VFSDefaultConst.BYTE_BUFFER_SIZE)
+            .defaultValue(VFSDefaults.BYTE_BUFFER_SIZE)
             .description("smb缓冲区大小")
             .build();
 

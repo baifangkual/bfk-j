@@ -130,7 +130,7 @@ public class MinioBucketRootVirtualFileSystem extends AbstractVirtualFileSystem 
                 this.bucket = buckN;
                 this.directoryAction = buildingDirAction(readonlyCfg.getOrDefault(dirActionStrategy), oCli, buckN);
                 this.putObjectBufSize = safeBufRange(readonlyCfg.getOrDefault(bufSize));
-                this.root = new DefaultSliceAbsolutePath(this, VFSDefaultConst.PATH_SEPARATOR);
+                this.root = new DefaultSliceAbsolutePath(this, VFSDefaults.PATH_SEPARATOR);
                 this.cli = oCli;
                 // 目录行为策略
                 this.isClosed.compareAndSet(true, false);

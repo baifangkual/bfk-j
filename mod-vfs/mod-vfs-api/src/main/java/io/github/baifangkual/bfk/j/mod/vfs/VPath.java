@@ -1,9 +1,9 @@
 package io.github.baifangkual.bfk.j.mod.vfs;
 
 
-import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;
 import io.github.baifangkual.bfk.j.mod.vfs.mark.VEntity;
 
@@ -11,7 +11,7 @@ import java.io.InputStream;
 import java.util.Objects;
 import java.util.Optional;
 
-import static io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst.PATH_SEPARATOR;
+import static io.github.baifangkual.bfk.j.mod.vfs.VFSDefaults.PATH_SEPARATOR;
 
 /**
  * <b>虚拟目录实体</b><br>
@@ -139,7 +139,7 @@ public interface VPath extends VEntity, Comparable<VPath> {
 
     /**
      * 获取当前所在目录层级的名称，也就是完整目录层级的最后一个层级名称，
-     * 当该实体表示根时，将返回{@value VFSDefaultConst#PATH_SEPARATOR}
+     * 当该实体表示根时，将返回{@value VFSDefaults#PATH_SEPARATOR}
      * <pre>
      *     {@code
      *     VPath p1 = vfs.root().join("a/b/c/d");
@@ -154,6 +154,15 @@ public interface VPath extends VEntity, Comparable<VPath> {
      */
     String name();
 
+    /**
+     * 返回该虚拟目录实体所指代位置是否实际存在一个实体
+     *
+     * @return true 存在，反之不存在
+     */
+    default boolean exists() {
+        //noinspection resource
+        return this.vfs().exists(this);
+    }
 
     /**
      * 给定可读的inputStream，创建文件<br>

@@ -2,7 +2,7 @@ package io.github.baifangkual.bfk.j.mod.vfs.minio;
 
 import io.github.baifangkual.bfk.j.mod.core.func.FnGet;
 import io.github.baifangkual.bfk.j.mod.core.func.FnRun;
-import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst;
+import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaults;
 import io.github.baifangkual.bfk.j.mod.vfs.VPath;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;
 import io.minio.BucketExistsArgs;
@@ -79,28 +79,28 @@ public class MinioPro {
     public static String listObjPrefixVPathTranslate(VPath path) {
         if (path.isRoot()) return null;
         String har = path.simplePath();
-        har = har.substring(VFSDefaultConst.PATH_SEPARATOR.length());
+        har = har.substring(VFSDefaults.PATH_SEPARATOR.length());
         return rightAddPathSeparator(har);
     }
 
     public static String leftAddPathSeparator(String path) {
-        return VFSDefaultConst.PATH_SEPARATOR + path;
+        return VFSDefaults.PATH_SEPARATOR + path;
     }
 
     public static String rightAddPathSeparator(String path) {
-        return path + VFSDefaultConst.PATH_SEPARATOR;
+        return path + VFSDefaults.PATH_SEPARATOR;
     }
 
     public static String leftCleanPathSeparator(String path) {
-        if (path.startsWith(VFSDefaultConst.PATH_SEPARATOR)) {
-            path = path.substring(VFSDefaultConst.PATH_SEPARATOR.length());
+        if (path.startsWith(VFSDefaults.PATH_SEPARATOR)) {
+            path = path.substring(VFSDefaults.PATH_SEPARATOR.length());
         }
         return path;
     }
 
     public static String rightCleanPathSeparator(String path) {
-        if (path.endsWith(VFSDefaultConst.PATH_SEPARATOR)) {
-            path = path.substring(0, path.length() - VFSDefaultConst.PATH_SEPARATOR.length());
+        if (path.endsWith(VFSDefaults.PATH_SEPARATOR)) {
+            path = path.substring(0, path.length() - VFSDefaults.PATH_SEPARATOR.length());
         }
         return path;
     }
@@ -112,11 +112,11 @@ public class MinioPro {
      * @return lastName
      */
     public static String lastName(String fullCleanedObjectName) {
-        int i = fullCleanedObjectName.lastIndexOf(VFSDefaultConst.PATH_SEPARATOR);
+        int i = fullCleanedObjectName.lastIndexOf(VFSDefaults.PATH_SEPARATOR);
         // 未有，返回同对象
         if (i == -1) return fullCleanedObjectName;
         else {
-            int length = VFSDefaultConst.PATH_SEPARATOR.length();
+            int length = VFSDefaults.PATH_SEPARATOR.length();
             return fullCleanedObjectName.substring(i + length);
         }
     }

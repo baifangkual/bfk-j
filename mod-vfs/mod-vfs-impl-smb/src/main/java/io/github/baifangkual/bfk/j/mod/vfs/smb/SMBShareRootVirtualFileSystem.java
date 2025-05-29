@@ -94,7 +94,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
             Session session = connPack.getSession();
             this.smbClient = smbClient;
             this.singleConnPack = connPack;
-            this.vfsRoot = new DefaultSliceAbsolutePath(this, VFSDefaultConst.PATH_SEPARATOR);
+            this.vfsRoot = new DefaultSliceAbsolutePath(this, VFSDefaults.PATH_SEPARATOR);
             this.isClose.compareAndSet(true, false);
         } catch (Exception e) {
             fail = true;
@@ -209,7 +209,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
         Err.realIf(!ds.folderExists(sp), VFSIOException::new, "Not a directory: '{}'", sp);
         List<FileIdBothDirectoryInformation> list = ds.list(sp);
         return list.stream().map(FileDirectoryQueryableInformation::getFileName)
-                .filter(n -> !(n.equals(VFSDefaultConst.CURR_PATH) || n.equals(VFSDefaultConst.PARENT_PATH)))
+                .filter(n -> !(n.equals(VFSDefaults.CURR_PATH) || n.equals(VFSDefaults.PARENT_PATH)))
                 .map(path::join)
                 .toList();
     }
@@ -220,8 +220,8 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
         VPath fPath = file.toPath();
         DiskShare ds = this.singleConnPack.getShare();
         List<FileIdBothDirectoryInformation> fL = ds.list(fPath.simplePath());
-        return fL.stream().filter(f -> !f.getFileName().equals(VFSDefaultConst.CURR_PATH)
-                                       && !f.getFileName().equals(VFSDefaultConst.PARENT_PATH))
+        return fL.stream().filter(f -> !f.getFileName().equals(VFSDefaults.CURR_PATH)
+                                       && !f.getFileName().equals(VFSDefaults.PARENT_PATH))
                 .map(f -> {
                     String fn = f.getFileName();
                     boolean dir = FileAttrTranslate.isDir(f.getFileAttributes());

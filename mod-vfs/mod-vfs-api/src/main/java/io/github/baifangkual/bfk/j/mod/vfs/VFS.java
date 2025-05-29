@@ -1,15 +1,18 @@
 package io.github.baifangkual.bfk.j.mod.vfs;
 
 
+import io.github.baifangkual.bfk.j.mod.core.lang.Const;
 import io.github.baifangkual.bfk.j.mod.core.lang.R;
+import io.github.baifangkual.bfk.j.mod.core.lang.Tree;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
 import io.github.baifangkual.bfk.j.mod.core.trait.Closeable;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * <b>虚拟文件系统（Virtual File System）</b><br>
@@ -110,8 +113,8 @@ public interface VFS extends Closeable {
      *
      * @param path 虚拟目录实体
      * @return {@link R.Ok}载荷该目录下的虚拟目录实体 | {@link R.Err}载荷过程中出现的异常
-     * @throws VFSIOException       当过程出现异常（如权限不足，给定路径不存在等）或给定的{@link VPath}所在位置的实体为文件时
-     * @throws NullPointerException 当给定的{@link VPath}为空时
+     * @apiNote 当过程出现异常（如权限不足，给定路径不存在等）或给定的{@link VPath}所在位置的实体为文件时，
+     * 或给定的{@link VPath}为空时等无法获取其子级的情况，返回 {@code R.Err(...)}，其中携带的异常即原因
      * @see #tryLsDir(VPath)
      */
     default R<List<VPath>> tryLsDir(VPath path) {
@@ -143,8 +146,8 @@ public interface VFS extends Closeable {
      *
      * @param file 虚拟文件实体
      * @return {@link R.Ok}载荷该文件实体代表的文件夹下的文件实体 | {@link R.Err}载荷过程中出现的异常
-     * @throws VFSIOException       当过程出现异常（如权限不足，给定路径不存在等），或给定的{@link VFile}不为文件夹时
-     * @throws NullPointerException 当给定的{@link VFile}为空时
+     * @apiNote 当过程出现异常（如权限不足，给定路径不存在等）或给定的{@link VFile}所在位置的实体为文件时，
+     * 或给定的{@link VFile}为空时等无法获取其子级的情况，返回 {@code R.Err(...)}，其中携带的异常即原因
      */
     default R<List<VFile>> tryLsDir(VFile file) {
         return R.ofFnCallable(() -> lsDir(file));
@@ -285,4 +288,176 @@ public interface VFS extends Closeable {
     default R<VFile> tryMkFile(VPath path, InputStream inputStream) {
         return R.ofFnCallable(() -> mkFile(path, inputStream));
     }
+
+    /**
+     * 给定虚拟文件实体和虚拟目录实体，将虚拟文件实体所代指的实体拷贝至虚拟目录实体所代指的位置<br>
+     * 该方法的语义在以下条件等同于 {@code cp -r /path/to/src /path/to/dst} :
+     * <p>{@code dst} 不存在，{@code dst} 的上级目录已存在</p>
+     * 该方法成功（不抛出异常）的结果:
+     * <p>若 {@code src} 为文件夹，则 {@code dst} 为文件夹，
+     * 且 {@code src} 内实体都递归的拷贝到 {@code dst} 内，
+     * 若 {@code src} 为文件，则 {@code dst} 将为文件</p>
+     * <pre>
+     *     {@code
+     *     VFile src = ...;            // (smb:/path/foo/a) (exists)
+     *     VPath dst = ...;            // (ftp:/path/bar/b) (not exists)
+     *     vfs.copy(src, dst);
+     *     // smb:/path/foo/a                      smb:/path/foo/a
+     *     //               ↓ (rename: a -> b)  →
+     *     // ftp:/path/bar/                       ftp:/path/bar/b
+     *     -------------------------------------------------------
+     *     VFile src = ...;            // (ftp:/path/foo/a) (exists)
+     *     VPath dst = ...;            // (smb:/path/bar)   (exists)
+     *     dst = dst.join(src.name()); // (smb:/path/bar/a) (not exists)
+     *     vfs.copy(src, dst);
+     *     // ftp:/path/foo/a                      ftp:/path/foo/a
+     *     //               ↓          →
+     *     // smb:/path/bar/                       smb:/path/bar/a
+     *     }
+     * </pre>
+     *
+     * @param src 源-虚拟文件实体
+     * @param dst 目标-虚拟目录实体
+     * @throws VFSIOException       当过程发生异常如 给定的虚拟目录实体已存在文件，当拷贝实际实体为文件夹时，
+     *                              给定虚拟目录实体文件夹内部已有同名文件存在等
+     * @throws NullPointerException 当给定的源或目标为 {@code null} 时
+     * @apiNote 该方法是fail-fast的，且不负责对目标虚拟目录实体的清理、一致性检查等作业。
+     * 该方法会阻塞当前线程，遂若调用方已知或预计该要进行的拷贝操作为大作业或长时任务时，
+     * 应另起线程进行该方法调用的作业，不应阻塞主线程<br>
+     * @implNote 该方法的实现应该有一点需要明确:目前该方法的实现方式是朴素且低效的，
+     * 该方法的过程实际为将两个远端的字节流进行传输，
+     * 因为字节流的目标和源都为远端，遂线程对IO流的可读可写唤醒较为频繁，尤其为网络情况不佳时。
+     * 但有额外可以实现的可行的补救或是优化方法，即若已知 {@code src} 和
+     * {@code dst} 作用于同一个vfs上（即同一个远端服务器实体），
+     * 则可通过vfs实际的依赖的传输协议（smb至少支持）进行如local_copy、local_move等操作直接通过协议本身的
+     * 支持进行对文件的拷贝等操作，实际的执行耗时基本靠近本地（vfs指向的）磁盘读写耗时，而非当前实现方案的耗时
+     */
+    default void copy(VFile src, VPath dst) throws VFSIOException {
+        Objects.requireNonNull(src, "given src is null");
+        Objects.requireNonNull(dst, "given dst is null");
+        if (dst.isRoot()) {
+            // dst 为 root，则这种非法情况应当抛出异常
+            throw new VFSIOException(Stf.f("illegal copy {}:\"{}\" to {}:\"{}\"," +
+                                           "cannot overwrite dst root directory",
+                    this, src.toPath(), dst.vfs(), dst));
+        } else if (dst.exists()) {
+            throw new VFSIOException("dst: '" + dst + "' already exists");
+        }
+        this.recursiveCopy(src, dst);
+    }
+
+    /**
+     * 实际的递归拷贝方法，该方法因递归，遂内不做太多无效校验
+     *
+     * @see #copy(VFile, VPath)
+     */
+    private void recursiveCopy(VFile src, VPath dst) throws VFSIOException {
+        if (src.isSimpleFile()) {
+            try (InputStream input = src.inputStream()) {
+                dst.mkFile(input);
+            } catch (IOException e) {
+                throw new VFSIOException(
+                        Stf.f("copy {}:\"{}\" to {}:\"{}\" fail, IOErr: {}",
+                                this,
+                                src.toPath(),
+                                dst.vfs(),
+                                dst,
+                                e.getMessage()), e);
+            }
+        } else if (src.isDirectory()) {
+            VFile targetDir = dst.mkDir();
+            List<VFile> sourceItems = this.lsDir(src);
+            for (VFile sourceOne : sourceItems) {
+                // 这里last不会异常，因为该为source的子级，遂一定不为root，不为 "/"
+                String sLast = sourceOne.toPath().name();
+                // 容错，防止意外的无限兄容自身target
+                if (Const.String.SLASH.equals(sLast)) {
+                    throw new VFSIOException(Stf.f("recursiveCopy, source vFile name is '{}'", sLast));
+                }
+                VPath targetOne = targetDir.toPath().join(sLast);
+                // dfs copy
+                this.recursiveCopy(sourceOne, targetOne);
+            }
+        } else {
+            throw new UnsupportedOperationException(Stf.f("尚未实现的类型的拷贝操作, 类型: {}", this.type()));
+        }
+    }
+
+    /**
+     * 给定一个 虚拟文件实体，返回其目录树<br>
+     * 给定的实体必须是文件夹
+     *
+     * @param file         虚拟文件实体（文件夹）
+     * @param depth        要构造的目录树的深度（包含）（边数计数法（给定的file所在深度为0，直接子级为1，以此类推）
+     * @param fnSort       函数-同一层的实体排序方式
+     * @param fnFilter     函数-需要出现在树中的实体条件，
+     * @param treeNodeType tree中节点的类型（双向节点可以获取其父）
+     * @return 目录树
+     * @throws NullPointerException     给定的引用类型参数为 {@code null}
+     * @throws IllegalArgumentException 给定的 depth 小于 0
+     * @throws IllegalArgumentException 给定的 file 不是文件夹
+     */
+    default Tree<VFile> tree(VFile file,
+                             int depth,
+                             Comparator<? super VFile> fnSort,
+                             Predicate<? super VFile> fnFilter,
+                             Tree.NodeType treeNodeType) {
+        Objects.requireNonNull(file, "given file is null");
+        Objects.requireNonNull(fnSort, "given fnSort is null");
+        Objects.requireNonNull(fnFilter, "given fnFilter is null");
+        Objects.requireNonNull(treeNodeType, "given treeNodeType is null");
+        Err.realIf(depth < 0, IllegalArgumentException::new, "depth less than 0");
+        Err.realIf(file.isSimpleFile(), IllegalArgumentException::new,
+                "given file '{}' is a simple file," +
+                " not a directory, so you can't use tree() method to get tree",
+                file.toPath());
+        return Tree.ofRoots(List.of(file), // root one
+                this::lsDir, // lsDir get child
+                treeNodeType,
+                fnSort, // sort
+                ArrayList::new,
+                // fnNeedFindChild, just dir need find child,
+                // if not dir, lsDir will throw exception
+                VFile::isDirectory,
+                // filter, eg: I just need dir: use vFile::isDir ...
+                // eg: I just need name like "abc": use vFile.name().contains("abc") ...
+                fnFilter,
+                depth); // maxDepth
+    }
+
+    /**
+     * 给定一个 虚拟文件实体，返回其目录树<br>
+     * 给定的实体必须是文件夹
+     *
+     * @param file  虚拟文件实体（文件夹）
+     * @param depth 要构造的目录树的深度（包含）（边数计数法（给定的file所在深度为0，直接子级为1，以此类推）
+     * @return 目录树
+     * @throws NullPointerException     给定的引用类型参数为 {@code null}
+     * @throws IllegalArgumentException 给定的 depth 小于 0
+     * @throws IllegalArgumentException 给定的 file 不是文件夹
+     * @see #tree(VFile, int, Comparator, Predicate, Tree.NodeType)
+     */
+    default Tree<VFile> tree(VFile file,
+                             int depth) {
+        return tree(file, depth,
+                VFSDefaults.F_COMP_DIR_FIRST_THEN_NAME_SORT,
+                (v) -> true,
+                Tree.NodeType.unidirectionalNode); // 单向
+    }
+
+    /**
+     * 给定一个 虚拟文件实体，返回其目录树<br>
+     * 给定的实体必须是文件夹
+     *
+     * @param file 虚拟文件实体（文件夹）
+     * @return 目录树
+     * @throws NullPointerException     给定的 file 为 {@code null}
+     * @throws IllegalArgumentException 给定的 file 不是文件夹
+     * @see #tree(VFile, int)
+     */
+    default Tree<VFile> tree(VFile file) {
+        return tree(file, Integer.MAX_VALUE); // 单向
+    }
+
+
 }

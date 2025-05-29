@@ -2,7 +2,7 @@ package io.github.baifangkual.bfk.j.mod.vfs.ftp.conf;
 
 
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst;
+import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaults;
 import io.github.baifangkual.bfk.j.mod.vfs.VFSFactory;
 
 /**
@@ -84,7 +84,7 @@ public class FTPCfgOptions {
 
     public static final Cfg.Option<Integer> bufSize = Cfg.Option.of("vfs.ftp.buf.size")
             .intType()
-            .defaultValue(VFSDefaultConst.BYTE_BUFFER_SIZE)
+            .defaultValue(VFSDefaults.BYTE_BUFFER_SIZE)
             .description("字节传输的缓冲区大小(vfs-impl-ftp实现中的设置，并非ftp协议本身的设置)")
             .build();
 

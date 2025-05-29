@@ -95,7 +95,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
             this.freeQueue = new ArrayBlockingQueue<>(transformQueueMaxSize);
             // 因为可能被借用的顺序和回收的顺序不同，这里应使用链表防止类似数组的多次位移开销
             this.busyQueue = new LinkedBlockingQueue<>(transformQueueMaxSize);
-            this.root = new DefaultSliceAbsolutePath(this, VFSDefaultConst.PATH_SEPARATOR);
+            this.root = new DefaultSliceAbsolutePath(this, VFSDefaults.PATH_SEPARATOR);
             this.closed.compareAndSet(true, false);
         } catch (IOException e) {
             throw new VFSBuildingFailException(e.getMessage(), e);
@@ -125,7 +125,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
             }
             // 对可能的win路径构造进行处理
             if (workingDir.contains("\\")) {
-                workingDir = workingDir.replace("\\", VFSDefaultConst.PATH_SEPARATOR);
+                workingDir = workingDir.replace("\\", VFSDefaults.PATH_SEPARATOR);
             }
             return workingDir;
         } finally {
@@ -275,7 +275,7 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
         if (path.isRoot()) {
             return null;
         }
-        return VFSDefaultConst.CURR_PATH + path.simplePath();
+        return VFSDefaults.CURR_PATH + path.simplePath();
     }
 
     @Override

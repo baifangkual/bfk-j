@@ -1,7 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.vfs.minio.conf;
 
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst;
+import io.github.baifangkual.bfk.j.mod.vfs.VFSDefaults;
 import io.github.baifangkual.bfk.j.mod.vfs.VFSFactory;
 import io.github.baifangkual.bfk.j.mod.vfs.minio.MinioDirectoryActionStrategy;
 
@@ -59,7 +59,7 @@ public class MinioCfgOptions {
 
     public static final Cfg.Option<Integer> bufSize = Cfg.Option.of("vfs.minio.buf.size")
             .intType()
-            .defaultValue(VFSDefaultConst.BYTE_BUFFER_SIZE)
+            .defaultValue(VFSDefaults.BYTE_BUFFER_SIZE)
             .description("minio putObject 缓冲区大小")
             .build();
 

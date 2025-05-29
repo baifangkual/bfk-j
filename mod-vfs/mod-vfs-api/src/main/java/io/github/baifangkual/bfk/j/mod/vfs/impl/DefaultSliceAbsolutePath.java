@@ -9,7 +9,7 @@ import io.github.baifangkual.bfk.j.mod.vfs.exception.IllegalVPathException;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static io.github.baifangkual.bfk.j.mod.vfs.VFSDefaultConst.PATH_SEPARATOR;
+import static io.github.baifangkual.bfk.j.mod.vfs.VFSDefaults.PATH_SEPARATOR;
 
 /**
  * impl {@link VPath}<br>
@@ -151,6 +151,7 @@ public class DefaultSliceAbsolutePath implements VPath {
         return result;
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public int compareTo(VPath other) {
         if (this == other) return 0;
