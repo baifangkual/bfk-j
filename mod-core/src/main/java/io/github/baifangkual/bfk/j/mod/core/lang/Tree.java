@@ -230,7 +230,8 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         Set<T> identityHashSet = Collections.newSetFromMap(new IdentityHashMap<>());
 
         // roots build
-        Iter.toStream(roots).filter(fnPreFilter)
+        Iter.toStream(roots)
+                .filter(fnPreFilter)
                 .peek(identityHashSet::add)
                 .map(t -> this.fnNewNode.newNode(this, 0, t, null))
                 .sorted(fnNSort)
@@ -1146,6 +1147,14 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
                 // 清理临时持有Node引用的集合
                 tempNodeRefReusableList.clear();
                 for (T child : it) {
+
+                    // fix 使该校验移至tempIdentityHashSet判定前，
+                    // 否则可能造成没有在Tree中，但却在tempNodeRefReusableList中的情况
+                    // 若元素未能通过test，则不将其纳入
+                    if (!fnFilterTest.test(child)) {
+                        continue;
+                    }
+
                     // CHECK 还未添加到 tempIdentityHashSet 便发现自身的引用
                     // 即证明：1. 有循环边 or 2. 当前实体有两个父节点
                     if (tempIdentityHashSet.contains(child)) {
@@ -1162,10 +1171,6 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
                     } else {
                         // 没有，则将自身加入 identityHashSet中，表示自身已被纳入tree
                         tempIdentityHashSet.add(child);
-                    }
-                    // 若元素未能通过test，则不将其纳入
-                    if (!fnFilterTest.test(child)) {
-                        continue;
                     }
                     // 走到这里，即迭代器不为null，且内有通过test的元素
                     UnsafeNode<T> n = fnNewNode.newNode(this, currentDepth + 1, child, node);
