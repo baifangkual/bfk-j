@@ -16,8 +16,8 @@ import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
 import com.hierynomus.smbj.share.File;
 import io.github.baifangkual.bfk.j.mod.core.conf.Cfg;
-import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;
+import io.github.baifangkual.bfk.j.mod.core.util.Stf;
 import io.github.baifangkual.bfk.j.mod.vfs.*;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.IllegalVFSBuildParamsException;
 import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSBuildingFailException;
@@ -112,7 +112,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     }
 
     @Override
-    protected void beforeCfgBind(Cfg config) {
+    protected void postCfgCopy(Cfg config) {
         /*
         20241115 fix 当 share以 /或 "\" 结尾时，消除其后的那个符号
          */
@@ -123,6 +123,12 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
                 share = share.substring(0, share.length() - 1);
                 config.reset(SMBCfgOptions.share, share);
             }
+        }
+        // 20250529 fix: 当 share 以 / 或 ”\“ 开头，去掉一个
+        String share = config.get(SMBCfgOptions.share);
+        if (share.startsWith("/") || share.startsWith("\\")) {
+            share = share.substring(1);
+            config.reset(SMBCfgOptions.share, share);
         }
     }
 
@@ -144,7 +150,7 @@ public class SMBShareRootVirtualFileSystem extends AbstractVirtualFileSystem imp
     }
 
     @Override
-    protected void afterReadonlyCfgBind(Cfg immutableConfig) throws IllegalVFSBuildParamsException {
+    protected void postReadonlyCfgBind(Cfg immutableConfig) throws IllegalVFSBuildParamsException {
         Optional<String> shareOpt = immutableConfig.tryGet(SMBCfgOptions.share);
         if (shareOpt.isEmpty() || shareOpt.get().startsWith("/"))
             throw new IllegalVFSBuildParamsException("非法参数share");

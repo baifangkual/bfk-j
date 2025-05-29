@@ -384,10 +384,11 @@ public interface VFS extends Closeable {
     }
 
     /**
-     * 给定一个 虚拟文件实体，返回其目录树<br>
-     * 给定的实体必须是文件夹
+     * 给定 n 个虚拟文件实体，返回以这些实体作为根的一颗树（该树允许有多个根）<br>
+     * 给定的实体必须是文件夹，若给定的 {@code treeRoot} 实体间有直接或间接的父子关系，则无法构成树，将抛出异常<br>
+     * 若给定的 {@code treeRoot} 列表为 empty，则返回 empty 树
      *
-     * @param file         虚拟文件实体（文件夹）
+     * @param treeRoot     虚拟文件实体（文件夹），作为树根
      * @param depth        要构造的目录树的深度（包含）（边数计数法（给定的file所在深度为0，直接子级为1，以此类推）
      * @param fnSort       函数-同一层的实体排序方式
      * @param fnFilter     函数-需要出现在树中的实体条件，
@@ -397,21 +398,27 @@ public interface VFS extends Closeable {
      * @throws IllegalArgumentException 给定的 depth 小于 0
      * @throws IllegalArgumentException 给定的 file 不是文件夹
      */
-    default Tree<VFile> tree(VFile file,
+    default Tree<VFile> tree(List<VFile> treeRoot,
                              int depth,
                              Comparator<? super VFile> fnSort,
                              Predicate<? super VFile> fnFilter,
                              Tree.NodeType treeNodeType) {
-        Objects.requireNonNull(file, "given file is null");
+        Objects.requireNonNull(treeRoot, "given treeRoot is null");
+        /*
+        不应检查 treeRoot是否为empty，可能调用者是 vfs.tree(vFile.lsDir())
+        当vFile为空文件夹，则应该返回空树，遂空树的情况是合法的
+        Err.realIf(treeRoot.isEmpty(), "treeRoot is empty");
+         */
         Objects.requireNonNull(fnSort, "given fnSort is null");
         Objects.requireNonNull(fnFilter, "given fnFilter is null");
         Objects.requireNonNull(treeNodeType, "given treeNodeType is null");
         Err.realIf(depth < 0, IllegalArgumentException::new, "depth less than 0");
-        Err.realIf(file.isSimpleFile(), IllegalArgumentException::new,
-                "given file '{}' is a simple file," +
-                " not a directory, so you can't use tree() method to get tree",
-                file.toPath());
-        return Tree.ofRoots(List.of(file), // root one
+        // 后续可能添加，遂不应用 isSimpleFile判断，而是应该 !isDir
+        for (VFile f : treeRoot) {
+            Err.realIf(!f.isDirectory(), IllegalArgumentException::new,
+                    "given file '{}' not a directory, so you can't use tree() method to get tree", f);
+        }
+        return Tree.ofRoots(treeRoot, // root one
                 this::lsDir, // lsDir get child
                 treeNodeType,
                 fnSort, // sort
@@ -426,37 +433,39 @@ public interface VFS extends Closeable {
     }
 
     /**
-     * 给定一个 虚拟文件实体，返回其目录树<br>
-     * 给定的实体必须是文件夹
+     * 给定 n 个虚拟文件实体，返回以这些实体作为根的一颗树（该树允许有多个根）<br>
+     * 给定的实体必须是文件夹，若给定的 {@code treeRoot} 实体间有直接或间接的父子关系，则无法构成树，将抛出异常<br>
+     * 若给定的 {@code treeRoot} 列表为 empty，则返回 empty 树
      *
-     * @param file  虚拟文件实体（文件夹）
-     * @param depth 要构造的目录树的深度（包含）（边数计数法（给定的file所在深度为0，直接子级为1，以此类推）
+     * @param treeRoot 虚拟文件实体（文件夹），作为树根
+     * @param depth    要构造的目录树的深度（包含）（边数计数法（给定的file所在深度为0，直接子级为1，以此类推）
      * @return 目录树
      * @throws NullPointerException     给定的引用类型参数为 {@code null}
      * @throws IllegalArgumentException 给定的 depth 小于 0
      * @throws IllegalArgumentException 给定的 file 不是文件夹
-     * @see #tree(VFile, int, Comparator, Predicate, Tree.NodeType)
+     * @see #tree(List, int, Comparator, Predicate, Tree.NodeType)
      */
-    default Tree<VFile> tree(VFile file,
+    default Tree<VFile> tree(List<VFile> treeRoot,
                              int depth) {
-        return tree(file, depth,
+        return tree(treeRoot, depth,
                 VFSDefaults.F_COMP_DIR_FIRST_THEN_NAME_SORT,
                 (v) -> true,
                 Tree.NodeType.unidirectionalNode); // 单向
     }
 
     /**
-     * 给定一个 虚拟文件实体，返回其目录树<br>
-     * 给定的实体必须是文件夹
+     * 给定 n 个虚拟文件实体，返回以这些实体作为根的一颗树（该树允许有多个根）<br>
+     * 给定的实体必须是文件夹，若给定的 {@code treeRoot} 实体间有直接或间接的父子关系，则无法构成树，将抛出异常<br>
+     * 若给定的 {@code treeRoot} 列表为 empty，则返回 empty 树
      *
-     * @param file 虚拟文件实体（文件夹）
+     * @param treeRoot 虚拟文件实体（文件夹），作为树根
      * @return 目录树
      * @throws NullPointerException     给定的 file 为 {@code null}
      * @throws IllegalArgumentException 给定的 file 不是文件夹
-     * @see #tree(VFile, int)
+     * @see #tree(List, int)
      */
-    default Tree<VFile> tree(VFile file) {
-        return tree(file, Integer.MAX_VALUE); // 单向
+    default Tree<VFile> tree(List<VFile> treeRoot) {
+        return tree(treeRoot, Integer.MAX_VALUE); // 单向
     }
 
 

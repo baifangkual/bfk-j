@@ -106,7 +106,7 @@ public interface VFile extends VEntity {
      * @return 该文件实体代表的文件夹下的文件实体
      * @throws VFSIOException 当过程出现异常（如权限不足，给定路径不存在等），或当前实体不为文件夹时
      */
-    default List<VFile> lsDir() {
+    default List<VFile> lsDir() throws VFSIOException {
         //noinspection resource
         return this.vfs().lsDir(this);
     }
@@ -175,29 +175,29 @@ public interface VFile extends VEntity {
 
     /**
      * 返回该 虚拟文件实体 的目录树<br>
-     * 该实体必须是文件夹
+     * 该实体必须是文件夹，当前实体将作为唯一树根
      *
      * @return 目录树
      * @throws IllegalArgumentException 该实体不是文件夹
      * @see #tree(int)
      */
-    default Tree<VFile> tree() {
+    default Tree<VFile> tree() throws IllegalArgumentException {
         return this.tree(Integer.MAX_VALUE); // 单向
     }
 
     /**
      * 返回该 虚拟文件实体 的目录树<br>
-     * 该实体必须是文件夹
+     * 该实体必须是文件夹，当前实体将作为唯一树根
      *
      * @param depth 要构造的目录树的深度（包含）（边数计数法（给定的file所在深度为0，直接子级为1，以此类推）
      * @return 目录树
      * @throws IllegalArgumentException 该实体不是文件夹
      * @throws IllegalArgumentException 给定的 depth 小于 0
-     * @see VFS#tree(VFile, int)
+     * @see VFS#tree(List, int)
      */
-    default Tree<VFile> tree(int depth) {
+    default Tree<VFile> tree(int depth) throws IllegalArgumentException {
         //noinspection resource
-        return this.vfs().tree(this, depth); // 单向
+        return this.vfs().tree(List.of(this), depth); // 单向
     }
 
 

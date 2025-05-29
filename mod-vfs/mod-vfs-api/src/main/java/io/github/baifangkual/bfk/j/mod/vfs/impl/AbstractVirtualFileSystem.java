@@ -32,9 +32,9 @@ public abstract class AbstractVirtualFileSystem implements VFS {
         }
         // 对cfg内map做新的map，使内外cfg无关联，当然，map内部更深的引用还是同一个
         final Cfg ocp = Cfg.ofMap(new HashMap<>(cfg.toReadonlyMap()));
-        beforeCfgBind(ocp);
+        postCfgCopy(ocp);
         this.readonlyCfg = ocp.toReadonly();
-        afterReadonlyCfgBind(this.readonlyCfg);
+        postReadonlyCfgBind(this.readonlyCfg);
     }
 
     /**
@@ -47,28 +47,30 @@ public abstract class AbstractVirtualFileSystem implements VFS {
     }
 
     /**
-     * vfs实例在实际实例化时，可校验或变更外界传递的参数，子类型可在该处变更其，默认行为无动作
+     * vfs实例在实际实例化时，可校验或变更外界传递的参数，子类型可在该处变更其，默认行为无动作<br>
+     * 该方法被回调的阶段是在 AbstractVirtualFileSystem 拷贝 Cfg 之后，
+     * 即该方法修改的可变 cfg 是独立的（浅拷贝外界给定的Cfg中的map）
      *
      * @param cfg 外界传递的vfs连接参数
      */
-    protected void beforeCfgBind(Cfg cfg) {
+    protected void postCfgCopy(Cfg cfg) {
     }
 
     /**
-     * 该方法被调用阶段属于{@link #beforeCfgBind(Cfg)} 之后被调用，用以明确检查给定参数是否正确，
+     * 该方法被调用阶段属于{@link #postCfgCopy(Cfg)} 之后被调用，用以明确检查给定参数是否正确，
      * 默认行为空实现，到该阶段时，vfs实例内部{@link #readonlyCfg}已经有引用且该配置实例不可变
      *
      * @param readonlyCfg 不可变配置实例
      * @throws IllegalVFSBuildParamsException 当给定参数明确会导致vfs构造失败时，显示抛出该
      */
-    protected void afterReadonlyCfgBind(Cfg readonlyCfg) throws IllegalVFSBuildParamsException {
+    protected void postReadonlyCfgBind(Cfg readonlyCfg) throws IllegalVFSBuildParamsException {
     }
 
 
     /**
      * 当 vfs 已被设定为已关闭，则调用该方法将抛出异常
      */
-    protected void ifClosedThrowVFSRtIOE() throws VFSIOException{
+    protected void ifClosedThrowVFSRtIOE() throws VFSIOException {
         if (isClosed()) {
             throw new VFSIOException("VFS: " + this + " is closed.");
         }
