@@ -1019,7 +1019,7 @@ public class TreeTest {
             Predicate.isEqual(null).negate(),
             Integer.MAX_VALUE);
     String displayStr = treeObj.toDisplayStr();
-    System.out.println(displayStr);
+   // System.out.println(displayStr);
 
 
         ObjectMapper mapper = new ObjectMapper();

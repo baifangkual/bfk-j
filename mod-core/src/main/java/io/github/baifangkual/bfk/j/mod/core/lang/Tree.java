@@ -19,7 +19,9 @@ import java.util.stream.Collectors;
  * 该树的深度 {@link #depth} 使用边数计算法（空树（{@link #root} is empty）的深度 = -1，只有根节点的树的深度 = 0）<br>
  * 该树可被迭代，可通过迭代器迭代树中所有元素，返回的迭代器的行为可查看 {@link #iterator()} 说明<br>
  * 该树存在的原因是对一批有逻辑从属关系且能构成树型结构的实体进行方便操作和部分特征的查询，换言之，该树仅应当为一种临时数据结构，
- * 不建议以任何形式序列化该树，强行的序列化可能造成 {@code StackOverflowError} 异常（因为树深度过深且可能含有循环引用）<br>
+ * 不建议以任何形式序列化该树（即使java原生的序列化行为可以正确处理循环引用），
+ * 强行的序列化可能造成 {@code StackOverflowError} 异常（因为树深度过深且可能含有循环引用），
+ * 同样基于该原因，该类型也不应实现 {@code equals & hashcode} 方法<br>
  * 因为该树为二叉树的父集，遂没有中序遍历<br>
  * 树的节点 {@link Node} 有两种实现 {@link BidirectionalNode} (含有对父节点的引用），{@link UnidirectionalNode} (不含有对父节点的引用）,
  * 可使用 {@link NodeType} 在构造时进行控制，若树已创建，则其内的 {@link NodeType} 便不可变更<br>
@@ -1342,6 +1344,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * 遂该类型的 {@code node1.equals(node2)} 语义就是 {@code node1 == node2}
      * @apiNote 除非清楚在做什么，否则不要将该类型直接序列化，因为该类型持有一系列引用，
      * 在序列化时可能造成无限递归（因为父节点又指向自己的循环引用）或栈内存溢出（引用链过长）
+     * （即使java原生的序列化行为可以正确处理循环引用）
      * @see UnidirectionalNode
      * @see BidirectionalNode
      */
@@ -1517,6 +1520,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * 遂该类型的 {@code node1.equals(node2)} 语义就是 {@code node1 == node2}
      * @apiNote 除非清楚在做什么，否则不要将该类型直接序列化，因为该类型持有一系列引用，
      * 在序列化时可能造成无限递归（因为父节点又指向自己的循环引用）或栈内存溢出（引用链过长）
+     * （即使java原生的序列化行为可以正确处理循环引用）
      * @see UnidirectionalNode
      * @see BidirectionalNode
      */
