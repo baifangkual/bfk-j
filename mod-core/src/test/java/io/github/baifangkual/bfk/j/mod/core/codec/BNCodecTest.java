@@ -122,16 +122,6 @@ public class BNCodecTest {
         return bits;
     }
 
-    @Deprecated // 该肯定不合法，过多位无法表达（占6位的b62分块无法表达值 0b111111 和 0b111110
-    private int initBitsPerChar2(int tableLen) {
-        int bits = 0;
-        int num = 1;
-        while (num < tableLen) {
-            bits += 1;
-            num <<= 1; // 正确计算位数
-        }
-        return bits;
-    }
 
     @Test
     public void test6() {

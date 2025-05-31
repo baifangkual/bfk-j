@@ -40,45 +40,5 @@ public interface Codec<D, C> {
     D decode(C encoded);
 
 
-    /**
-     * 链式调用，多次编解码
-     * <pre>{@code
-     * byte[] result = Codec.chain(data)
-     *     .gzip()
-     *     .base62()
-     *     .getBytes();
-     * }</pre>
-     *
-     * @deprecated 应用面太小，后续或删除
-     */
-    @Deprecated(forRemoval = true)
-    class Chain {
-        private byte[] data;
-        private final List<Function<byte[], byte[]>> encodeFunctions = new ArrayList<>();
-
-        public Chain(byte[] data) {
-            this.data = data;
-        }
-
-        public Chain add(Function<byte[], byte[]> function) {
-            encodeFunctions.add(function);
-            return this;
-        }
-
-        public byte[] toBytes() {
-            for (Function<byte[], byte[]> function : encodeFunctions) {
-                data = function.apply(data);
-            }
-            return data;
-        }
-
-        public String toString(Charset cs) {
-            return new String(toBytes(), cs);
-        }
-
-        public String toString() {
-            return toString(UTF_8);
-        }
-    }
 
 }
