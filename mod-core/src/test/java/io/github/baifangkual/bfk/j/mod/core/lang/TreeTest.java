@@ -499,7 +499,7 @@ public class TreeTest {
                 // fix tree nodeCount and depth modify
                 Tree.Node<Integer> n = iter.next();
                 iterPeeked.add(n.data());
-                long num = Long.parseLong(Rng.rollFixLenLarge(1));
+                long num = Long.parseLong(Rng.nextFixLenLarge(1));
                 long test = num % 2;
                 boolean randomDelete = test == 0;
                 if (randomDelete) {
@@ -817,17 +817,17 @@ public class TreeTest {
                                                                 int rootCountBound) {
 
         // 生成一个大的随机树，节点数在1000-2000之间
-        int nodeCount = (int) Rng.rollLong(nodeCountOrigin, nodeCountBound);
+        int nodeCount = (int) Rng.nextLong(nodeCountOrigin, nodeCountBound);
 
         // 生成节点值列表，确保值唯一
         Set<Integer> values = new HashSet<>();
         while (values.size() < nodeCount) {
-            values.add((int) Rng.rollLong(1, Integer.MAX_VALUE));
+            values.add((int) Rng.nextLong(1, Integer.MAX_VALUE));
         }
         List<Integer> nodeValues = new ArrayList<>(values);
 
         // 随机选择1-5个根节点
-        int rootCount = (int) Rng.rollLong(rootCountOrigin, rootCountBound);
+        int rootCount = (int) Rng.nextLong(rootCountOrigin, rootCountBound);
         List<Integer> roots = new ArrayList<>();
         for (int i = 0; i < rootCount; i++) {
             roots.add(nodeValues.remove(0));
@@ -838,11 +838,11 @@ public class TreeTest {
 
         while (!nodeValues.isEmpty()) {
             // 随机选择一个父节点
-            int parentIndex = (int) Rng.rollLong(availableParents.size());
+            int parentIndex = (int) Rng.nextLong(availableParents.size());
             int parent = availableParents.get(parentIndex);
 
             // 随机决定当前父节点要添加多少个子节点(1-5个)
-            int childCount = (int) Rng.rollLong(1, Math.min(6, nodeValues.size() + 1));
+            int childCount = (int) Rng.nextLong(1, Math.min(6, nodeValues.size() + 1));
 
             for (int i = 0; i < childCount && !nodeValues.isEmpty(); i++) {
                 int child = nodeValues.remove(0);
@@ -913,7 +913,7 @@ public class TreeTest {
         while (nodeIterator.hasNext()) {
             Tree.Node<Integer> node = nodeIterator.next();
             // 随机删除节点(50%概率)
-            if (Rng.rollBoolean()) {
+            if (Rng.nextBoolean()) {
                 int beforeDelete = tree.nodeCount();
                 nodeIterator.remove();
                 int afterDelete = tree.nodeCount();

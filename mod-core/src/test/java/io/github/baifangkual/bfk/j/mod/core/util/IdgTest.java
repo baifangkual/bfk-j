@@ -106,7 +106,7 @@ public class IdgTest {
                 // start ---
                 long startMils = System.currentTimeMillis();
                 while (System.currentTimeMillis() - startMils < testTimeMils) {
-                    long l = idg.nextId();
+                    long l = idg.nextLongId();
                     genIds.add(l);
                 }
                 long endMils = System.currentTimeMillis();
@@ -223,5 +223,22 @@ public class IdgTest {
         //t: 30, genCount: 270407
         //t: 31, genCount: 417773
         //========================
+    }
+
+    @Test
+    public void testGenB62Id(){
+
+        int loop = 1000;
+        List<String> genIds = new LinkedList<>();
+        for (int i = 0; i < loop; i++) {
+            String s = Idg.b62Id();
+            genIds.add(s);
+            //System.out.println(s);
+        }
+
+        List<String> ls = genIds.stream().distinct()
+                .toList();
+        Assertions.assertEquals(genIds.size(), ls.size());
+
     }
 }

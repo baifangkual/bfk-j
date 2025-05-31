@@ -1,7 +1,7 @@
 package io.github.baifangkual.bfk.j.mod.vfs;
 
 
-import io.github.baifangkual.bfk.j.mod.core.lang.Const;
+import io.github.baifangkual.bfk.j.mod.core.Const;
 import io.github.baifangkual.bfk.j.mod.core.lang.R;
 import io.github.baifangkual.bfk.j.mod.core.lang.Tree;
 import io.github.baifangkual.bfk.j.mod.core.panic.Err;

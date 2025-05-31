@@ -1,4 +1,4 @@
-package io.github.baifangkual.bfk.j.mod.core.code;
+package io.github.baifangkual.bfk.j.mod.core.codec;
 
 import java.io.*;
 import java.util.Objects;

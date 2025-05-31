@@ -1,56 +1,80 @@
-package io.github.baifangkual.bfk.j.mod.core.code;
+package io.github.baifangkual.bfk.j.mod.core.codec;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 /**
+ * 编码工具类，提供各种编码和解码方式。
+ *
+ * <p>支持的编码方式：
+ * <ul>
+ *   <li>Hex编码 - 将字节数据转换为16进制字符串</li>
+ *   <li>Base62编码 - 使用62个可打印字符进行编码</li>
+ *   <li>Gzip压缩 - 使用gzip算法压缩数据</li>
+ * </ul>
+ *
+ * <p>所有实现都保证：
+ * <pre>{@code
+ * Assert.eq(data, xxxDecode(xxxEncode(data)));
+ * Assert.eq(data, fromXxxString(toXxxString(data)));
+ * }</pre>
+ *
+ * <p>示例：
+ * <pre>{@code
+ * // 编码示例
+ * byte[] data = "Hello".getBytes();
+ * String hex = Codes.toHexEncodeString(data);
+ * String base62 = Codes.toBase62EncodeString(data);
+ * byte[] compressed = Codes.gzipEncode(data);
+ *
+ * // 链式编码示例
+ * byte[] result = Codes.chain(data)
+ *     .gzip()
+ *     .base62()
+ *     .getBytes();
+ * }</pre>
+ *
  * @author baifangkual
  * @since 2024/6/24 v0.0.7
- * 工具类，提供 各种 编码 解码 方式,
- * 所有实现，应当有 data == xxxEncode(xxxDecode(data)) 和 data == fromXxxString(toXxxString(data))
+ * @deprecated 已重构 {@link Codec} {@link BNCodec}
  */
+@Deprecated(forRemoval = true)
 public final class Codes {
 
+    private Codes() {
+        throw new UnsupportedOperationException("u can't instantiate me...");
+    }
 
+    private static final Charset UTF_8 = StandardCharsets.UTF_8;
 
-    /**
-     * 使用gzip压缩给定的字节序列
-     */
-    public static byte[] gzipEncode(byte[] data) {
-        preNonNull(data);
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
-             GZIPOutputStream gos = new GZIPOutputStream(bos)) {
-            gos.write(data);
-            gos.finish();
-            return bos.toByteArray();
-        } catch (IOException e) {
-            throw new IllegalStateException("unable to gzip encode bytes", e);
+    private static final byte[] BASE62_CHARS = {
+            '0', '1', '2', '3', '4', '5', '6', '7',
+            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', // pre base16
+            'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+            'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+            'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
+            'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+            'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+            'u', 'v', 'w', 'x', 'y', 'z'
+    };
+    private static final byte[] BASE62_LOOKUP = initBase62Lookup(); // 反向查找表
+
+    private static byte[] initBase62Lookup() {
+        //以ASCII字面量字符的二进制值做索引，映射实际的二进制值的值
+        byte[] lookup = new byte['z' + 1];
+        for (int i = 0; i < BASE62_CHARS.length; i++) {
+            lookup[BASE62_CHARS[i]] = (byte) i;
+        }
+        return lookup;
+    }
+
+    private static void preNonNull(Object obj) {
+        if (obj == null) {
+            throw new NullPointerException("data is null");
         }
     }
 
-    /**
-     * 使用gzip解码data，data应为已压缩过的数据字节
-     */
-    public static byte[] gzipDecode(byte[] data) {
-        preNonNull(data);
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-             ByteArrayInputStream bis = new ByteArrayInputStream(data);
-             GZIPInputStream gis = new GZIPInputStream(bis)) {
-            byte[] buffer = new byte[1024];
-            int len;
-            while ((len = gis.read(buffer)) > 0) {
-                out.write(buffer, 0, len);
-            }
-            return out.toByteArray();
-        } catch (IOException e) {
-            throw new IllegalStateException("unable to gzip decode bytes", e);
-        }
-    }
 
     /**
      * 以十六进制字面量形式编码给定的字节序列，并以utf8编码构成str
@@ -138,39 +162,6 @@ public final class Codes {
         return convert(t, 62, 256);
     }
 
-    // ============================= PRIVATE ===================================
-
-    private Codes() {
-        throw new UnsupportedOperationException("u can't instantiate me...");
-    }
-
-    private static final Charset UTF_8 = StandardCharsets.UTF_8;
-
-    private static final byte[] BASE62_CHARS = {
-            '0', '1', '2', '3', '4', '5', '6', '7',
-            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', // pre base16
-            'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-            'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
-            'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
-            'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
-            'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-            'u', 'v', 'w', 'x', 'y', 'z'
-    };
-    private static final byte[] BASE62_LOOKUP; // 反向查找表
-
-    static {
-        //以ASCII字面量字符的二进制值做索引，映射实际的二进制值的值
-        BASE62_LOOKUP = new byte['z' + 1];
-        for (int i = 0; i < BASE62_CHARS.length; i++) {
-            BASE62_LOOKUP[BASE62_CHARS[i]] = (byte) i;
-        }
-    }
-
-    private static void preNonNull(Object obj) {
-        if (obj == null) {
-            throw new NullPointerException("data is null");
-        }
-    }
 
     /**
      * 估算结果长度, <a href="http://codegolf.stackexchange.com/a/21672">算法来源</a>

@@ -1,6 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.vfs;
 
-import io.github.baifangkual.bfk.j.mod.core.lang.Const;
+import io.github.baifangkual.bfk.j.mod.core.Const;
 
 import java.util.Comparator;
 
@@ -22,7 +22,7 @@ public class VFSDefaults {
      * 但这样会使不同vfs的拷贝状态流大小不匹配，
      * 通常来讲，较大的缓冲区会降低系统调用的成本，但会对内存造成压力，遂应当取舍最优解
      */
-    public static final int BYTE_BUFFER_SIZE = 1024 * 1024 * 8;
+    public static final int BYTE_BUFFER_SIZE = 1024 * 1024 * 5;
     /**
      * 路径分隔符（在VFS系统中的路径分隔符表示）
      */

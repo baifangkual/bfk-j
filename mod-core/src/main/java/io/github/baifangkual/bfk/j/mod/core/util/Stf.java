@@ -1,6 +1,6 @@
 package io.github.baifangkual.bfk.j.mod.core.util;
 
-import io.github.baifangkual.bfk.j.mod.core.lang.Const;
+import io.github.baifangkual.bfk.j.mod.core.Const;
 
 import java.util.Objects;
 

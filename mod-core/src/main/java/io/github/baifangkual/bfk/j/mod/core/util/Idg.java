@@ -45,11 +45,22 @@ public final class Idg {
      * @throws IllegalStateException 当时间发生至少两次连续回溯,
      *                               或时间发生一次大于 {@value MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY} ms 的回溯时
      * @throws IllegalStateException 当线程收到中断信号时
-     * @see Idg#nextId()
+     * @see Idg#nextLongId()
      */
     public static long longId() {
-        return defaultSingle().nextId();
+        return defaultSingle().nextLongId();
     }
+
+    /**
+     * 返回一个62进制的雪花ID
+     *
+     * @return 62进制的雪花ID
+     * @see Radixc
+     */
+    public static String b62Id() {
+        return defaultSingle().nextB62Id();
+    }
+
 
     // DEFINITION ==================================
     /**
@@ -194,7 +205,7 @@ public final class Idg {
      *                               或时间发生一次大于 {@value #MAX_FAULT_TOLERANT_BACKTRACKING_CAPACITY} ms 的回溯时
      * @throws IllegalStateException 当线程收到中断信号时
      */
-    public long nextId() {
+    public long nextLongId() {
         lock.lock();
         try {
             long timestamp = nowSystemTime();
@@ -244,6 +255,17 @@ public final class Idg {
                | (machineId << SEQUENCE_BITS)
                | sequence;
     }
+
+    /**
+     * 生成一个62进制的雪花ID
+     *
+     * @return 62进制的雪花ID
+     * @see Radixc
+     */
+    public String nextB62Id() {
+        return Radixc.convert(nextLongId(), 62);
+    }
+
 
     /**
      * 方法内当前线程会忙自旋到至少下一毫秒再返回<br>
@@ -325,7 +347,7 @@ public final class Idg {
         // 该不应作为生成id过程的中间对象，否则高并发情况下会创建大量内存垃圾
 
         /**
-         * 接收一个{@link Idg#nextId()}生成的Id，返回该Id的结构记录
+         * 接收一个{@link Idg#nextLongId()}生成的Id，返回该Id的结构记录
          *
          * @param snowflakeId 雪花Id
          * @return Id结构记录
