@@ -71,8 +71,34 @@ public final class Rng {
      * @see Radixc
      */
     public static String nextFixLenLarge(int length, int radix) {
-        int radixNumLen = Radixc.base2len(length, 10, radix);
-        return Radixc.convert(nextFixLenLarge(radixNumLen), 10, radix);
+        // 当length等于1时，可能随机到0，尤其二进制下，随机到0概率百分之50
+        if (length == 1) {
+            // 随机一个10进制下 0 - 进制值（取不到）之间的数（可能在10进制下是多位，再将其转为相应进制
+            return Radixc.convert(Rng.nextLong(0, radix), radix);
+        }
+        // 当length大于1时，不会随机到0，可放心转换
+        if (length > 1) {
+            // 反向，一直要求进制下的长度，求在10进制下最小能覆盖到所有数的长度
+            int radix10NumLen = Radixc.base2len(length, radix, 10);
+            // 因为为覆盖要求进制下的所有数，所以10进制下要求长度的值转为指定进制可能大于
+            // 要求的长度，遂剪掉长度
+            String fixLenNum = nextFixLenLarge(radix10NumLen);
+            StringBuilder largeAfterRadixConvert = new StringBuilder(Radixc.convert(fixLenNum, 10, radix));
+            int afterCvLen = largeAfterRadixConvert.length();
+            // fix：因为base2len算出来的是一定覆盖到的最小长度
+            // 当Large出来的10进制随机数过小时，转为低进制的可能会不够长度，需要补
+            // 经测试在不大的数时仅会相差1位，但数字超大时，可能相差多位，遂这里需循环
+            while (afterCvLen < length) {
+                largeAfterRadixConvert.append(nextFixLenLarge(length - afterCvLen, radix));
+                afterCvLen = largeAfterRadixConvert.length();
+            }
+            if (afterCvLen > length) {
+                largeAfterRadixConvert.delete(length, Integer.MAX_VALUE);
+            }
+
+            return largeAfterRadixConvert.toString();
+        }
+        throw new IllegalArgumentException("Length must > 0");
     }
 
     /**
