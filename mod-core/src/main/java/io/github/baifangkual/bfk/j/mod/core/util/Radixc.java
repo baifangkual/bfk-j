@@ -115,6 +115,12 @@ public class Radixc {
      * @return 目标进制下字符串
      */
     public static String convert(long src, int tgtRadix) {
+        validateRadix(tgtRadix, "目标进制");
+        // 当进制需求大于当前src时，即表示一定不会进位
+        // 当 src > -1 时，则表示可以直接取
+        if (tgtRadix > src && src > -1) {
+            return Character.toString(B62NUMBERS[(int) src]);
+        }
         return fromDecimal(BigInteger.valueOf(src), tgtRadix);
     }
 
@@ -126,6 +132,12 @@ public class Radixc {
      * @return 目标进制下字符串
      */
     public static String convert(int src, int tgtRadix) {
+        validateRadix(tgtRadix, "目标进制");
+        // 当进制需求大于当前src时，即表示一定不会进位
+        // 当 src > -1 时，则表示可以直接取
+        if (tgtRadix > src && src > -1) {
+            return Character.toString(B62NUMBERS[src]);
+        }
         return fromDecimal(BigInteger.valueOf(src), tgtRadix);
     }
 
