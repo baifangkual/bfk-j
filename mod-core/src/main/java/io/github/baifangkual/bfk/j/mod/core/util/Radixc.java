@@ -158,13 +158,24 @@ public class Radixc {
         BigInteger value = BigInteger.ZERO;
         BigInteger base = BigInteger.valueOf(srcRadix);
 
+        // fix: 当给定的数为负数，执行到这里时，负号会被 LOOKUP消掉，变为取值0，从而导致整个数变成正数
+        boolean isNegative = false;
         for (char c : numCharArr) {
-            int digit = LOOKUP[c];
-            if (digit >= srcRadix) {
-                throw new IllegalArgumentException("字符 '" + c + "' 在 " + srcRadix + " 进制中无效");
+            if (c == '-') {
+                if (isNegative) {
+                    throw new ArithmeticException("数字: '" + number + "' 发现多个负号");
+                }
+                isNegative = true;
+            } else {
+                int digit = LOOKUP[c]; // 负号对应的值为 0
+                if (digit >= srcRadix) {
+                    throw new IllegalArgumentException("字符 '" + c + "' 在 " + srcRadix + " 进制中无效");
+                }
+                value = value.multiply(base).add(BigInteger.valueOf(digit));
             }
-
-            value = value.multiply(base).add(BigInteger.valueOf(digit));
+        }
+        if (isNegative) {
+            value = value.negate();
         }
 
         return value;
