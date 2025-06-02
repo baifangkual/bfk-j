@@ -1,6 +1,9 @@
 package io.github.baifangkual.bfk.j.mod.core.mark;
 
+import io.github.baifangkual.bfk.j.mod.core.lang.Indexed;
+
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -12,10 +15,10 @@ import java.util.stream.StreamSupport;
  * 因该接口继承自 {@link Iterable}，遂可以使用语法糖 {@code for-each}<br>
  *
  * @author baifangkual
- * @see #toSet(Supplier)
- * @see #toList(Supplier)
+ * @see #into(Supplier)
  * @see #stream()
  * @see #parallelStream()
+ * @see #toIndexedSpliterator(Spliterator, Indexed.FnBuildIndexed)
  * @since 2025/5/12 v0.0.4
  */
 public interface Iter<T> extends Iterable<T> {
@@ -27,52 +30,35 @@ public interface Iter<T> extends Iterable<T> {
      * @return 迭代器
      */
     @Override
+    @SuppressWarnings("NullableProblems")
     Iterator<T> iterator();
 
 
     /**
-     * 执行给定的集合提供者函数获取函数返回的{@link Set}，并收集该类型当中的所有元素<br>
-     * 返回的{@link Set}为给定的集合提供者函数返回的{@link Set}
+     * 将元素收集到指定集合
+     * <p>“指定集合” 是函数提供的集合</p>
+     * <pre>{@code
+     * List<Long> list = Line.of(1L, 2L).into(ArrayList::new);
+     * Set<Long> set = Line.of(1L, 2L).into(HashSet::new);
+     * }</pre>
      *
-     * @param fn 集合提供者函数
-     * @return Set
-     * @throws NullPointerException 当给定的函数为空时，或该类型返回的迭代器为空时，或给定函数返回的Set为空时
-     * @apiNote 因为该方法将元素收集到函数生成的集合中，遂函数生成的集合必须是可写的
+     * @param fnGetCollect 集合提供函数
+     * @return 集合
+     * @throws NullPointerException 当给定的函数为空，或该类型返回的迭代器为空，或给定函数返回的集合实例为空时
+     * @apiNote 因为该方法将元素收集到函数提供的集合中，遂函数生成的集合必须是可写的。
+     * <p>除非该类型提供的迭代器会修改当前实例状态，否则该方法不会修改当前实例，仅会将当前实例中元素引用收集到指定集合</p>
      */
-    default Set<T> toSet(Supplier<? extends Set<T>> fn) {
-        Objects.requireNonNull(fn, "fn is null");
+    default <Collect extends Collection<? super T>> Collect into(Supplier<Collect> fnGetCollect) {
+        Objects.requireNonNull(fnGetCollect);
         Iterator<T> it = iterator();
         Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
-        Set<T> set = fn.get();
-        Objects.requireNonNull(set, "fn.get() returned a null Set");
+        Collect collector = fnGetCollect.get();
+        Objects.requireNonNull(collector, "fnGetCollect.get() returned a null collect");
         while (it.hasNext()) {
             T t = it.next();
-            set.add(t);
+            collector.add(t);
         }
-        return set;
-    }
-
-
-    /**
-     * 执行给定的集合提供者函数获取函数返回的{@link List}，并收集该类型当中的所有元素<br>
-     * 返回的{@link List}为给定的集合提供者函数返回的{@link List}
-     *
-     * @param fn 集合提供者函数
-     * @return List
-     * @throws NullPointerException 当给定的函数为空时，或该类型返回的迭代器为空时，或给定函数返回的List为空时
-     * @apiNote 因为该方法将元素收集到函数生成的集合中，遂函数生成的集合必须是可写的
-     */
-    default List<T> toList(Supplier<? extends List<T>> fn) {
-        Objects.requireNonNull(fn, "fn is null");
-        Iterator<T> it = iterator();
-        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
-        List<T> list = fn.get();
-        Objects.requireNonNull(list, "fn.get() returned a null list");
-        while (it.hasNext()) {
-            T t = it.next();
-            list.add(t);
-        }
-        return list;
+        return collector;
     }
 
     /**
@@ -85,7 +71,7 @@ public interface Iter<T> extends Iterable<T> {
      * 避免构建中间List的开销
      */
     default Stream<T> stream() {
-        return toList(ArrayList::new).stream();
+        return into(ArrayList::new).stream();
     }
 
     /**
@@ -98,8 +84,9 @@ public interface Iter<T> extends Iterable<T> {
      * 避免构建中间List的开销
      */
     default Stream<T> parallelStream() {
-        return toList(ArrayList::new).parallelStream();
+        return into(ArrayList::new).parallelStream();
     }
+
 
     // static fn ----------------------------------------------------------
 
@@ -188,23 +175,199 @@ public interface Iter<T> extends Iterable<T> {
         return Iterable.super.spliterator();
     }
 
+    /**
+     * 将给定 "带元素的" {@link Spliterator} 包装为 “带索引元素的” {@link Spliterator}
+     * <p>"带索引元素" 由函数 {@link Indexed.FnBuildIndexed} 指定构造，
+     * 该函数作用于 {@link Spliterator} 中的每个元素，该函数应为无副作用函数
+     *
+     * @param spliterator    {@link Spliterator}
+     * @param fnBuildIndexed 函数-接收一个索引值和“元素”，返回一个“带索引的元素”
+     * @param <T>            元素类型
+     * @param <IndexedT>     带索引元素类型
+     * @return “带索引元素的” {@link Spliterator}
+     * @implNote 该方法实现参考 google guava(com.google.common.collect.Streams.mapWithIndex(...))
+     * @apiNote 当该 {@link Spliterator} 被拆分时（{@link Spliterator#trySplit()}被回调）
+     * 若原 {@link Spliterator} 的 {@link Spliterator#getExactSizeIfKnown()} 返回的 SIZE 总量大于 {@link Integer#MAX_VALUE}，
+     * 则会抛出 {@link IllegalStateException}。
+     * <p>返回的 IndexedSpliterator的 {@link Spliterator#characteristics()} 报告的 {@link Spliterator#SUBSIZED},
+     * {@link Spliterator#SIZED},{@link Spliterator#ORDERED} 等取决于给定的 Spliterator 的 {@link Spliterator#characteristics()}。
+     * <p>返回的 IndexedSpliterator 的状态合法性依赖于给定的 Spliterator 的状态合法性
+     * @see Indexed#toIndexedStream(Stream)
+     */
+    static <T, IndexedT> Spliterator<IndexedT> toIndexedSpliterator(Spliterator<T> spliterator,
+                                                                    Indexed.FnBuildIndexed<? super T, ? extends IndexedT> fnBuildIndexed) {
+        Objects.requireNonNull(spliterator);
+        Objects.requireNonNull(fnBuildIndexed);
+
+        // 不知道拆分的子spliterator的大小的
+        if (!spliterator.hasCharacteristics(Spliterator.SUBSIZED)) {
+            Iterator<T> fromIterator = Spliterators.iterator(spliterator);
+            return new Spliterators.AbstractSpliterator<>(
+                    spliterator.estimateSize(),
+                    spliterator.characteristics() & (Spliterator.ORDERED | Spliterator.SIZED)) {
+                int index = 0;
+
+                @Override
+                public boolean tryAdvance(Consumer<? super IndexedT> action) {
+                    if (fromIterator.hasNext()) {
+                        action.accept(fnBuildIndexed.buildIndexed(index++, fromIterator.next()));
+                        return true;
+                    }
+                    return false;
+                }
+            };
+        }
+        // 知道拆分的子spliterator的大小的
+        // 该参考自 google guava
+        class SubSizedIndexedSpliterator implements Spliterator<IndexedT>, Consumer<T> {
+
+            final Spliterator<T> fromSpliterator;
+            int index;
+            T holder;
+
+            SubSizedIndexedSpliterator(Spliterator<T> sp, int index) {
+                this.fromSpliterator = sp;
+                this.index = index;
+                this.holder = null;
+            }
+
+            SubSizedIndexedSpliterator of(Spliterator<T> from, int i) {
+                return new SubSizedIndexedSpliterator(from, i);
+            }
+
+            @Override
+            public void accept(T t) {
+                this.holder = t;
+            }
+
+            @Override
+            public boolean tryAdvance(Consumer<? super IndexedT> action) {
+                // 这个原理大概明了：
+                // 并行流走这里的，在 toIndexedStream 返回的流走终端操作时
+                // 该方法被回调，从外界传递了一个 action
+                // 当前的 IndexedSpliterator会调用自身持有的实际的 Stream<T> 的
+                // spliterator，即 fromSpliterator引用的这个，
+                // 该会先将自身（因为impl了 Consumer）传递到 fromSpliterator的tryAdvance中，
+                // 而自身（Consumer）的accept是将传递的元素的引用放到holder引用位置
+                // 然后在自己的tryAdvance的if实际的fromSpliterator返回true后
+                // 调用外界传递过来的action，从holder和自身的index构建索引对象
+                // 并调用外界传递的action，调用后的finally中再将holder置空
+                // 我观察到 holder只在该方法内用了，那能否IndexedSpliterator自身不是先Consumer？
+                // 然后 只在该方法内构建局部的Consumer？虽说也可，但不好：
+                // 因为lambda无法修改外界引用，遂若要传递到内部fromSpliterator的action执行后能够拿到
+                // fromSpliterator内的元素，则必须要用包装的引用类型比如atomicRef或自定义对象等... 没必要
+                // 不得不说这样设计可谓厉害
+                if (fromSpliterator.tryAdvance(this)) {
+                    try {
+                        // The cast is safe because tryAdvance puts a T into `holder`.
+                        action.accept(fnBuildIndexed.buildIndexed(index++, holder));
+                        return true;
+                    } finally {
+                        holder = null;
+                    }
+                }
+                return false;
+            }
+
+            @Override
+            public SubSizedIndexedSpliterator trySplit() {
+                Spliterator<T> splitOrNull = fromSpliterator.trySplit();
+                if (splitOrNull == null) {
+                    return null;
+                }
+                SubSizedIndexedSpliterator result = of(splitOrNull, index);
+                long exactSizeIfKnown = splitOrNull.getExactSizeIfKnown();
+                // fix or：拆出来的太大了，因为 FnBuildIndexed 和默认的 Indexed 的
+                // 索引都是int，当其大于最大int值，则证明元素过多已无法表达了
+                // 遂此处直接抛出异常
+                if (exactSizeIfKnown > Integer.MAX_VALUE) {
+                    throw new IllegalStateException("Exact sized split is too large");
+                }
+                this.index += (int) exactSizeIfKnown;
+                return result;
+            }
+
+            @Override
+            public long estimateSize() {
+                return fromSpliterator.estimateSize();
+            }
+
+            @Override
+            public int characteristics() {
+                return fromSpliterator.characteristics()
+                       & (Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
+            }
+
+        }
+        return new SubSizedIndexedSpliterator(spliterator, 0);
+    }
 
     /**
-     * 类型映射迭代器装饰器(element type mapping iterator decorator)<br>
+     * 携带被迭代元素索引的迭代器
+     * <p>索引从 {@code 0} 开始，表示从迭代器被迭代到的元素的顺序，
+     * {@link #remove()} 方法将会委托至原迭代器，删除元素不会导致索引回溯
+     *
+     * @param <T>        不带索引的被迭代类型
+     * @param <IndexedT> 包含索引的类型
+     */
+    class IndexedIter<T, IndexedT> implements Iterator<IndexedT> {
+
+        private final Iterator<T> it;
+        private final Indexed.FnBuildIndexed<? super T, ? extends IndexedT> fnIndexed;
+        private int index;
+
+        private IndexedIter(Iterator<T> it,
+                            Indexed.FnBuildIndexed<? super T, ? extends IndexedT> fnIndexed) {
+            Objects.requireNonNull(it, "Iterator");
+            Objects.requireNonNull(fnIndexed, "idxFn2");
+            this.index = 0;
+            this.it = it;
+            this.fnIndexed = fnIndexed;
+        }
+
+        public static <T, IndexedT> IndexedIter<T, IndexedT> of(Iterator<T> it,
+                                                                Indexed.FnBuildIndexed<? super T, ? extends IndexedT> fnIndexed) {
+            return new IndexedIter<>(it, fnIndexed);
+        }
+
+
+        public static <T> Iterator<Indexed<T>> ofIndexed(Iterator<T> it) {
+            return of(it, Indexed.fnDefaultBuildIndexed());
+        }
+
+        @Override
+        public boolean hasNext() {
+            return it.hasNext();
+        }
+
+        @Override
+        public IndexedT next() {
+            return fnIndexed.buildIndexed(index++, it.next());
+        }
+
+        @Override
+        public void remove() {
+            it.remove();
+        }
+    }
+
+
+    /**
+     * 类型映射代理迭代器(element type mapping proxy iterator)<br>
      * 给定一个迭代器和一个函数以构造该类型，每次调用迭代器的{@link Iterator#next()}方法时，
-     * 都会对元素使用函数进行类型转换
+     * 都会对元素使用函数进行类型转换，{@link #remove()} 方法将会委托至原迭代器
      *
      * @param <E> 映射前类型
      * @param <T> 映射后类型
      */
-    class ETMProxyIter<E, T> implements Iterator<T> {
+    class MappedIter<E, T> implements Iterator<T> {
         private final Iterator<E> it;
         private final Function<? super E, ? extends T> fn;
 
-        private ETMProxyIter(Iterator<E> it,
-                             Function<? super E, ? extends T> fn) {
+        private MappedIter(Iterator<E> it,
+                           Function<? super E, ? extends T> fnMapping) {
             this.it = Objects.requireNonNull(it, "it(Iterator) is null");
-            this.fn = Objects.requireNonNull(fn, "fn(Function) is null");
+            this.fn = Objects.requireNonNull(fnMapping, "fnMapping(Function) is null");
         }
 
         /**
@@ -219,7 +382,7 @@ public interface Iter<T> extends Iterable<T> {
          */
         public static <E, T> Iterator<T> of(Iterator<E> it,
                                             Function<? super E, ? extends T> fn) {
-            return new ETMProxyIter<>(it, fn);
+            return new MappedIter<>(it, fn);
         }
 
         @Override
