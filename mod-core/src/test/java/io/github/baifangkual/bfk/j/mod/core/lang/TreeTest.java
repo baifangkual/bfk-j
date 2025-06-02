@@ -510,7 +510,7 @@ public class TreeTest {
                     iter.remove();
                 }
             }
-            // todo 生成大随机树，并测试
+            // to do 生成大随机树，并测试
             int aftCount = tree.nodeCount();
             String peek = iterPeeked.stream().map(Object::toString).collect(Collectors.joining(" -> "));
 //            System.out.println(Stf.f("callIterCount: {}, result: ", ++callIterCount));
@@ -995,31 +995,31 @@ public class TreeTest {
 
     @Test
     public void testToJson2() {
-    record Obj(int id, String name) {
-        static Obj ofId(int id) {
-            return new Obj(id, String.valueOf(id));
+        record Obj(int id, String name) {
+            static Obj ofId(int id) {
+                return new Obj(id, String.valueOf(id));
+            }
         }
-    }
-    List<Obj> objs = List.of(
-            Obj.ofId(0), Obj.ofId(1), Obj.ofId(2),
-            Obj.ofId(3), Obj.ofId(4), Obj.ofId(5)
-    );
-    Map<Obj, List<Obj>> getChild = Map.of(
-            objs.get(0), List.of(objs.get(1)),
-            objs.get(1), List.of(objs.get(2), objs.get(3)),
-            objs.get(3), List.of(objs.get(4)),
-            objs.get(4), List.of(objs.get(5))
-    );
-    Tree<Obj> treeObj = Tree.ofRoots(List.of(objs.get(0)),
-            getChild::get,
-            Tree.NodeType.unidirectionalNode,
-            Comparator.comparingInt(Obj::id),
-            ArrayList::new,
-            getChild::containsKey,
-            Predicate.isEqual(null).negate(),
-            Integer.MAX_VALUE);
-    String displayStr = treeObj.toDisplayStr();
-   // System.out.println(displayStr);
+        List<Obj> objs = List.of(
+                Obj.ofId(0), Obj.ofId(1), Obj.ofId(2),
+                Obj.ofId(3), Obj.ofId(4), Obj.ofId(5)
+        );
+        Map<Obj, List<Obj>> getChild = Map.of(
+                objs.get(0), List.of(objs.get(1)),
+                objs.get(1), List.of(objs.get(2), objs.get(3)),
+                objs.get(3), List.of(objs.get(4)),
+                objs.get(4), List.of(objs.get(5))
+        );
+        Tree<Obj> treeObj = Tree.ofRoots(List.of(objs.get(0)),
+                getChild::get,
+                Tree.NodeType.unidirectionalNode,
+                Comparator.comparingInt(Obj::id),
+                ArrayList::new,
+                getChild::containsKey,
+                Predicate.isEqual(null).negate(),
+                Integer.MAX_VALUE);
+        String displayStr = treeObj.toDisplayStr();
+        // System.out.println(displayStr);
 
 
         ObjectMapper mapper = new ObjectMapper();
@@ -1070,6 +1070,27 @@ public class TreeTest {
     }
 
     record Obj2(int id, String name) {
+    }
+
+    @Test
+    public void test25() {
+        R<Tree<Object>> treeR = Tree.ofNodes(List.of(), Tree.NodeType.bidirectionalNode);
+        Assertions.assertDoesNotThrow(() -> {
+            Tree<Object> tr = treeR.unwrap();
+            Assertions.assertTrue(tr.isEmpty());
+        });
+    }
+
+    @Test
+    public void test26() {
+        Assertions.assertThrows(R.UnwrapException.class, () -> {
+            R<Tree<Object>> treeR = Tree.ofNodes(null, Tree.NodeType.bidirectionalNode);
+            treeR.unwrap();
+        });
+        Assertions.assertThrows(R.UnwrapException.class, () -> {
+            R<Tree<Object>> treeR = Tree.ofNodes(List.of(), null);
+            treeR.unwrap();
+        });
     }
 
 }
