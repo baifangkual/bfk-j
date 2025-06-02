@@ -5,14 +5,15 @@ import io.github.baifangkual.bfk.j.mod.core.trait.Cloneable;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * 带索引的实例
+ * <b>带索引的包装</b>
  * <p>该实例包装一个对象T（可以为 {@code null})，返回 {@code Indexed<T>}，
- * 以表示对象的索引值
+ * 以表示对象的索引值。该实例不可变
  * <p>类型 {@link Tup2} 无法表达该类型效果，因为其无法表达空指针引用 {@code null}
  * <pre>{@code
  * Stream<T> s = Stream.of(...);
@@ -87,6 +88,16 @@ public final class Indexed<T> implements Serializable, Cloneable<Indexed<T>> {
      */
     public Optional<T> tryValue() {
         return Optional.ofNullable(value);
+    }
+
+    public <V> Indexed<V> map(Function<? super T, ? extends V> fn) {
+        return Indexed.of(index, fn.apply(value));
+    }
+
+    public <V> Indexed<V> flatMap(Function<? super T, ? extends Indexed<? extends V>> fn) {
+        @SuppressWarnings("unchecked")
+        Indexed<V> ni = (Indexed<V>) fn.apply(value);
+        return ni; // 不检查可能为null的情况
     }
 
     @SuppressWarnings("MethodDoesntCallSuperMethod")
