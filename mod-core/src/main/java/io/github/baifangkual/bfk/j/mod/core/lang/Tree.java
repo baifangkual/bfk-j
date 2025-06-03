@@ -61,6 +61,7 @@ import java.util.stream.Collectors;
  */
 public final class Tree<T> implements Iter<Tree.Node<T>> {
 
+
     /**
      * 被标记为已破坏的node的depth，可以以此判断是否已破坏,
      * 因为 node 的 depth 正常情况不会为 -1，遂可以以该值做标志位判定
@@ -82,6 +83,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     };
 
     // immutable
+    private final IndirectRef<Tree<T>> treeIndirectRef; // 自己的间接引用
     private final Supplier<? extends List<UnsafeNode<T>>> listFactory; // 各node中childNodes类型
     private final FnRefNodeConstructor<T> fnNewNode;
     private final NodeType nodeType;
@@ -242,6 +244,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         this.fnNewNode = switchNBuildFn(nodeType);
         this.nodeType = nodeType;
         this.listFactory = listFactory;
+        this.treeIndirectRef = () -> this; // 间接引用
 
         // compose fnHasChild and fnGetChild
         final Function<? super T, ? extends Iterable<T>> fnCompGetChild =
@@ -262,7 +265,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         Iter.toStream(roots)
                 .filter(fnPreFilter)
                 .peek(identityHashSet::add)
-                .map(t -> this.fnNewNode.newNode(this, 0, t, null))
+                .map(t -> this.fnNewNode.newNode(this.treeIndirectRef, 0, t, null))
                 .sorted(fnNSort)
                 .forEach(rootCollector::add);
         if (identityHashSet.size() != rootCollector.size()) {
@@ -287,7 +290,6 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
                     fnNSort, maxDepth - 1, 0);
         }
         this.root = rootCollector;
-
     }
 
     /**
@@ -1142,7 +1144,17 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     @FunctionalInterface
     private interface FnRefNodeConstructor<T> {
         // 不取消 owner引用，后续或拓展，现在用不着
-        UnsafeNode<T> newNode(Tree<T> owner, int dep, T vRef, UnsafeNode<T> pRef);
+        UnsafeNode<T> newNode(IndirectRef<Tree<T>> treeIndirectRef, int dep, T vRef, UnsafeNode<T> pRef);
+    }
+
+    /**
+     * 间接引用 - 使用在Node引用Tree和父节点的情景
+     *
+     * @param <T> 被引用的类型
+     */
+    @FunctionalInterface
+    private interface IndirectRef<T> {
+        T get();
     }
 
     /**
@@ -1164,8 +1176,6 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         return (n1, n2) -> sort.compare(n1.data(), n2.data());
     }
 
-
-    // DEF FUNCTION ===========================
 
     /**
      * 递归构造树
@@ -1225,7 +1235,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
                         tempIdentityHashSet.add(child);
                     }
                     // 走到这里，即迭代器不为null，且内有通过test的元素
-                    UnsafeNode<T> n = fnNewNode.newNode(this, currentDepth + 1, child, node);
+                    UnsafeNode<T> n = fnNewNode.newNode(this.treeIndirectRef, currentDepth + 1, child, node);
                     tempNodeRefReusableList.add(n);
                     this.nodeCount += 1;
                 }
@@ -1614,12 +1624,17 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * @param <T> 节点载荷
      */
     static final class BidirectionalNode<T> implements Node<T>, UnsafeNode<T> {
+        private IndirectRef<Tree<T>> treeIndRef;
         private final T data;
         private int depth;
         private UnsafeNode<T> parentNode;
         private List<UnsafeNode<T>> childNodes;
 
-        BidirectionalNode(Tree<T> owner, int depth, T data, UnsafeNode<T> parentNode) {
+        BidirectionalNode(IndirectRef<Tree<T>> treeIndRef, // 只持有树的间接引用
+                          int depth,
+                          T data,
+                          UnsafeNode<T> parentNode) {
+            this.treeIndRef = treeIndRef;
             this.depth = depth;
             this.data = data;
             this.parentNode = parentNode;
@@ -1689,11 +1704,16 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * @param <T> 节点载荷
      */
     static final class UnidirectionalNode<T> implements Node<T>, UnsafeNode<T> {
+        private final IndirectRef<Tree<T>> treeIndRef;
         private final T data;
         private int depth;
         private List<UnsafeNode<T>> childNodes;
 
-        UnidirectionalNode(Tree<T> owner, int depth, T data, UnsafeNode<T> ignore) {
+        UnidirectionalNode(IndirectRef<Tree<T>> treeIndRef,
+                           int depth,
+                           T data,
+                           UnsafeNode<T> ignore) {
+            this.treeIndRef = treeIndRef;
             this.depth = depth;
             this.data = data;
         }
@@ -2090,6 +2110,16 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         //       getLine 路由线段
         //       and test
         // todo removeCurrentNodeAndMove2Parent 怎么设计？ R??
+        //  ！！！ 每个Tree生成时可以添加Id，然后Tree内有Static的 弱引用缓存 Node可通过Id找到Tree，然后就能删除自己了？，no。。。。
+        //                 没啥用，外界若只持有TreeNode的引用，则Tree可能就没了...，到时候Node的remove就是可能成功？不能这样...
+        //	 ！！！ 或需yes？ 每个树的Id都是一个对象，给Node的都是那个对象的引用，只要那个static的弱引用缓存当Key，也就是
+        //                  Id没有引用时，才会使的value位置的Tree被回收即可，YES！似乎可行
+        //            还有 Node的removed验证，应assert在Node的每个方法前，防止其语义 depth 出现 -1等，
+        //                应用后还需更新Tree的doc上removed的说明...
+        //   ！！！ Tree的Cursor还能够有方法 genLine（路由），可通过 move2路由返回R<Cursor，Err>，快速移动到路由描述的地方
+
+        // todo 可以使用 非 直接引用，而是使用 SupliterGet 的间接引用，
+        //   然后 取消 那两个不同的 Node实现，对父的引用使用间接引用
 //        public Cursor<T> removeCurrentNodeAndMove2Parent(){
 //            assertJustMeModifyTree();
 //            if (isOnRootNode()){
