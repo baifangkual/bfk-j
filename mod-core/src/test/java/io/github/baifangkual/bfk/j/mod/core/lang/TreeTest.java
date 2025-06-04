@@ -41,8 +41,7 @@ public class TreeTest {
                 num -> lines.stream()
                         .filter(l -> l.begin().equals(num))
                         .map(Line::end)
-                        .toList(),
-                LinkedList::new
+                        .toList()
         );
         Tree<Integer> integerTree1 = Tree.ofLines(lines).unwrap();
         Assertions.assertEquals(integerTree.toDisplayStr(), integerTree1.toDisplayStr());
@@ -69,23 +68,21 @@ public class TreeTest {
                         .filter(l -> l.begin().equals(num))
                         .map(Line::end)
                         .toList(),
-
-                (i1, i2) -> Integer.compare(i1, i2),
-                LinkedList::new,
+                Comparator.comparingInt(i -> i),
                 e -> true,
                 e -> true,
                 Integer.MAX_VALUE
         );
         StringJoiner pre = new StringJoiner("\n");
         pre.add("DFS PRE ORDER:");
-        tree.dfsPreOrder(n -> pre.add(n.toString()));
+        tree.forEachDfsPreOrder(n -> pre.add(n.toString()));
         StringJoiner post = new StringJoiner("\n");
         post.add("DFS POST ORDER:");
-        tree.dfsPostOrder(n -> post.add(n.toString()));
+        tree.forEachDfsPostOrder(n -> post.add(n.toString()));
         Assertions.assertNotEquals(pre.toString(), post.toString());
         StringJoiner bfs = new StringJoiner("\n");
         bfs.add("BFS:");
-        tree.bfs(n -> bfs.add(n.toString()));
+        tree.forEachBfs(n -> bfs.add(n.toString()));
         Assertions.assertNotEquals(bfs.toString(), post.toString());
         Assertions.assertNotEquals(pre.toString(), bfs.toString());
 //        System.out.println(STF.f("tree depth: {}", tree.depth()));
@@ -200,8 +197,7 @@ public class TreeTest {
                 num -> lines.stream()
                         .filter(l -> l.begin().equals(num))
                         .map(Line::end)
-                        .toList(),
-                LinkedList::new
+                        .toList()
         );
         Tree<Integer> integerTree1 = Tree.ofLines(lines).unwrap();
         Assertions.assertEquals(tree.toDisplayStr(), integerTree1.toDisplayStr());
@@ -452,7 +448,7 @@ public class TreeTest {
             lIterForEach.add(i.data());
             sbIterForEach.add(i.data().toString());
         }
-        tree.bfs(n -> {
+        tree.forEachBfs(n -> {
             lBFS.add(n.data());
             sbBFS.add(n.data().toString());
         });
@@ -892,7 +888,7 @@ public class TreeTest {
 
         // 3. 测试树的遍历
         Set<Integer> bfsNodes = new HashSet<>();
-        tree.bfs(node -> bfsNodes.add(node.data()));
+        tree.forEachBfs(node -> bfsNodes.add(node.data()));
         Assertions.assertEquals(tree.nodeCount(), bfsNodes.size());
 
         // 4. 测试迭代器
@@ -1011,12 +1007,11 @@ public class TreeTest {
         Tree<Obj> treeObj = Tree.ofRoots(List.of(objs.get(0)),
                 getChild::get,
                 Comparator.comparingInt(Obj::id),
-                ArrayList::new,
                 getChild::containsKey,
                 Predicate.isEqual(null).negate(),
                 Integer.MAX_VALUE);
         String displayStr = treeObj.toDisplayStr();
-        // System.out.println(displayStr);
+        //System.out.println(displayStr);
 
 
         ObjectMapper mapper = new ObjectMapper();
@@ -1091,29 +1086,87 @@ public class TreeTest {
     }
 
     @Test
-    public void testTreeCursor(){
+    public void test27() {
+        // chopTest
+        Tree<Integer> tree = genBigTree(1000, 2000, 1, 10).r();
+        //System.out.println(tree.toDisplayStr());
+        //System.out.println(tree);
+        int treeDepth = tree.depth();
+        int nodeCount = tree.nodeCount();
+        while (treeDepth-- > -1) {
+            //System.out.println("==============");
+            nodeCount -= tree.rootCount();
+            int befNodeCount = tree.nodeCount();
+            int befDepth = tree.depth();
 
-        int nodeCountOrigin = 100;
-        int nodeCountBound = 150;
-        int rootCountOrigin = 1;
-        int rootCountBound = 2;
-        Tup2<List<Line<Integer>>, Tree<Integer>> lineAndTree = genBigTree(
-                nodeCountOrigin, nodeCountBound, rootCountOrigin, rootCountBound);
-        Tree<Integer> tree = lineAndTree.r();
-        System.out.println(tree.toDisplayStr());
-        Tree.Node<Integer> deepNode = null;
-        int depth = -1;
-        for (Tree.Node<Integer> n : tree) {
-            if (n.depth() > depth){
-                depth = n.depth();
-                deepNode = n;
+            List<Tree.Node<Integer>> befRoots = tree.root();
+            tree.chopRoot();
+            //System.out.println(tree.toDisplayStr());
+            int afterDepth = tree.depth();
+            int afterNodeCount = tree.nodeCount();
+            //System.out.println(Stf
+            //        .f("tree:{}, lNodeCount:{}, befNC:{}, aftNC:{}, befDepth:{}, aftDepth:{}",
+            //                tree, nodeCount, befNodeCount, afterNodeCount, befDepth, afterDepth));
+            Assertions.assertEquals(nodeCount, afterNodeCount);
+            Assertions.assertEquals(befDepth - 1, afterDepth);
+            int newRootCount = tree.rootCount();
+            if (newRootCount > 0) {
+                int idx = Rng.nextInt(0, newRootCount);
+                Tree.Node<Integer> rngRoot = tree.root(idx);
+                Assertions.assertTrue(rngRoot.isRoot());
+                Assertions.assertEquals(0, rngRoot.depth());
             }
+            for (Tree.Node<Integer> befRoot : befRoots) {
+                Assertions.assertTrue(befRoot.isPruned());
+            }
+
         }
-        Tree.Cursor<Integer> leafCur = new Tree.Cursor<>(tree, deepNode);
-
-
-
+        Assertions.assertEquals(-1, tree.depth());
+        Assertions.assertTrue(tree.isEmpty());
 
     }
+
+    @Test
+    public void test28() {
+        Tree<Integer> tree = genBigTree(1000, 2000, 1, 10).r();
+        Iterator<Tree.Node<Integer>> iter = tree.iterator();
+        Tree<Integer> self = tree.pruneRoot(0);
+        Assertions.assertSame(tree, self);
+        Assertions.assertThrows(ConcurrentModificationException.class, iter::hasNext);
+        Assertions.assertThrows(ConcurrentModificationException.class, iter::next);
+        Assertions.assertThrows(ConcurrentModificationException.class, iter::remove);
+        Iterator<Tree.Node<Integer>> itAfter = self.iterator();
+        Assertions.assertThrows(IllegalStateException.class, itAfter::remove);
+        Assertions.assertDoesNotThrow(itAfter::next);
+        Assertions.assertDoesNotThrow(itAfter::remove);
+    }
+
+    @Test
+    public void test29() {
+        Tree<Integer> tree = genBigTree(1000, 2000, 1, 10).r();
+        Tree.Node<Integer> root = tree.root(Rng.nextInt(0, tree.rootCount()));
+        Tree.Node<Integer> anyNotRootNode = null;
+        int befNodeCount = tree.nodeCount();
+        int befRtCount = tree.rootCount();
+        boolean doPrune = false;
+        if (!root.isLeaf()){
+            for (Tree.Node<Integer> cnode : root.childNode()) {
+                Assertions.assertFalse(cnode.isPruned());
+            }
+            int childCount = root.childCount();
+            int i = Rng.nextInt(0, childCount);
+            anyNotRootNode = root.childNode().get(i);
+            root.mut().prune();
+            doPrune = true;
+        }
+        if (anyNotRootNode != null) {
+            Assertions.assertTrue(anyNotRootNode.isPruned());
+        }
+        if (doPrune) {
+            Assertions.assertNotEquals(befNodeCount, tree.nodeCount());
+            Assertions.assertNotEquals(befRtCount, tree.rootCount());
+        }
+    }
+
 
 }

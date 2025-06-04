@@ -11,7 +11,10 @@ import io.github.baifangkual.bfk.j.mod.vfs.exception.VFSIOException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 /**
@@ -418,7 +421,6 @@ public interface VFS extends Closeable {
         return Tree.ofRoots(treeRoot, // root one
                 this::lsDir, // lsDir get child
                 fnSort, // sort
-                ArrayList::new,
                 // fnNeedFindChild, just dir need find child,
                 // if not dir, lsDir will throw exception
                 VFile::isDirectory,

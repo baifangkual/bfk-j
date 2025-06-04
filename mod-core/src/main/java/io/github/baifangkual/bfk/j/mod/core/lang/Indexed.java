@@ -74,12 +74,21 @@ public final class Indexed<T> implements Serializable, Cloneable<Indexed<T>> {
     }
 
     /**
-     * 实例值是否为 {@code null}
+     * value 不存在？（实例值是否为 {@code null}）
      *
-     * @return true 为null，反之则不为null
+     * @return true 不存在，反之则存在
      */
-    public boolean isNullValue() {
+    public boolean isValueAbsent() {
         return value == null;
+    }
+
+    /**
+     * {@code !isValueAbsent()}
+     *
+     * @see #isValueAbsent()
+     */
+    public boolean isValuePresent() {
+        return value != null;
     }
 
     /**
@@ -139,19 +148,19 @@ public final class Indexed<T> implements Serializable, Cloneable<Indexed<T>> {
     @FunctionalInterface
     public
     interface FnBuildIndexed<T, IndexedT> {
-        IndexedT buildIndexed(int index, T t);
+        IndexedT build(int index, T t);
+
+        /**
+         * 函数-无副作用，默认使用 {@link Indexed} 类型表示带索引的实例
+         *
+         * @param <T> 需表达索引的实体
+         * @return 默认函数
+         */
+        static <T> FnBuildIndexed<T, Indexed<T>> fnBuildIndexed() {
+            return Indexed::of;
+        }
     }
 
-
-    /**
-     * 函数-无副作用，默认使用 {@link Indexed} 类型表示带索引的实例
-     *
-     * @param <T> 需表达索引的实体
-     * @return 默认函数
-     */
-    public static <T> FnBuildIndexed<T, Indexed<T>> fnDefaultBuildIndexed() {
-        return Indexed::of;
-    }
 
     /**
      * 读取给定List中元素，返回UnmodifiedList，其中元素为 {@link Indexed} 带索引的原元素
@@ -171,18 +180,24 @@ public final class Indexed<T> implements Serializable, Cloneable<Indexed<T>> {
      * @apiNote 该方法仅接收List，因为Collection中Set等无序，索引其中元素无意义
      */
     public static <T> List<Indexed<T>> toIndexedList(List<? extends T> list) {
+        return toIndexedList(list, FnBuildIndexed.fnBuildIndexed());
+    }
+
+    public static <T, IndexedT> List<IndexedT> toIndexedList(List<? extends T> list,
+                                                             FnBuildIndexed<? super T, ? extends IndexedT> fn) {
         Objects.requireNonNull(list, "list");
+        Objects.requireNonNull(fn, "fn");
         if (list.isEmpty()) return Collections.emptyList();
 
         // 针对 RandomAccess 列表使用索引访问 （ArrayList, Vector 等）
         if (list instanceof RandomAccess) {
             return IntStream.range(0, list.size())
-                    .mapToObj(i -> Indexed.of(i, (T) list.get(i)))
+                    .mapToObj(i -> (IndexedT) fn.build(i, list.get(i)))
                     .toList();
         } else {
             // 针对 LinkedList 等无法随机访问的 先变为indexedStream
             // 否则 其的get(idx) 方法时间复杂度O(n)消受不起
-            Stream<Indexed<T>> indexedStream = toIndexedStream(list.stream());
+            Stream<IndexedT> indexedStream = toIndexedStream(list.stream(), fn);
             return indexedStream.toList();
         }
     }
@@ -198,7 +213,7 @@ public final class Indexed<T> implements Serializable, Cloneable<Indexed<T>> {
      * @see #toIndexedStream(Stream, FnBuildIndexed)
      */
     public static <T> Stream<Indexed<T>> toIndexedStream(Stream<? extends T> stream) {
-        return toIndexedStream(stream, Indexed.fnDefaultBuildIndexed());
+        return toIndexedStream(stream, FnBuildIndexed.fnBuildIndexed());
     }
 
     /**

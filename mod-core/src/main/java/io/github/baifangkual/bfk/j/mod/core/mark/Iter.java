@@ -62,9 +62,7 @@ public interface Iter<T> extends Iterable<T> {
     }
 
     /**
-     * 返回{@link Stream}<br>
-     * 该方法返回的流实际是委托给{@link ArrayList}返回的流，
-     * 并非默认{@link Iterable#spliterator()}构造的流，遂不会差性能
+     * 返回{@link Stream}
      *
      * @return Stream
      * @apiNote 该默认方法会返回委托给List的流，若实现类中元素较少，应覆盖该实现已
@@ -75,16 +73,14 @@ public interface Iter<T> extends Iterable<T> {
     }
 
     /**
-     * 返回并行{@link Stream}<br>
-     * 该方法返回的流实际是委托给{@link ArrayList}返回的流，
-     * 并非默认{@link Iterable#spliterator()}构造的流，遂不会差性能
+     * 返回并行{@link Stream}
      *
      * @return ParallelStream
      * @apiNote 该默认方法会返回委托给List的流，若实现类中元素较少，应覆盖该实现已
      * 避免构建中间List的开销
      */
     default Stream<T> parallelStream() {
-        return into(ArrayList::new).parallelStream();
+        return stream().parallel();
     }
 
 
@@ -210,7 +206,7 @@ public interface Iter<T> extends Iterable<T> {
                 @Override
                 public boolean tryAdvance(Consumer<? super IndexedT> action) {
                     if (fromIterator.hasNext()) {
-                        action.accept(fnBuildIndexed.buildIndexed(index++, fromIterator.next()));
+                        action.accept(fnBuildIndexed.build(index++, fromIterator.next()));
                         return true;
                     }
                     return false;
@@ -260,7 +256,7 @@ public interface Iter<T> extends Iterable<T> {
                 if (fromSpliterator.tryAdvance(this)) {
                     try {
                         // The cast is safe because tryAdvance puts a T into `holder`.
-                        action.accept(fnBuildIndexed.buildIndexed(index++, holder));
+                        action.accept(fnBuildIndexed.build(index++, holder));
                         return true;
                     } finally {
                         holder = null;
@@ -332,7 +328,7 @@ public interface Iter<T> extends Iterable<T> {
 
 
         public static <T> Iterator<Indexed<T>> ofIndexed(Iterator<T> it) {
-            return of(it, Indexed.fnDefaultBuildIndexed());
+            return of(it, Indexed.FnBuildIndexed.fnBuildIndexed());
         }
 
         @Override
@@ -342,7 +338,7 @@ public interface Iter<T> extends Iterable<T> {
 
         @Override
         public IndexedT next() {
-            return fnIndexed.buildIndexed(index++, it.next());
+            return fnIndexed.build(index++, it.next());
         }
 
         @Override

@@ -13,69 +13,50 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
- * <b>Tree</b><br>
+ * <b>Tree</b>
  * <p>多叉树，通用树，状态可变，线程不安全，可以存在多个根节点
  * <p>该树的深度 {@link #depth} 使用边数计算法（空树（{@link #root} is empty）的深度 = -1，只有根节点的树的深度 = 0）
  * <p>该树可被迭代，可通过迭代器迭代树中所有元素，返回的迭代器的行为可查看 {@link Tree#iterator()} 说明<br>
  * 该树存在的原因是对一批有逻辑从属关系且能构成树型结构的实体进行方便操作和部分特征的查询，换言之，该树仅应当为一种临时数据结构，
- * 不建议以任何形式序列化该树（即使java原生的序列化行为可以正确处理循环引用），
+ * 不建议以任何形式序列化该树（因为树通常很大，即使java原生的序列化行为可以正确处理循环引用），
  * 强行的序列化可能造成 {@code StackOverflowError} 异常（因为树深度过深且可能含有循环引用），
  * 同样基于该原因，该类型也不应实现 {@code equals & hashcode} 方法
  * <p>因为该树为二叉树的父集，遂没有中序遍历
- * <p>该树中，某节点 {@code Tree.Node} 的“删除”语义是：将自身及子节点从 {@code Tree} 中删除（可以理解为删除文件夹，里面东西全没了），
- * 被删除的 {@code Tree.Node} 从树中一定不会访问到，
- * 被删除的 {@code Tree.Node} 状态：
- * <ul>
- *     <li>{@code isRemoved()} 方法永远返回 {@code true}</li>
- *     <li>一定无法再访问到 {@code parent} (即使其为 {@link BidirectionalNode}</li>
- *     <li>一定无法再访问到 {@code child} (即使其之前有子节点）</li>
- *     <li>{@code isLeaf()} 永远返回 {@code true}</li>
- *     <li>{@code depth()} 永远返回 {@code -1}</li>
- *     <li>{@code isRoot()} 永远返回 {@code false}</li>
- * </ul>
+ * <p>该树中，某节点 {@code Tree.Node} 的“删除（剪枝）”语义是：将自身及所有直接和间接子节点从 {@code Tree} 中删除，
+ * 被删除的 {@code Tree.Node} 从树中一定不会访问到，其 {@code node.isPruned() == true}，
  * 基于上述 {@code Tree.Node} 被变更时其自身的状态信息的变化的原因，
- * 外界不应当持有 {@code Tree.Node} 的引用，而是应当持有 {@code Tree} 的引用<br>
+ * 外界不应当长期持有 {@code Tree.Node} 的引用，而是应当持有 {@code Tree} 的引用<br>
  *
  * @author baifangkual
- * @apiNote 且一旦构建树，其内节点仅可删除，不可添加
- * <p>构建树时会使用需存储在树中元素 {@link T} 的 {@code IdentityHash} 来判定树中元素是否有重复，
+ * @apiNote 构建树时会使用需存储在树中元素 {@link T} 的 {@code IdentityHash} 来判定树中元素是否有重复，
  * 以此来检查是否有 循环边/循环引用（环）和 是否存在入度大于1的节点，当这种非法情况发生，抛出异常，即说明无法构成树型结构，
  * 若能够构成树型结构，即一定一个树中的 {@link T} 没有重复 {@code IdentityHash}
  * @see #identityHash(Object)
- * @see #ofRoots(Iterable, Function, Comparator, Supplier, Predicate, Predicate, int)
- * @see #ofRoots(Iterable, Function, Supplier)
+ * @see #ofRoots(Iterable, Function, Comparator, Predicate, Predicate, int)
  * @see #ofRoots(Iterable, Function)
  * @see #ofLines(Iterable)
  * @see #nodeDataIterator()
  * @see Tree#iterator()
- * @see #bfs(Consumer)
- * @see #dfsPreOrder(Consumer)
- * @see #dfsPostOrder(Consumer)
+ * @see #forEachBfs(Consumer)
+ * @see #forEachDfsPreOrder(Consumer)
+ * @see #forEachDfsPostOrder(Consumer)
  * @see #toDisplayStr()
  * @see #toJsonStr(int, String, String, Function)
  * @since 2023/8/18 v0.0.6
  */
 public final class Tree<T> implements Iter<Tree.Node<T>> {
 
-
-    /**
-     * 被标记为已破坏的node的depth，可以以此判断是否已破坏,
-     * 因为 node 的 depth 正常情况不会为 -1，遂可以以该值做标志位判定
-     */
-    private static final int DESTROY_NODE_DEPTH = -1;
     // ref emptyTree
     private static final Tree<?> EMPTY_TREE_IMMUTABLE = new Tree<>(); // emptyTree，immutable
     private static final Consumer<Object> FN_ACC_DO_NOTHING = (n) -> { /* do nothing... */};
     /**
-     * 销毁/破坏 node，将其所有引用清除，能断就断，并将depth置位{@value #DESTROY_NODE_DEPTH}
+     * 销毁/破坏/剪掉 node，将其对宿主树的引用置空
      */
-    private static final Consumer<UnsafeNode<?>> FN_DESTROY_NODE = (n) -> {
-        // node.data = null; // 不重置data为null
-        n.unsafeSetDepth(DESTROY_NODE_DEPTH);
-        n.unsafeSetChildNode(null);
-        n.unsafeSetParentNode(null);
+    private static final Consumer<UnsafeNode<?>> FN_PRUNE_NODE = (n) -> {
+        n.unsafeSetHost(null);
     };
 
     // immutable
@@ -87,7 +68,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     private int nodeCount = 0;
     private int depth = -1;
     // 用以验证是否有同时使用tree的临时视图（如迭代器）对树做修改，对树做完修改后，
-    // 修改树的实体（Iter、Cursor等）需要同步该状态与树相同
+    // 修改树的实体（Iter）需要同步该状态与树相同
     private int modifyCount = 0;
     // ------- mutable
 
@@ -102,13 +83,15 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     }
 
     /**
-     * 根节点<br>
+     * 返回所有根节点<br>
      * 返回的 List 的类型是 {@code unmodifiableList}
      *
      * @return 根节点
      */
     public List<Node<T>> root() {
-        return root.isEmpty() ? Collections.emptyList() : Collections.unmodifiableList(root);
+        // fix: 调用时返回快照，该返回应对后续List<Root>本身的变动不可见
+        return root.isEmpty() ? Collections.emptyList() :
+                root.stream().map(un -> (Node<T>) un).toList();
     }
 
     /**
@@ -118,22 +101,21 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * @param idx 索引
      * @return Optional(rootNode) | Optional.Empty
      */
-    public Optional<Node<T>> root(int idx) {
+    public Optional<Node<T>> tryRoot(int idx) {
         return rootCount() <= idx ? Optional.empty() : Optional.of(root.get(idx));
-
     }
 
     /**
-     * 返回指定位置的根节点游标<br>
-     * 若指定位置没有节点，则返回 {@link Optional#empty()}
+     * 返回指定位置的根节点
      *
-     * @param idx rootNode 索引
-     * @return Optional(rootCursor) | Optional.Empty
+     * @param idx 索引
+     * @return 根节点
+     * @throws IndexOutOfBoundsException 索引位置根节点不存在 ({@code index < 0 || index >= size()})
      */
-    public Optional<Cursor<T>> newCursor(int idx) {
-        return rootCount() <= idx ? Optional.empty() :
-                Optional.of(new Cursor<>(this, root.get(idx)));
+    public Node<T> root(int idx) throws IndexOutOfBoundsException {
+        return root.get(idx);
     }
+
 
     /**
      * 根节点个数
@@ -160,6 +142,93 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      */
     public int nodeCount() {
         return nodeCount;
+    }
+
+    /**
+     * 砍掉所有根节点，将所有根节点的直接子节点作为新的根节点
+     * <p>如果树是空树，则什么都不做，否则，树的所有剩余节点的 {@code depth} 减一，
+     * 可以想象的，如果持续进行该操作，树最终会成为空树
+     * <p>该方法会修改树的节点状态</p>
+     * <pre>{@code
+     * Tree<T> tree = ...;
+     * // tree before(root is 1, root.child is 2 & 5):
+     * // │/
+     * // │└─ 1
+     * // │   ├─ 2
+     * // │   │  └─ 3
+     * // │   │     └─ 4
+     * // │   └─ 5
+     * // │      └─ 6
+     * tree.chopRoot();
+     * // tree after(root is 2 & 5):
+     * // │/
+     * // │└─ 2
+     * // │   └─ 3
+     * // │      └─ 4
+     * // │/
+     * // │└─ 5
+     * // │   └─ 6
+     * }</pre>
+     *
+     * @return this
+     */
+    public Tree<T> chopRoot() {
+        if (isEmpty()) {
+            return this;
+        }
+        int befRootCount = rootCount();
+        List<UnsafeNode<T>> clearParentDepth1ChildNode = this.root.stream()
+                .map(UnsafeNode::unsafeGetChildNode)
+                .filter(Objects::nonNull)
+                .filter(clist -> !clist.isEmpty())
+                .flatMap(List::stream)
+                // 清除对原root的引用，刚好使其表意为root的表意（parentNode isnull）
+                .peek(nr -> nr.unsafeSetParentNode(null))
+                .toList();
+        // 清除对当前树的引用，使其 isPruned == true
+        this.root.forEach(or -> or.unsafeSetHost(null));
+        this.root.clear();
+        this.root.addAll(clearParentDepth1ChildNode);
+        // 更新节点的depth
+        this.bfs(() -> root, n -> n.unsafeSetDepth(n.depth() - 1));
+        // 更新树的depth 和 nodeCount，更新modCount
+        this.nodeCount -= befRootCount;
+        this.depth -= 1;
+        incrementModifyCount();
+        return this;
+    }
+
+    /**
+     * 剪掉给定索引位置的根节点
+     * <p>该方法会修改树的节点状态</p>
+     *
+     * @param idx 索引
+     * @return this
+     * @throws IndexOutOfBoundsException 索引位置根节点不存在 ({@code index < 0 || index >= size()})
+     */
+    public Tree<T> pruneRoot(int idx) {
+        Node<T> r = tryRoot(idx).orElseThrow(() -> new IndexOutOfBoundsException(Stf
+                .f("idx: {}, not found root, rootCount: {}",
+                        idx, rootCount())));
+        pruneNodeAndUpdateTreeState(r);
+        return this;
+    }
+
+    @Override
+    public Stream<Node<T>> stream() {
+        return into(LinkedList::new).stream();
+    }
+
+    /**
+     * 剪掉给定索引位置的根节点
+     * <p>该方法可能会修改树的节点状态</p>
+     *
+     * @param idx 索引
+     * @return this
+     */
+    public Tree<T> tryPruneRoot(int idx) {
+        tryRoot(idx).ifPresent(this::pruneNodeAndUpdateTreeState);
+        return this;
     }
 
     /**
@@ -296,7 +365,6 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      *     );
      *     Tree<Obj> treeObj = Tree.ofRoots(List.of(objs.get(0)),
      *             getChild::get,
-     *             Tree.NodeType.unidirectionalNode,
      *             Comparator.comparingInt(Obj::id),
      *             ArrayList::new,
      *             getChild::containsKey,
@@ -320,9 +388,6 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      *                           在使用默认{@code maxDepth}参数的情况下，
      *                           该方法一定要有穷，即一定能够找到逻辑上的叶子节点，否则可能会造成栈内存溢出</b>
      * @param fnSort             函数-实体排序的函数<b>(该函数仅在Tree构造时使用，Tree构造完成便被丢弃）</b>
-     * @param listFactory        函数-List构造方法引用（形如 {@code ArrayList::new}），
-     *                           返回的List用以装载 {@code root} 和 {@code Node.childNode},
-     *                           函数返回的List一定要可读可写，否则构造树时会抛出异常
      * @param fnPreNeedFindChild 函数(nullable)，要求给定一个实体，返回布尔值标识该实体是否需要寻找直接子实体，
      *                           该函数仅在对元素执行 {@code fnGetChild} 前执行，当该函数返回 {@code false}，
      *                           则 {@code fnGetChild} 函数一定不会对当前元素执行，否则，
@@ -340,32 +405,10 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     public static <E> Tree<E> ofRoots(Iterable<? extends E> roots,
                                       Function<? super E, ? extends Iterable<E>> fnGetChild,
                                       Comparator<? super E> fnSort,
-                                      Supplier<? extends List<UnsafeNode<E>>> listFactory,
                                       Predicate<? super E> fnPreNeedFindChild,
                                       Predicate<? super E> fnPreFilter,
                                       int maxDepth) {
-        return new Tree<>(roots, fnGetChild, fnSort, listFactory, fnPreNeedFindChild, fnPreFilter, maxDepth);
-    }
-
-    /**
-     * 构建树，若失败则抛出异常<br>
-     *
-     * @param roots       根节点，一个或多个
-     * @param fnGetChild  函数，<b>要求给定一个实体，返回这个实体的子实体，返回的可迭代对象可以为null，也可以没有元素，
-     *                    该方法一定要有穷，即一定能够找到逻辑上的叶子节点，否则可能会造成栈内存溢出</b>
-     * @param listFactory 函数-List构造方法引用（形如 {@code ArrayList::new}），
-     *                    返回的List用以装载 {@code root} 和 {@code Node.childNode},
-     *                    函数返回的List一定要可读可写，否则构造树时会抛出异常
-     * @throws NullPointerException     当不允许为空的参数给定空时
-     * @throws IllegalArgumentException 当给定的最大停止深度小于 -1 时
-     * @throws IllegalArgumentException 当构建树的过程发现循环边/循环引用/存在节点大于1个入度时
-     */
-    public static <E> Tree<E> ofRoots(Iterable<? extends E> roots,
-                                      Function<? super E, ? extends Iterable<E>> fnGetChild,
-                                      Supplier<? extends List<UnsafeNode<E>>> listFactory) {
-        final Predicate<? super E> defaultFnPre = (e) -> true;
-        final Comparator<? super E> defaultFnSort = Comparator.nullsFirst(null);
-        return Tree.ofRoots(roots, fnGetChild, defaultFnSort, listFactory, defaultFnPre, defaultFnPre, Integer.MAX_VALUE);
+        return new Tree<>(roots, fnGetChild, fnSort, ArrayList::new, fnPreNeedFindChild, fnPreFilter, maxDepth);
     }
 
     /**
@@ -380,12 +423,14 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      */
     public static <E> Tree<E> ofRoots(Iterable<? extends E> roots,
                                       Function<? super E, ? extends Iterable<E>> fnGetChild) {
-        return Tree.ofRoots(roots, fnGetChild, ArrayList::new);
+        final Predicate<? super E> defaultFnPre = (e) -> true;
+        final Comparator<? super E> defaultFnSort = Comparator.nullsFirst(null);
+        return Tree.ofRoots(roots, fnGetChild, defaultFnSort, defaultFnPre, defaultFnPre, Integer.MAX_VALUE);
     }
 
     /**
-     * 给定一系列树中的节点 {@code nodes} 和要构成新树的节点类型 {@code type}，
-     * 以给定的一系列 nodes 做根节点，构建一颗树，树中的节点类型为给定的type参数的类型<br>
+     * 给定一系列节点 {@code nodes}
+     * 以给定的一系列节点做根节点，构建一颗树<br>
      * 给定的一系列树中的节点之间若存在间接或直接的父子关系，则构建树将失败 {@code R.Err(...)}<br>
      * 给定的一系列节点可以来自不同的树中
      * <pre>
@@ -421,7 +466,6 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
             Map<E, UnsafeNode<E>> selfRefNode = new IdentityHashMap<>();
             Iter.toStream(nodes) // 强转，不应有外界实现 Node，否则可能无法转为 NodeExt
                     .forEach(e -> selfRefNode.put(e.data(), (UnsafeNode<E>) e));
-            // 需检查给定的迭代器中的node，其nodeType是否一致？ 不需要，可能来自两棵树
             return selfRefNode;
         }).map(selfRefNodeMap ->
                 Tree.ofRoots(selfRefNodeMap.keySet(), (e) -> {
@@ -442,7 +486,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
                     // 将自身从selfRefNode map中移除，尽量防止map达到扩容大小而重新计算昂贵的SystemIdHash
                     selfRefNodeMap.remove(e);
                     return arrayList;
-                }, ArrayList::new));
+                }));
     }
 
     /**
@@ -474,7 +518,11 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      */
     public static <E> R<Tree<E>> ofLines(Iterable<Line<E>> lines) {
         return R.ofFnCallable(() -> {
+            Objects.requireNonNull(lines, "given lines is null");
             List<Line<E>> allLines = Iter.toStream(lines).toList();
+            if (allLines.isEmpty()) {
+                throw new IllegalArgumentException("given lines is empty");
+            }
             boolean isTree = Line.isTree(allLines);
             if (!isTree) throw new IllegalArgumentException("Not a tree: " + allLines);
             Set<E> headerNodes = Line.findHeaderNodes(allLines);
@@ -500,7 +548,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * @param fn          函数-能够接收一个{@link Node}，返回一个{@link V}，映射函数
      * @param <V>         通过函数转换的Line中承载的类型
      * @return Ok(Lines) | Err(...)
-     * @apiNote 仅包含根节点的树（因为没有子节点，无法构造{@link Line#end()})、
+     * @apiNote 空树、仅包含根节点的树（因为没有子节点，无法构造{@link Line#end()})、
      * 给定的listFactory为空、给定的fn为空等，均会返回{@link R.Err}
      * @see #ofLines(Iterable)
      */
@@ -543,8 +591,8 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      *
      * @return 树的迭代器
      * @apiNote 该迭代器并非线程安全，当树的节点状态发生改变后，
-     * 非引发变动的实例 ({@link TreeIter} {@link Cursor} 便会失效，
-     * 调用这些实例的任何方法都会抛出 {@link ConcurrentModificationException}
+     * 非引发变动的实例 ({@link TreeIter} 便会失效，
+     * 调用这些失效实例的任何方法都会抛出 {@link ConcurrentModificationException}
      * @see ConcurrentModificationException
      * @see Tree#nodeDataIterator()
      */
@@ -564,8 +612,8 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * @return 树的迭代器
      * @throws UnsupportedOperationException 当调用该迭代器的 {@code remove()} 方法
      * @apiNote 该迭代器并非线程安全，当树的节点状态发生改变后，
-     * 非引发变动的实例 ({@link TreeIter} {@link Cursor} 便会失效，
-     * 调用这些实例的任何方法都会抛出 {@link ConcurrentModificationException}
+     * 非引发变动的实例 ({@link TreeIter} 便会失效，
+     * 调用这些失效实例的任何方法都会抛出 {@link ConcurrentModificationException}
      * @see Tree#iterator()
      */
     public Iterator<T> nodeDataIterator() {
@@ -573,18 +621,19 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
             @Override
             public void remove() {
                 throw new UnsupportedOperationException(
-                        "在Tree的nodeDataIterator迭代器上调用remove方法的语义不明确，不允许该操作");
+                        "在Tree的nodeDataIterator迭代器上调用remove方法的语义不明确，不允许该操作," +
+                        "若需在迭代时删除树中节点，使用Tree.iterator()");
             }
         }, Node::data);
     }
 
 
     /**
-     * 树的迭代器<br>
+     * 树的迭代器 （<i>fail-fast</i>)<br>
      * BFS 方式，内有 Queue 作为对当前层节点的子节点的缓存
      *
      * @apiNote 该迭代器并非线程安全，当树的节点状态发生改变后，
-     * 非引发变动的实例 ({@link TreeIter} {@link Cursor} 便会失效，
+     * 非引发变动的实例 ({@link TreeIter} 便会失效，
      * 调用这些实例的任何方法都会抛出 {@link ConcurrentModificationException}
      * @implNote 该迭代器的 Queue 中还有作为 fence（栅栏）的标记节点，该节点外界不可见，
      * fence 仅是为了隔离不同父节点的一批节点，遂对外界安全的不可见
@@ -642,10 +691,10 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         TreeIter(Tree<E> tree, List<UnsafeNode<E>> iterStartNodes) {
             this.treeRef = tree;
             this.queue.addAll(iterStartNodes);
-            this.currentParentChildNodesRef = iterStartNodes;
-            // 初始化
-            this.beforeNodeRef = null;
             this.currentParentNodeRef = null; //root no parent
+            this.currentParentChildNodesRef = iterStartNodes;
+            this.beforeNodeRef = null;
+            this.beforeNodeChildNodesRef = null;
             this.modifyCount = tree.modifyCount;
             // root 添加后不必添加Fence，因为root的currentParentChildNodesRef已经有引用了
         }
@@ -718,8 +767,8 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
                 // 当 发现destroy，应当立即抛出异常
 
                 n = queue.poll(); // 若是标记对象，再取一个 , 根据逻辑，一定不会有两个fence连着
-                //noinspection DataFlowIssue
-                if (n.isRemoved()) {
+                if (n == null || isFence(n)) throw new ConcurrentModificationException();
+                if (n.isPruned()) {
                     // 将所有引用丢弃
                     current = null;
                     currentParentChildNodesRef = null;
@@ -774,21 +823,39 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     }
 
     /**
+     * 剪枝
+     * <p>该方法会修改树的节点状态</p>
+     *
+     * @param n 需被剪枝的节点
+     * @see #pruneNodeAndUpdateTreeState(UnsafeNode, UnsafeNode, List, boolean)
+     * @see #pruneNodeAndUpdateTreeState(UnsafeNode, UnsafeNode)
+     */
+    private void pruneNodeAndUpdateTreeState(Node<T> n) {
+        UnsafeNode<T> un = (UnsafeNode<T>) n;
+        if (n.isRoot()) {
+            pruneNodeAndUpdateTreeState(un, null, this.root, true);
+        } else {
+            pruneNodeAndUpdateTreeState(un, un.unsafeGetParentNode());
+        }
+    }
+
+
+    /**
      * 剪枝，从父的子中移除，并且更新树的节点状态值<br>
      * 该方法不会有{@link #pruneNodeAndUpdateTreeState(UnsafeNode, UnsafeNode, List, boolean)} 方法API描述的问题
      * <p>该方法会修改树的节点状态</p>
      *
-     * @param dumpNode   要剪掉的node
+     * @param pruneNode  要剪掉的node
      * @param parentNode 要dump的node的父节点
      * @throws NullPointerException  parentNode is null
      * @throws IllegalStateException parentNode is leaf
      */
-    private void pruneNodeAndUpdateTreeState(UnsafeNode<T> dumpNode, UnsafeNode<T> parentNode) {
+    private void pruneNodeAndUpdateTreeState(UnsafeNode<T> pruneNode, UnsafeNode<T> parentNode) {
         Objects.requireNonNull(parentNode, "given parentNode is null");
         if (parentNode.isLeaf()) {
             throw new IllegalStateException("given parentNode is leaf");
         } else {
-            pruneNodeAndUpdateTreeState(dumpNode, parentNode,
+            pruneNodeAndUpdateTreeState(pruneNode, parentNode,
                     parentNode.unsafeGetChildNode(), true);
         }
     }
@@ -798,14 +865,15 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * 剪枝，从父的子中移除，并且更新树的节点状态值
      * <p>该方法会修改树的节点状态</p>
      *
-     * @param dumpNode                   要剪掉的node
+     * @param pruneNode                  要剪掉的node
      * @param nullableParentNodeRef      要dump的node的父节点（nullable（当为root节点时））
      * @param parentChildNodesListRef    父的子集合
-     * @param ifPossibleDumpEmptyListRef 选项，若为true，则如果可以，当 dumpNode 被丢弃后，
+     * @param ifPossibleDumpEmptyListRef 选项，若为true，则如果可以，当 pruneNode 被丢弃后，
      *                                   被丢弃的node的父的子List为empty时，将该List引用丢弃，
      *                                   （无论如何，该不会丢弃roots所在的List的引用）
+     * @throws IllegalStateException    已被剪枝的节点再次被剪枝
      * @throws NullPointerException     parentChildNodesListRef is null
-     * @throws IllegalStateException    parentChildNodesListRef not found dumpNode ref
+     * @throws IllegalStateException    parentChildNodesListRef not found pruneNode ref
      * @throws IllegalArgumentException given parentChildNodesRef is not from parentNodeRef
      * @apiNote 该方法参数的 nullableParentNodeRef 和 parentChildNodesListRef 是分别给方法的，
      * 遂当该方法的外界持有 parentChildNodesListRef 的引用时，当 parentChildNodesListRef 为empty，
@@ -817,13 +885,16 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      */
     @SuppressWarnings("SameParameterValue")
     private void pruneNodeAndUpdateTreeState(
-            UnsafeNode<T> dumpNode,
+            UnsafeNode<T> pruneNode,
             UnsafeNode<T> nullableParentNodeRef,
             List<UnsafeNode<T>> parentChildNodesListRef,
             boolean ifPossibleDumpEmptyListRef
     ) {
+        if (pruneNode.isPruned()) {
+            throw new IllegalStateException("node is pruned");
+        }
         Objects.requireNonNull(parentChildNodesListRef);
-        if (!parentChildNodesListRef.contains(dumpNode)) {
+        if (!parentChildNodesListRef.contains(pruneNode)) {
             // 若父的子集合中无当前，则直接用异常中断后续逻辑，防止更新树全局变量
             // fix：还有一点，若同一时间持有树的两个迭代器，则第二个迭代器在进行删除操作时
             //   可能 需被删除的节点 已经被删除（因为被第一个迭代器删除的节点可能已存在于
@@ -835,19 +906,19 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         // 使用两个变量记录被剪枝的node上的count和depth，用以更新Tree的count和depth
         final int[] countAndDeepLeafDepth = {0, 0};
         // 从要删除的node bfs 遍历 局部bfs
-        bfs(() -> List.of(dumpNode),
+        bfs(() -> List.of(pruneNode),
                 n -> {
                     countAndDeepLeafDepth[0] = countAndDeepLeafDepth[0] + 1; //count ++
                     // 因为为bfs，所以最后的点一定深度最深，所以无需Math.max比较
                     countAndDeepLeafDepth[1] = n.depth(); // until leaf depth update
                 },
                 FN_ACC_DO_NOTHING,
-                FN_DESTROY_NODE);
+                FN_PRUNE_NODE);
         // 完成后 里面就有 count 和 最深叶子节点的depth了
         this.nodeCount -= countAndDeepLeafDepth[0]; //tree nodeCount 更新
         int deepLeafDepth = countAndDeepLeafDepth[1];
         // 删除自身引用
-        parentChildNodesListRef.remove(dumpNode);
+        parentChildNodesListRef.remove(pruneNode);
         // 将树的变更记录 + 1
         incrementModifyCount();
 
@@ -894,7 +965,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
                 && parentChildNodesListRef != this.root) {
                 // 要获取直接的ChildNodes引用不能用isLeaf判定，因为其会把emptyList忽略
                 // 因为下直接获取ChildNodes引用，遂可能不为null而为empty，这时就不能在nullableChild == null块内更新depth了
-                this.bfs(n -> {
+                this.forEachBfs(n -> {
                     UnsafeNode<T> unsafeN = (UnsafeNode<T>) n;
                     countAndDeepLeafDepth[0] = n.depth();
                     // to do unIsLeaf，因为空集合也会被判定为Leaf，所以应当直接获取其引用
@@ -907,7 +978,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
                 // 否则，仅计算新的depth
             } else {
                 // 因为为bfs，所以最后的点一定深度最深，所以无需Math.max比较
-                this.bfs(n -> countAndDeepLeafDepth[0] = n.depth());
+                this.forEachBfs(n -> countAndDeepLeafDepth[0] = n.depth());
             }
             // 更新树深
             this.depth = countAndDeepLeafDepth[0];
@@ -969,22 +1040,23 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * 递归-DFS<br>
      * 根据给定的函数操作，可表示先序或后序遍历
      *
-     * @param node      树节点
-     * @param fnPreAcc  函数-先序遍历访问
-     * @param fnPostAcc 函数-后序遍历访问
+     * @param node                 树节点
+     * @param fnPreAcc             函数-先序遍历访问
+     * @param fnPostAccIfNotPruned 函数-后序遍历访问
      * @throws NullPointerException 给定的节点为空或函数为空时
      */
     private void dfs(UnsafeNode<T> node,
                      Consumer<? super UnsafeNode<T>> fnPreAcc,
-                     Consumer<? super UnsafeNode<T>> fnPostAcc) {
+                     Consumer<? super UnsafeNode<T>> fnPostAccIfNotPruned) {
         fnPreAcc.accept(node); // 先访问
+        if (node.isPruned()) return; // 若该访问修改了树为删除状态，则后续方法无需再调用
         if (!node.isLeaf()) {
             List<UnsafeNode<T>> cList = node.unsafeGetChildNode();
             for (UnsafeNode<T> child : cList) {
-                dfs(child, fnPreAcc, fnPostAcc);// 递归子
+                dfs(child, fnPreAcc, fnPostAccIfNotPruned);// 递归子
             }
         }
-        fnPostAcc.accept(node); // 后访问
+        fnPostAccIfNotPruned.accept(node); // 后访问
     }
 
     /**
@@ -1003,50 +1075,82 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     /**
      * 非递归-BFS遍历
      *
-     * @param fnGetNodes               树节点提供函数，提供n个树节点，这些节点应是同一深度的，
-     *                                 否则可能会导致一个实体被遍历不止一次
-     * @param fnPreAcc                 函数，一定对node执行
-     * @param fnOnPostChildAddQueueAcc 函数，仅对有子节点的node执行，在被遍历的node的子添加到bfs队列后执行
-     * @param fnPostAcc                函数，一定对node执行
+     * @param fnGetNodes             树节点提供函数，提供n个树节点，这些节点应是同一深度的，
+     *                               否则可能会导致一个实体被遍历不止一次
+     * @param fnPreAcc               函数，一定对node执行
+     * @param fnPostChildAddQueueAcc 函数，仅对有子节点的node执行，在被遍历的node的子添加到bfs队列后执行
+     * @param fnPostAccIfNotPruned   函数，一定对node执行
      * @throws NullPointerException 给定的节点为空或函数为空时
      */
     private void bfs(Supplier<? extends Iterable<UnsafeNode<T>>> fnGetNodes,
                      Consumer<? super UnsafeNode<T>> fnPreAcc,
-                     Consumer<? super UnsafeNode<T>> fnOnPostChildAddQueueAcc,
-                     Consumer<? super UnsafeNode<T>> fnPostAcc) {
+                     Consumer<? super UnsafeNode<T>> fnPostChildAddQueueAcc,
+                     Consumer<? super UnsafeNode<T>> fnPostAccIfNotPruned) {
         Objects.requireNonNull(fnGetNodes, "fnGetNodes is null");
         Objects.requireNonNull(fnPreAcc, "fnPreAcc is null");
-        Objects.requireNonNull(fnPostAcc, "fnPostAcc is null");
-        Objects.requireNonNull(fnOnPostChildAddQueueAcc, "fnOnPostChildAddQueueAcc is null");
+        Objects.requireNonNull(fnPostAccIfNotPruned, "fnPostAccIfNotPruned is null");
+        Objects.requireNonNull(fnPostChildAddQueueAcc, "fnPostChildAddQueueAcc is null");
         Queue<UnsafeNode<T>> queue = new LinkedList<>();
-        fnGetNodes.get().forEach(queue::add);
+        Iterable<UnsafeNode<T>> iter = fnGetNodes.get();
+        for (UnsafeNode<T> node : iter) {
+            queue.add(node);
+        }
         while (!queue.isEmpty()) {
             UnsafeNode<T> current = queue.poll();
             fnPreAcc.accept(current); // pre 处理当前节点
+            if (current.isPruned()) continue; // 若使用完fnPreAcc后为 isPruned 则不将自身子添加到bfs队列
             // 将当前节点的所有子节点加入队列
             if (!current.isLeaf()) {
                 queue.addAll(current.unsafeGetChildNode());
-                fnOnPostChildAddQueueAcc.accept(current);
+                fnPostChildAddQueueAcc.accept(current);
             }
-            fnPostAcc.accept(current); // 最后对current执行
+            fnPostAccIfNotPruned.accept(current); // 最后对current执行
         }
     }
 
     /**
-     * 使用给定函数以BFS方式排序当前树中同属一个父的所有子<br>
+     * 使用给定函数排序当前树中同属一个父的所有子<br>
      * 这会改变树中同属一个父的存储子的List中元素顺序
      * <p>该方法会修改树的节点状态</p>
      *
      * @param fnSort 排序函数
+     * @return this
      */
-    public void sort(Comparator<? super T> fnSort) {
+    public Tree<T> sort(Comparator<? super T> fnSort) {
         Objects.requireNonNull(fnSort, "fnSort is null");
         Comparator<Node<T>> comparator = compNSortFn(fnSort);
         this.root.sort(comparator);
         this.bfs(() -> root, FN_ACC_DO_NOTHING,
+                // 调用该方法时子已经被添加到 队列且一定有子，
+                // 但不会影响sort逻辑，因为仅是同层排序
                 (n) -> n.unsafeGetChildNode().sort(comparator),
                 FN_ACC_DO_NOTHING);
+        // 因为仅排序不会增删树中节点，但确确实实修改了树，遂需要增加修改计数
+        // 需注意，可能排序完后顺序与原本顺序相同，这种情况虽然可以追溯判定
+        // 但这里BFS就不对每次排序判定了，直接认为树被修改，更新incrementModifyCount值
         incrementModifyCount();
+        return this;
+    }
+
+    /**
+     * 使用给定函数剪掉树中 {@code fnTest.test(n) == false} 的节点
+     * <p>若节点被剪掉，则其所有子节点也会从树中被剪掉
+     * <p>该方法会修改树的节点状态</p>
+     *
+     * @param fnTest 函数
+     * @return this
+     */
+    public Tree<T> filter(Predicate<? super Node<T>> fnTest) {
+        // 该方法内无需调用 incrementModifyCount，因为 prune 内会调用之
+        Objects.requireNonNull(fnTest, "fnTest is null");
+        this.bfs(() -> root,
+                // 仅将不符合的删除
+                (un) -> {
+                    boolean test = fnTest.test(un);
+                    if (!test) un.prune();
+                },
+                FN_ACC_DO_NOTHING, FN_ACC_DO_NOTHING);
+        return this;
     }
 
     private void incrementModifyCount() {
@@ -1056,22 +1160,22 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     /**
      * 非递归-BFS遍历
      *
-     * @param fn 函数-访问每个被遍历到的{@link Node}
+     * @param fn 函数-访问每个被遍历到的{@link MutNode}
      * @throws NullPointerException 给定的节点为空或函数为空时
      * @apiNote 函数会访问每个节点，除非清楚在做什么，否则不应该在函数中通过node递归的访问其父或子
      */
-    public void bfs(Consumer<? super Node<T>> fn) {
+    public void forEachBfs(Consumer<? super Node<T>> fn) {
         bfs(() -> root, fn);
     }
 
     /**
      * 递归-DFS先序遍历
      *
-     * @param fn 函数-访问每个被遍历到的{@link Node}
+     * @param fn 函数-访问每个被遍历到的{@link MutNode}
      * @throws NullPointerException 给定的节点为空或函数为空时
      * @apiNote 函数会访问每个节点，除非清楚在做什么，否则不应该在函数中通过node递归的访问其父或子
      */
-    public void dfsPreOrder(Consumer<? super Node<T>> fn) {
+    public void forEachDfsPreOrder(Consumer<? super Node<T>> fn) {
         for (UnsafeNode<T> root : root) {
             dfs(root, fn, FN_ACC_DO_NOTHING);
         }
@@ -1080,11 +1184,11 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     /**
      * 递归-DFS后序遍历
      *
-     * @param fn 函数-访问每个被遍历到的{@link Node}
+     * @param fn 函数-访问每个被遍历到的{@link MutNode}
      * @throws NullPointerException 给定的节点为空或函数为空时
      * @apiNote 函数会访问每个节点，除非清楚在做什么，否则不应该在函数中通过node递归的访问其父或子
      */
-    public void dfsPostOrder(Consumer<? super Node<T>> fn) {
+    public void forEachDfsPostOrder(Consumer<? super Node<T>> fn) {
         for (UnsafeNode<T> root : root) {
             dfs(root, FN_ACC_DO_NOTHING, fn);
         }
@@ -1092,20 +1196,16 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
     // DEF FUNCTION ===========================
 
-
-    // todo 该方法返回的函数Tree不应该一直持有，因为其可能捕获了外界的实体引用
-    //   且无意义，因为后续若要开放向节点添加子，也仅允许一个一个添加
-    //   一个一个添加时可再提供相应函数也可...
-
     /**
      * compose nullable hasChildFn and getChildFn
      */
     private Function<? super T, ? extends Iterable<T>>
     compGetChildFn(Predicate<? super T> nullableFnPreNeedFindChild,
                    Function<? super T, ? extends Iterable<T>> fnGetChild) {
+        // 为 null 的去除掉，不允许Tree中Node的data为null
         return nullableFnPreNeedFindChild == null ?
-                fnGetChild :
-                (e) -> nullableFnPreNeedFindChild.test(e) ? fnGetChild.apply(e) : null;
+                (e) -> e != null ? fnGetChild.apply(e) : null :
+                (e) -> (e != null && nullableFnPreNeedFindChild.test(e)) ? fnGetChild.apply(e) : null;
     }
 
     /**
@@ -1115,7 +1215,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     compNSortFn(Comparator<? super T> sort) {
         return (n1, n2) -> sort.compare(n1.data(), n2.data());
     }
-
+    // DEF FUNCTION ===========================
 
     /**
      * 递归构造树
@@ -1198,7 +1298,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
     /**
      * 递归构造显示树的字符串（从根节点直到叶子节点）<br>
-     * 若树为空树，则返回的字符串仅包含{@code /}<br>
+     * 若树为空树，则返回的字符串仅包含 {@code /}
      * <pre>
      *     {@code
      *     List<Line<Integer>> lines = List.of(
@@ -1248,7 +1348,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * @see #toDisplayStr()
      */
     public String toDisplayStr(int displayDepth,
-                               Function<? super Node<T>, ? extends CharSequence> fnNodeDisplayFmt) {
+                               Function<? super Node<? super T>, ? extends CharSequence> fnNodeDisplayFmt) {
         Objects.requireNonNull(fnNodeDisplayFmt, "fnNodeDisplayFmt is null");
         Err.realIf(displayDepth < -1, IllegalArgumentException::new, "displayDepth < -1");
         if (displayDepth == -1 || isEmpty()) return Const.String.SLASH; // -1 display depth and empty tree display :"/"
@@ -1300,17 +1400,14 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     }
 
 
-    // todo eq he hashCode 方法， 子直接获取List引用判断
-
     /**
-     * 树的节点<br>
+     * 树的节点视图（node view）
+     * <p>视图中没有修改Node及其树的方法，仅可查看Node中属性等
      *
-     * @param <T> 节点载荷类型 {@link Node#data()}
+     * @param <T> 节点数据类型 {@link MutNode#data()}
      * @apiNote 不要使用无法处理循环引用的方式将该类型直接序列化
-     * @see BidirectionalNode
      */
     public interface Node<T> {
-
         /**
          * 当前节点深度（边数计算法）
          *
@@ -1344,22 +1441,11 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         }
 
         /**
-         * 当前节点是否已从树中被删除<br>
-         * 被删除的 {@code Tree.Node} 状态：
-         * <ul>
-         *     <li>{@code isRemoved()} 方法永远返回 {@code true}</li>
-         *     <li>一定无法再访问到 {@code parent} (即使其之前有父节点）</li>
-         *     <li>一定无法再访问到 {@code child} (即使其之前有子节点）</li>
-         *     <li>{@code isLeaf()} 永远返回 {@code true}</li>
-         *     <li>{@code depth()} 永远返回 {@code -1}</li>
-         *     <li>{@code isRoot()} 永远返回 {@code false}</li>
-         * </ul>
+         * 当前节点是否已从树中被剪掉
          *
          * @return true 是，反之则不是
          */
-        default boolean isRemoved() {
-            return depth() == Tree.DESTROY_NODE_DEPTH;
-        }
+        boolean isPruned();
 
         /**
          * 返回当前节点的直接子节点个数
@@ -1370,26 +1456,21 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
         /**
          * 返回当前节点父节点的 {@code Node.data()}<br>
-         * 若没有父节点，则一定返回 {@link Optional#empty()}
+         * 若没有父节点（根节点），抛出异常
          *
-         * @return Optional父节点 {@code Node.data()} | Optional.empty()
+         * @return 父节点数据 node.data()
+         * @throws NoSuchElementException 没有父节点（根节点）
+         * @see #tryParentData()
          */
-        Optional<T> parent();
+        T parentData() throws NoSuchElementException;
 
         /**
-         * 当前节点父节点<br>
-         * 根节点将返回{@link Optional#empty()}
-         * <pre>
-         *     {@code
-         *     if (node.depth() == 0)
-         *         Assert.eq(node.parentNode(), Optional.empty());
-         * </pre>
+         * 返回当前节点父节点的 {@code Node.data()}<br>
+         * 若没有父节点（根节点），返回 {@link Optional#empty()}
          *
-         * @return Optional父节点 | Optional.empty()
-         * @see #depth()
-         * @see #nodeType()
+         * @return Optional {@code Node.data()} | Optional.empty()
          */
-        Optional<Node<T>> parentNode();
+        Optional<T> tryParentData();
 
         /**
          * 返回当前节点直接子节点的 {@code Node.data()}<br>
@@ -1406,14 +1487,40 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
          *     }
          * </pre>
          *
-         * @return 子节点 {@code Node.data()}
+         * @return 直接子节点 {@code Node.data()}
          * @see #isLeaf()
          */
-        List<T> child();
+        List<T> childData();
+
+        /**
+         * 返回当前节点父节点<br>
+         * 若没有父节点（根节点），抛出异常
+         *
+         * @return 父节点
+         * @throws NoSuchElementException 没有父节点（根节点）
+         */
+        Node<T> parentNode() throws NoSuchElementException;
+
+
+        /**
+         * 当前节点父节点<br>
+         * 若没有父节点（根节点），返回 {@link Optional#empty()}
+         * <pre>
+         *     {@code
+         *     if (node.depth() == 0)
+         *         Assert.eq(node.tryParentNode(), Optional.empty());
+         *     }
+         * </pre>
+         *
+         * @return Optional 父节点 | Optional.empty()
+         * @see #depth()
+         */
+        Optional<Node<T>> tryParentNode();
+
 
         /**
          * 返回当前节点的直接子节点<br>
-         * 若当前节点无子节点，调用该方法将返回 {@link Collections#emptyList()}<br>
+         * 若没有子节点，则返回 {@link Collections#emptyList()}<br>
          * 返回的 List 的类型是 {@code unmodifiableList}
          * <pre>
          *     {@code
@@ -1426,38 +1533,92 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
          *     }
          * </pre>
          *
-         * @return 子节点
+         * @return 直接子节点
          * @see #isLeaf()
          */
         List<Node<T>> childNode();
 
+        /**
+         * 将当前引用转为 {@link MutNode}
+         * <pre>{@code
+         * Node<T> node = ...;
+         * if (conditionPruneNode){
+         *     node.mut().prune();
+         * }
+         * if (conditionResetData){
+         *     node.mut().resetData(...);
+         * }
+         * }</pre>
+         *
+         * @return Node（可变的）
+         */
+        default MutNode<T> mut() {
+            return (MutNode<T>) this;
+        }
+    }
+
+
+    /**
+     * 树的节点（mutable node）<br>
+     *
+     * @param <T> 节点数据类型 {@link MutNode#data()}
+     * @apiNote 不要使用无法处理循环引用的方式将该类型直接序列化
+     * @see BidirectionalNode
+     */
+    public interface MutNode<T> extends Node<T> {
+
+        /**
+         * 将当前节点从树上剪掉
+         * <p>进行该操作时，当前节点的所有子节点（包括间接子节点）都会从树中被剪掉
+         * <p>该方法会修改树的节点状态</p>
+         *
+         * @throws IllegalStateException 对一个 {@code isPruned == true} 的节点再次调用
+         * @apiNote 该方法返回 void，因为节点被删除后其便已经在某种意义上表示了“丢弃”，不会再返回该节点引用
+         * @see #tryPrune()
+         */
+        void prune() throws IllegalStateException;
+
+        /**
+         * 将当前节点从树上剪掉，若已被剪掉，则直接返回
+         * <p>进行该操作时，当前节点的所有子节点（包括间接子节点）都会从树中被剪掉
+         * <p>该方法可能会修改树的节点状态</p>
+         *
+         * @apiNote 该方法返回 void，因为节点被删除后其便已经在某种意义上表示了“丢弃”，不会再返回该节点引用
+         * @see #prune()
+         */
+        void tryPrune();
+
+        /**
+         * 将节点的data数据设定为给定实体
+         *
+         * @param data 新的数据
+         * @return this
+         * @throws NullPointerException 给定的实体为 {@code null}
+         */
+        MutNode<T> resetData(T data) throws NullPointerException;
     }
 
     /**
-     * 树的节点（不安全的）<br>
-     * 相对于 {@link Node}，该类型引用可直接调用一系列 {@code unsafe} 方法，
-     * 可直接修改树中节点的各项引用等，使用这些方法可能会造成树的节点状态信息与实际状态不一致，
-     * 除非清楚在做什么，否则不建议使用该类型引用，若需使用该类型引用，直接强转即可
+     * 树的节点（不安全的）
+     * <p>相对于 {@link MutNode}，该类型引用可直接调用一系列 {@code unsafe} 方法，
+     * 可直接修改树中节点的各项引用等，使用这些方法可能会造成树的节点状态信息与实际状态不一致
      *
      * @param <T> 节点载荷类型 {@code node.data()}
      * @apiNote 不要使用无法处理循环引用的方式将该类型直接序列化
      * @see BidirectionalNode
      */
-    public interface UnsafeNode<T> extends Node<T> {
-
+    public interface UnsafeNode<T> extends MutNode<T> {
 
         @Override
         default List<Node<T>> childNode() {
             // unmodifiedList
-            // fixed: 该方法语义与 Cursor的 currentChildNode 语义保持一致
             return isLeaf() ? Collections.emptyList() :
                     Collections.unmodifiableList(this.unsafeGetChildNode());
         }
 
         @Override
-        default List<T> child() {
+        default List<T> childData() {
             // unmodifiedList
-            // fixed: 该方法语义与 Cursor的 currentChild 语义保持一致
             return isLeaf() ? Collections.emptyList() :
                     this.unsafeGetChildNode().stream().map(UnsafeNode::data).toList();
         }
@@ -1476,6 +1637,40 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
             return childNodes == null ? 0 : childNodes.size();
         }
 
+        @Override
+        default boolean isPruned() {
+            return unsafeGetHost() == null;
+        }
+
+        @Override
+        default void prune() throws IllegalStateException {
+            if (isPruned()) throw new IllegalStateException("node is pruned");
+            Tree<T> t = this.unsafeGetHost();
+            t.pruneNodeAndUpdateTreeState(this);
+        }
+
+        @Override
+        default void tryPrune() {
+            if (isPruned()) return;
+            prune();
+        }
+
+        /**
+         * 返回自身宿主树的直接引用， 可能为 {@code null}<br>
+         * 若当前节点 {@code isPruned() == true},
+         * 则一定返回 {@code null}
+         *
+         * @return hostTree | null
+         */
+        Tree<T> unsafeGetHost();
+
+        /**
+         * 修改自身宿主树的直接引用
+         *
+         * @apiNote 使用该方法可能会造成树的节点状态信息与实际状态不一致
+         */
+        void unsafeSetHost(Tree<T> host);
+
         /**
          * 返回父节点的直接引用，可能为 {@code null}<br>
          * 当前节点 {@code isRoot() == true}，
@@ -1490,7 +1685,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
          *
          * @apiNote 使用该方法可能会造成树的节点状态信息与实际状态不一致
          */
-        void unsafeSetParentNode(UnsafeNode<T> parentNode) throws UnsupportedOperationException;
+        void unsafeSetParentNode(UnsafeNode<T> parentNode);
 
         /**
          * 返回子节点列表的直接引用，可能为 {@code null}<br>
@@ -1517,31 +1712,46 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     }
 
     /**
-     * 双向节点，内{@link #parentNode}为对父节点的引用，若父节点不为{@code null}，
-     * 则一定有 {@code node.parentNode().get().childNode().contains(node) == true}
+     * 双向节点，内{@code parentNode}为对父节点的引用，
+     * 作为Root的Node的parentNode一定为 {@code null}
      *
-     * @param <T> 节点载荷
+     * @param <T> 节点数据
      */
-    static final class BidirectionalNode<T> implements Node<T>, UnsafeNode<T> {
-        private Tree<T> treeIndRef;
-        private final T data;
+    static final class BidirectionalNode<T> implements MutNode<T>, UnsafeNode<T> {
+        private Tree<T> host; // 宿主树，node 有其引用
+        private T data;
         private int depth;
         private UnsafeNode<T> parentNode;
         private List<UnsafeNode<T>> childNodes;
 
-        BidirectionalNode(Tree<T> treeIndRef, // 只持有树的间接引用
+        BidirectionalNode(Tree<T> host,
                           int depth,
                           T data,
                           UnsafeNode<T> parentNode) {
-            this.treeIndRef = treeIndRef;
+            this.host = host;
             this.depth = depth;
             this.data = data;
             this.parentNode = parentNode;
         }
 
         @Override
+        public Tree<T> unsafeGetHost() {
+            return host;
+        }
+
+        @Override
+        public void unsafeSetHost(Tree<T> host) {
+            // this can set owner to null
+            this.host = host;
+        }
+
+        // no need impl equals & hashcode
+        // 只有同属一颗树的，且父和子分别相同的才eq
+        // 遂就是 Object.eq & hashcode 的语义
+
+        @Override
         public String toString() {
-            return "BidirectionalNode{" + "data=" + data + ", depth=" + depth + '}';
+            return Stf.f("BidirectionalNode(depth:{}, tree:{}){data: {}}", depth, host, data);
         }
 
         @Override
@@ -1555,13 +1765,30 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         }
 
         @Override
-        public Optional<Node<T>> parentNode() {
+        public MutNode<T> resetData(T data) throws NullPointerException {
+            this.data = Objects.requireNonNull(data, "given data is null");
+            return this;
+        }
+
+        @Override
+        public MutNode<T> parentNode() throws NoSuchElementException {
+            if (parentNode == null) throw new NoSuchElementException("no parent node");
+            return parentNode;
+        }
+
+        @Override
+        public T parentData() throws NoSuchElementException {
+            return parentNode().data();
+        }
+
+        @Override
+        public Optional<Node<T>> tryParentNode() {
             // can't use Opt.of because root.parent is null
             return Optional.ofNullable(parentNode);
         }
 
         @Override
-        public Optional<T> parent() {
+        public Optional<T> tryParentData() {
             return parentNode == null ? Optional.empty() : Optional.of(parentNode.data());
         }
 
@@ -1601,14 +1828,14 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      */
     @Override
     public String toString() {
-        return Stf.f("Tree[rootCount: {}, nodeCount: {}, depth: {}]@{}",
+        return Stf.f("Tree(root:{})[node: {}, depth: {}]@{}",
                 rootCount(), nodeCount, depth, Integer.toHexString(this.hashCode()));
     }
 
     /**
      * 递归构造该Tree的Json形式<br>
      * 该方法主要为了方便将该Tree中各节点关系以Json形式构建字符串并传输，
-     * 遂该方法返回的Json为压缩大小没有换行符及缩进等格式化输出形式<br>
+     * 遂该方法返回的Json为压缩大小没有换行符及缩进等格式化输出形式
      * <pre>
      *     {@code
      *     record Obj(int id, String name) {};
@@ -1660,7 +1887,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     public String toJsonStr(int toJsonDepth,
                             String nodeFieldName,
                             String childArrayFieldName,
-                            Function<? super Node<T>, ? extends CharSequence> fnNode2Json) {
+                            Function<? super Node<? super T>, ? extends CharSequence> fnNode2Json) {
         Objects.requireNonNull(fnNode2Json, "fnNode2Json is null");
         Err.realIf(nodeFieldName == null || nodeFieldName.isBlank(),
                 IllegalArgumentException::new, "given node name is null or blank");
@@ -1734,378 +1961,39 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         sb.append(Const.Char.DELIM_END);
     }
 
-    /**
-     * Tree的游标<br>
-     * <i>fail-fast</i>，非线程安全，状态可变，使用此对象可在树的节点间游走
-     * <p>游标的 {@code move2XXX()} 系列方法表示将游标移动到相应位置，方法返回值为游标自身的引用 {@code this}
-     *
-     * @apiNote 当树的节点状态发生改变后，
-     * 非引发变动的实例 ({@link TreeIter} {@link Cursor} 便会失效，
-     * 调用这些实例的任何方法都会抛出 {@link ConcurrentModificationException}
-     */
-    @Deprecated(forRemoval = true)
-    public static final class Cursor<T> {
-
-        // 不应预先大小 treeDepth，因为可能不会完全走到最后，预先申请无意义
-        private final ArrayDeque<UnsafeNode<T>> backRoute = new ArrayDeque<>();
-        // 树的引用
-        private final Tree<T> treeRef;
-        // 当前节点
-        private UnsafeNode<T> current;
-        // treeModCount，用以快速失败，非我其他修改失败
-        private int modCount;
-
-        public Cursor(Tree<T> treeRef, Node<T> current) {
-            Objects.requireNonNull(treeRef, "treeRef is null");
-            Objects.requireNonNull(current, "currentNode is null");
-            // 判定，若为current为root，则不用找和填充回退栈,否则，则需要找回退栈
-            // 该过程可能无用：因为只会对外提供从root Cur，遂一定没有父
-            // 但该构造宽一些，可允许从非Root Cur，
-            // 但该两个入参，使得参数从外界传递的不可控，可能故意一个树，一个非树的另一个树的Node
-            // 若是Node中持有Tree的引用就不用两个了，而且从Node可以拓展到Remove（因为要更新树状态，所以要持有tree的引用）
-            // 但Node若持有Tree，则在UniNode里也会有循环引用了... 难抉择
-            final UnsafeNode<T> unsafeCurRef = (UnsafeNode<T>) current;
-            if (!unsafeCurRef.isRoot()) {
-                // 没有向上引用，得dfs找，而且Tree.dfsPreOrder不支持回溯，需手动实现
-                backRoute.addAll(treeRef.findNodeAllParentRefReturnStack(unsafeCurRef));
-
-            }
-
-            this.treeRef = treeRef;
-            this.current = unsafeCurRef;
-            this.modCount = treeRef.modifyCount;
-        }
-
-        /**
-         * 一个树时间仅应只有一个可修改树的实体在作业，该方法判断该，若非，则抛出异常
-         */
-        private void assertJustMeModifyTree() {
-            if (this.modCount != treeRef.modifyCount) {
-                throw new ConcurrentModificationException("Tree 已被其他实体修改，当前游标已失效");
-            }
-        }
-
-
-        // ============== MOVE ==============================
-
-        /**
-         * 使游标移动到当前节点 {@link #currentNode()} 的父节点，
-         * 若无法找到当前节点的父节点（比如当前节点为 root（无父），则该方法抛出异常
-         *
-         * @return this
-         * @throws IllegalStateException 找不到当前节点的父节点
-         */
-        public Cursor<T> move2Parent() throws IllegalStateException {
-            assertJustMeModifyTree();
-            if (backRoute.isEmpty()) {
-                throw new IllegalStateException("root node no parent");
-            }
-            this.current = backRoute.pop();
-            return this;
-        }
-
-        /**
-         * 使游标移动到root节点，若当前已经是root节点，则该方法直接返回
-         *
-         * @return this
-         */
-        public Cursor<T> move2Root() {
-            assertJustMeModifyTree();
-            if (backRoute.isEmpty()) {
-                return this;
-            }
-            this.current = this.backRoute.getLast();
-            backRoute.clear();
-            return this;
-        }
-
-        /**
-         * 使游标移动到当前节点 {@link #currentNode()} 给定的索引值表示的直接子节点
-         *
-         * @param idx 索引-子节点位置
-         * @return this
-         * @throws IllegalArgumentException 给定的索引位置找不到子节点
-         */
-        public Cursor<T> move2Child(int idx) throws IllegalArgumentException {
-            assertJustMeModifyTree();
-            if (isOnLeafNode()) {
-                throw new IllegalArgumentException("当前游标指向的节点是叶子节点");
-            }
-            List<UnsafeNode<T>> childNodes = this.current.unsafeGetChildNode();
-            if (childNodes.size() <= idx) {
-                throw new IllegalArgumentException(Stf
-                        .f("给定的子节点索引位置 '{}' 找不到子节点，子节点个数：{}",
-                                idx, childNodes.size()));
-            }
-            // 将当前入栈，将子做当前
-            this.backRoute.push(this.current);
-            this.current = childNodes.get(idx);
-            return this;
-        }
-
-        // ============== MOVE ==============================
-
-        /**
-         * 返回游标指向的当前节点
-         *
-         * @return 游标指向的当前节点
-         */
-        public Node<T> currentNode() {
-            assertJustMeModifyTree();
-            return current;
-        }
-
-        /**
-         * 返回游标指向的当前节点中的数据
-         * <pre>{@code
-         * Cursor<T> cursor = ...;
-         * Assert.eq(cursor.currentNode().data(), cursor.current());
-         * }</pre>
-         *
-         * @return 游标指向的当前节点的数据
-         */
-        public T current() {
-            assertJustMeModifyTree();
-            return current.data();
-        }
-
-        public boolean isOnLeafNode() {
-            assertJustMeModifyTree();
-            return this.current.isLeaf();
-        }
-
-        public boolean isOnRootNode() {
-            assertJustMeModifyTree();
-            return this.current.isRoot();
-        }
-
-        public int depth() {
-            assertJustMeModifyTree();
-            return this.current.depth();
-        }
-
-        public Cursor<T> removeChildNodeIfExists(int index) {
-            assertJustMeModifyTree();
-            if (!isOnLeafNode()) {
-                List<UnsafeNode<T>> cn = this.current.unsafeGetChildNode();
-                if (cn.size() > index) {
-                    this.treeRef.pruneNodeAndUpdateTreeState(cn.get(index), this.current);
-                    this.modCount += 1;
-                }
-            }
-            return this;
-        }
-
-        public Cursor<T> removeAllChildNode() {
-            assertJustMeModifyTree();
-            if (!isOnLeafNode()) {
-                // 不应使用原始的List引用，因为要进行迭代 for
-                List<Node<T>> cn = this.current.childNode();
-                for (Node<T> n : cn) {
-                    this.treeRef.pruneNodeAndUpdateTreeState((UnsafeNode<T>) n, this.current);
-                    this.modCount += 1;
-                }
-            }
-            return this;
-        }
-
-
-        // todo
-        //  method implement removeCurrentAndMoveBack....
-        //       getLine 路由线段
-        //       and test
-        // todo removeCurrentNodeAndMove2Parent 怎么设计？ R??
-        //  ！！！ 每个Tree生成时可以添加Id，然后Tree内有Static的 弱引用缓存 Node可通过Id找到Tree，然后就能删除自己了？，no。。。。
-        //                 没啥用，外界若只持有TreeNode的引用，则Tree可能就没了...，到时候Node的remove就是可能成功？不能这样...
-        //	 ！！！ 或需yes？ 每个树的Id都是一个对象，给Node的都是那个对象的引用，只要那个static的弱引用缓存当Key，也就是
-        //                  Id没有引用时，才会使的value位置的Tree被回收即可，YES！似乎可行
-        //            还有 Node的removed验证，应assert在Node的每个方法前，防止其语义 depth 出现 -1等，
-        //                应用后还需更新Tree的doc上removed的说明...
-        //   ！！！ Tree的Cursor还能够有方法 genLine（路由），可通过 move2路由返回R<Cursor，Err>，快速移动到路由描述的地方
-
-        // todo 可以使用 非 直接引用，而是使用 SupliterGet 的间接引用，
-        //   然后 取消 那两个不同的 Node实现，对父的引用使用间接引用
-//        public Cursor<T> removeCurrentNodeAndMove2Parent(){
-//            assertJustMeModifyTree();
-//            if (isOnRootNode()){
-//                this.treeRef.pruneNodeAndUpdateTreeState(
-//                        this.current, null,
-//                        this.treeRef.root, true
-//                );
-//                this.modCount += 1;
-//                throw
-//            }
-//        }
-
-
-        /**
-         * 返回游标指向的当前节点的直接子节点，返回的List是 UnmodifiedList，
-         * 若当前节点为叶子节点，则返回的List一定为empty
-         * <p>该方法与 {@link Node#childNode()} 语义大致相同
-         *
-         * @return 当前节点的直接子节点
-         */
-        public List<Node<T>> currentChildNode() {
-            assertJustMeModifyTree();
-            if (this.current.isLeaf()) {
-                return Collections.emptyList();
-            }
-            return this.current.childNode();
-        }
-
-        /**
-         * 返回游标指向的当前节点的直接子节点中的数据，返回的List是 UnmodifiedList，
-         * 若当前节点为叶子节点，则返回的List一定为empty
-         * <p>该方法与 {@link Node#child()} 语义大致相同
-         *
-         * @return 当前节点的直接子节点的数据
-         */
-        public List<T> currentChild() {
-            assertJustMeModifyTree();
-            if (this.current.isLeaf()) {
-                return Collections.emptyList();
-            }
-            return this.current.child();
-        }
-
-
-        /**
-         * 返回游标指向的当前节点的直接子节点(带索引)，返回的List是 UnmodifiedList，
-         * 若当前节点为叶子节点，则返回的List一定为empty
-         * <pre>{@code
-         * Cursor<T> cursor = ...;
-         * List<Indexed<Node<T>>> cn = cursor.currentIndexedChildNode();
-         * List<Indexed<T>> c = cursor.currentIndexedChild();
-         * Assert.eq(cn.size(), c.size());
-         * int idx = ...;
-         * Assert.isTrue(cn.get(idx).index() == idx);
-         * Assert.isTrue(cn.get(idx).value().data() == c.get(idx).value());
-         * }</pre>
-         *
-         * @return 当前节点的直接子节点(带索引)
-         */
-        public List<Indexed<Node<T>>> currentIndexedChildNode() {
-            assertJustMeModifyTree();
-            if (this.current.isLeaf()) {
-                return Collections.emptyList();
-            }
-            return Indexed.toIndexedList(this.current.unsafeGetChildNode());
-        }
-
-        /**
-         * 返回游标指向的当前节点的直接子节点中的数据(带索引)，返回的List是 UnmodifiedList，
-         * 若当前节点为叶子节点，则返回的List一定为empty
-         * <pre>{@code
-         * Cursor<T> cursor = ...;
-         * List<Indexed<Node<T>>> cn = cursor.currentIndexedChildNode();
-         * List<Indexed<T>> c = cursor.currentIndexedChild();
-         * Assert.eq(cn.size(), c.size());
-         * int idx = ...;
-         * Assert.isTrue(cn.get(idx).index() == idx);
-         * Assert.isTrue(cn.get(idx).value().data() == c.get(idx).value());
-         * }</pre>
-         *
-         * @return 当前节点的直接子节点的数据(带索引)
-         */
-        public List<Indexed<T>> currentIndexedChild() {
-            assertJustMeModifyTree();
-            if (this.current.isLeaf()) {
-                return Collections.emptyList();
-            }
-            return Indexed.toIndexedStream(this.current.unsafeGetChildNode().stream().map(Node::data)).toList();
-        }
-
-
-    }
 
     /**
-     * 找给定节点从root到其parent的引用栈，弹栈顺序为最近的parent...到root，
-     * 需注意该方法，要么找到了，要么异常，遂当返回的栈为empty栈时，则证明给定的节点就是root其中之一，
-     * 否则必不为empty栈，该方法一定不会返回 {@code null} 引用
+     * 找给定节点从root到其parent的引用栈，弹栈 {@link Deque#poll()} 顺序为最近的parent...到root，
+     * 当返回的栈为 empty 栈时，则证明给定的节点就是root其中之一，
+     * 返回的栈是可写的栈 ArrayDeque
      *
-     * @param curRef 需找一溜父节点的节点
+     * @param node 需找一溜父节点的节点
      * @return 一溜父节点的栈，empty栈证明当前节点为root其一
-     * @throws IllegalStateException 从所有root向下dfs找都没找到，
-     *                               证明节点不在该树上，但因为该方法为Tree的实例方法，遂当该情况发生，
-     *                               即表明：1.curRef被外界持有挺久，被删除了才调该方法找，
-     *                               2. Tree被多个线程持有修改了，cur被删除，且调用该方法寻找的线程刷内存可见了该删除情况，
-     *                               所以才会找不到
+     * @throws IllegalStateException 节点被删除了才调该方法找
      */
-    private Deque<UnsafeNode<T>> findNodeAllParentRefReturnStack(UnsafeNode<T> curRef) {
-        // todo re impl 没有UniNodeType了，遂直接使用向上找即可
-        /*
-        因要从多个root向下dfs，且不会修改树，
-        遂多线程从每个root向下找是安全的，
-        遂该方法可修改为多线程找， 目前先单线程找
-         */
-        int curDepth = curRef.depth();
-        // 若为被删除的标志位，则证明外界持有该引用，但被删除了，或者，
-        // 一个线程删掉了另一个线程调用该方法刷内存可见了
-        if (curDepth == DESTROY_NODE_DEPTH) {
+    private Deque<UnsafeNode<T>> findNodeAllParentRefReturnStack(UnsafeNode<T> node) {
+        if (node.isPruned()) {
             throw new IllegalStateException("node is removed from tree");
         }
+        int curDepth = node.depth();
+        // 若为被删除的标志位，则证明外界持有该引用，但被删除了，或者，
+        // 一个线程删掉了另一个线程调用该方法刷内存可见了
         // 若当前节点深度为0，则证明其为root之一，则其一溜父的栈必为empty，
-        // 为防止外界modify栈，应返回可修改的栈，而不是UnModify的
-        if (curDepth == 0) {
-            return new LinkedList<>();
-        }
         // 容量不用加一，因为当为当前节点深度时，不会加入到stack中，遂最多curDepth 个（索引0 到 curDep - 1)
         Deque<UnsafeNode<T>> dfsTempRouteStack = new ArrayDeque<>(curDepth);
-        for (UnsafeNode<T> rt : this.root) {
-            // 从这个root找
-            // findFlag为true则找到了
-            if (innerDFSFillCurNodeParRefStack(rt, curRef, dfsTempRouteStack)) {
-                // 从这个root找到了，直接返回，其他root不用再找
-                return dfsTempRouteStack;
-            }
-            // 否则，接着下一个root找，清理栈，丢弃所有引用
-            dfsTempRouteStack.clear();
-        }
-        // 最后，没找到，抛异常区分状态
-        throw new IllegalStateException("找不到当前节点的从root到父节点的路径引用栈");
-    }
 
-    /**
-     * 执行 dfs填充栈，栈中应为指定节点从root到其父的引用，
-     * 弹栈顺序就应该是：最近的parent...直到root，
-     * 该方法为dfs递归，调用时参数 {@code dfsMutNode} 应始终为 root<br>
-     * 该方法应仅由 {@link #findNodeAllParentRefReturnStack(UnsafeNode)} 方法调用，
-     * 其他方法不应调用，其他方法可能无法保证该方法的递归参数的正确性
-     *
-     * @param dfsMutNode dfs递归-当前查找引用-从外界调用始终应传递 root的引用
-     * @param curRef     需找到其一堆父节点的节点的引用
-     * @param stack      栈，一直dfs传递到深层
-     * @return true 找到了，反之未找到
-     */
-    private boolean innerDFSFillCurNodeParRefStack(UnsafeNode<T> dfsMutNode,
-                                                   UnsafeNode<T> curRef,
-                                                   Deque<UnsafeNode<T>> stack) {
-        // 同引用，则找到了，栈里已经将一堆父都塞进去了，遂直接将标志位置位true并返回
-        if (dfsMutNode == curRef) {
-            return true;
+        UnsafeNode<T> tempRef = node;
+        while (!tempRef.isRoot()) {
+            UnsafeNode<T> tempParent = tempRef.unsafeGetParentNode();
+            dfsTempRouteStack.addLast(tempParent);
+            tempRef = tempParent;
         }
-        // 当当前深度已经到需找的节点的深度 depth，则立即返回，同层不可能为父
-        if (dfsMutNode.depth() == curRef.depth()) {
-            return false;
-        }
-        List<UnsafeNode<T>> unsafeChild = dfsMutNode.unsafeGetChildNode();
-        if (unsafeChild != null && !unsafeChild.isEmpty()) {
-            // 自己引用传到栈里
-            stack.push(dfsMutNode);
-            for (UnsafeNode<T> cn : unsafeChild) {
-                // fix 忘了判定找到后直接返回了，这里加上，若不判定，则即使找到，每个for都会执行完
-                if (innerDFSFillCurNodeParRefStack(cn, curRef, stack)) {
-                    return true;
-                }
-            }
-            // 先序，走到这里自己的子已经走完了，判定找到没，没找到就弹出自己
-            // 找到了则证明自己是其中一环，就不弹栈，这里不用判定...，因为找到在上个for里就直接return了，傻逼了
-            stack.pop();
-        }
-        return false;
+        return dfsTempRouteStack;
     }
 
     /*
+    node.genLine（路由）-- Tree.node(路由) -> Node 通过路由可以找到一个确定的Node（只要Tree没变（包括排序））
+    MutNode<T> resetParentNode(Node<T> parent) throws IllegalArgumentException; 包括不同树间的node的reset
     后续若有机会或需求，应修改Node对外界返回的承载ChildNodes的List为可变的，
     且对List的修改，Tree应该立即可见，这也许并不容易，因为即使使用下List将存储ChildNodes的List
     代理，使之能够响应对应add或remove的操作，但List吐出去的 Iterator 呢？吐出去的Stream呢？
