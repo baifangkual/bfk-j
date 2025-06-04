@@ -388,11 +388,10 @@ public interface VFS extends Closeable {
      * 给定的实体必须是文件夹，若给定的 {@code treeRoot} 实体间有直接或间接的父子关系，则无法构成树，将抛出异常<br>
      * 若给定的 {@code treeRoot} 列表为 empty，则返回 empty 树
      *
-     * @param treeRoot     虚拟文件实体（文件夹），作为树根
-     * @param depth        要构造的目录树的深度（包含）（边数计数法（给定的file所在深度为0，直接子级为1，以此类推）
-     * @param fnSort       函数-同一层的实体排序方式
-     * @param fnFilter     函数-需要出现在树中的实体条件，
-     * @param treeNodeType tree中节点的类型（双向节点可以获取其父）
+     * @param treeRoot 虚拟文件实体（文件夹），作为树根
+     * @param depth    要构造的目录树的深度（包含）（边数计数法（给定的file所在深度为0，直接子级为1，以此类推）
+     * @param fnSort   函数-同一层的实体排序方式
+     * @param fnFilter 函数-需要出现在树中的实体条件，
      * @return 目录树
      * @throws NullPointerException     给定的引用类型参数为 {@code null}
      * @throws IllegalArgumentException 给定的 depth 小于 0
@@ -401,8 +400,7 @@ public interface VFS extends Closeable {
     default Tree<VFile> tree(List<VFile> treeRoot,
                              int depth,
                              Comparator<? super VFile> fnSort,
-                             Predicate<? super VFile> fnFilter,
-                             Tree.NodeType treeNodeType) {
+                             Predicate<? super VFile> fnFilter) {
         Objects.requireNonNull(treeRoot, "given treeRoot is null");
         /*
         不应检查 treeRoot是否为empty，可能调用者是 vfs.tree(vFile.lsDir())
@@ -411,7 +409,6 @@ public interface VFS extends Closeable {
          */
         Objects.requireNonNull(fnSort, "given fnSort is null");
         Objects.requireNonNull(fnFilter, "given fnFilter is null");
-        Objects.requireNonNull(treeNodeType, "given treeNodeType is null");
         Err.realIf(depth < 0, IllegalArgumentException::new, "depth less than 0");
         // 后续可能添加，遂不应用 isSimpleFile判断，而是应该 !isDir
         for (VFile f : treeRoot) {
@@ -420,7 +417,6 @@ public interface VFS extends Closeable {
         }
         return Tree.ofRoots(treeRoot, // root one
                 this::lsDir, // lsDir get child
-                treeNodeType,
                 fnSort, // sort
                 ArrayList::new,
                 // fnNeedFindChild, just dir need find child,
@@ -443,14 +439,13 @@ public interface VFS extends Closeable {
      * @throws NullPointerException     给定的引用类型参数为 {@code null}
      * @throws IllegalArgumentException 给定的 depth 小于 0
      * @throws IllegalArgumentException 给定的 file 不是文件夹
-     * @see #tree(List, int, Comparator, Predicate, Tree.NodeType)
+     * @see #tree(List, int, Comparator, Predicate)
      */
     default Tree<VFile> tree(List<VFile> treeRoot,
                              int depth) {
         return tree(treeRoot, depth,
                 VFSDefaults.F_COMP_DIR_FIRST_THEN_NAME_SORT,
-                (v) -> true,
-                Tree.NodeType.unidirectionalNode); // 单向
+                (v) -> true);
     }
 
     /**

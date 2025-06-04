@@ -42,7 +42,6 @@ public class TreeTest {
                         .filter(l -> l.begin().equals(num))
                         .map(Line::end)
                         .toList(),
-                Tree.NodeType.bidirectionalNode,
                 LinkedList::new
         );
         Tree<Integer> integerTree1 = Tree.ofLines(lines).unwrap();
@@ -70,7 +69,7 @@ public class TreeTest {
                         .filter(l -> l.begin().equals(num))
                         .map(Line::end)
                         .toList(),
-                Tree.NodeType.bidirectionalNode,
+
                 (i1, i2) -> Integer.compare(i1, i2),
                 LinkedList::new,
                 e -> true,
@@ -202,7 +201,6 @@ public class TreeTest {
                         .filter(l -> l.begin().equals(num))
                         .map(Line::end)
                         .toList(),
-                Tree.NodeType.bidirectionalNode,
                 LinkedList::new
         );
         Tree<Integer> integerTree1 = Tree.ofLines(lines).unwrap();
@@ -798,11 +796,11 @@ public class TreeTest {
         Assertions.assertNotNull(nc);
         Tree.Node<String> finalNc = nc; // lambda final
         Assertions.assertThrows(R.UnwrapException.class, () -> {
-            Tree<String> tree2 = Tree.ofNodes(List.of(root, finalNc), Tree.NodeType.bidirectionalNode).unwrap();
+            Tree<String> tree2 = Tree.ofNodes(List.of(root, finalNc)).unwrap();
         });
 
         Assertions.assertDoesNotThrow(() -> {
-            Tree<String> tree3 = Tree.ofNodes(List.of(finalNc), Tree.NodeType.bidirectionalNode).unwrap();
+            Tree<String> tree3 = Tree.ofNodes(List.of(finalNc)).unwrap();
             //System.out.println(tree3.displayString());
             //System.out.println(tree3);
         });
@@ -940,7 +938,7 @@ public class TreeTest {
         Tree<Integer> tree1 = Tree.ofNodes(spTree.stream()
                 .map(Tree::root)
                 .flatMap(List::stream)
-                .toList(), tree.nodeType()).unwrap();
+                .toList()).unwrap();
         //System.out.println(Stf.f("tree: {}", tree));
         //spTree.forEach(t -> System.out.println(Stf.f("sp_tree: {}", t)));
         //System.out.println(Stf.f("tree1: {}", tree1));
@@ -1012,7 +1010,6 @@ public class TreeTest {
         );
         Tree<Obj> treeObj = Tree.ofRoots(List.of(objs.get(0)),
                 getChild::get,
-                Tree.NodeType.unidirectionalNode,
                 Comparator.comparingInt(Obj::id),
                 ArrayList::new,
                 getChild::containsKey,
@@ -1074,7 +1071,7 @@ public class TreeTest {
 
     @Test
     public void test25() {
-        R<Tree<Object>> treeR = Tree.ofNodes(List.of(), Tree.NodeType.bidirectionalNode);
+        R<Tree<Object>> treeR = Tree.ofNodes(List.of());
         Assertions.assertDoesNotThrow(() -> {
             Tree<Object> tr = treeR.unwrap();
             Assertions.assertTrue(tr.isEmpty());
@@ -1084,13 +1081,39 @@ public class TreeTest {
     @Test
     public void test26() {
         Assertions.assertThrows(R.UnwrapException.class, () -> {
-            R<Tree<Object>> treeR = Tree.ofNodes(null, Tree.NodeType.bidirectionalNode);
+            R<Tree<Object>> treeR = Tree.ofNodes(null);
             treeR.unwrap();
         });
-        Assertions.assertThrows(R.UnwrapException.class, () -> {
-            R<Tree<Object>> treeR = Tree.ofNodes(List.of(), null);
+        Assertions.assertDoesNotThrow(() -> {
+            R<Tree<Object>> treeR = Tree.ofNodes(List.of());
             treeR.unwrap();
         });
+    }
+
+    @Test
+    public void testTreeCursor(){
+
+        int nodeCountOrigin = 100;
+        int nodeCountBound = 150;
+        int rootCountOrigin = 1;
+        int rootCountBound = 2;
+        Tup2<List<Line<Integer>>, Tree<Integer>> lineAndTree = genBigTree(
+                nodeCountOrigin, nodeCountBound, rootCountOrigin, rootCountBound);
+        Tree<Integer> tree = lineAndTree.r();
+        System.out.println(tree.toDisplayStr());
+        Tree.Node<Integer> deepNode = null;
+        int depth = -1;
+        for (Tree.Node<Integer> n : tree) {
+            if (n.depth() > depth){
+                depth = n.depth();
+                deepNode = n;
+            }
+        }
+        Tree.Cursor<Integer> leafCur = new Tree.Cursor<>(tree, deepNode);
+
+
+
+
     }
 
 }

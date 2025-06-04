@@ -14,7 +14,8 @@ import java.util.stream.StreamSupport;
  * <b>带索引的包装</b>
  * <p>该实例包装一个对象T（可以为 {@code null})，返回 {@code Indexed<T>}，
  * 以表示对象的索引值。该实例不可变
- * <p>类型 {@link Tup2} 无法表达该类型效果，因为其无法表达空指针引用 {@code null}
+ * <p>类型 {@link Tup2} 无法表达该类型效果，因为其无法表达空指针引用 {@code null}，
+ * 虽说可以使用 {@code Tup2<Integer, Optional<T>>} 但会多创建一个Optional，且第一泛型的引用可能会拆装箱
  * <pre>{@code
  * Stream<T> s = Stream.of(...);
  * Stream<Indexed<T>> is = Indexed.toIndexedStream(s);
