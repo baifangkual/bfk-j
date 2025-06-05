@@ -9,8 +9,8 @@ import java.util.function.Supplier;
 
 /**
  * <b>异常校验工具类</b><br>
- * 该类方法签名中 {@code realxxx} 表示直接返回相应的异常（运行时或预检异常），
- * {@code panicxxx} 表示返回以{@link PanicException}类型包装的相应异常<br>
+ * 该类方法签名中 {@code realIf} 表示直接返回相应的异常（运行时或预检异常），
+ * {@code panicIf} 表示返回以{@link PanicException}类型包装的相应异常<br>
  * 使用说明：
  * <pre>
  *     {@code
@@ -284,9 +284,9 @@ public final class Err {
      *        try {
      *             byte[] bytes = Files.readAllBytes(Path.of("/xxx"));
      *         } catch (IOException e) {
-     *             throw e;
+     *             throw PanicException.wrap(e);
      *         }
-     *         // 上述语句同下，区别是不会因为 e 为预检异常而需要向当前方法作用域内显式声明throws
+     *         // 上述语句同下
      *         byte[] bytes = Err.getOrThrowPanic(() -> Files.readAllBytes(Path.of("/xxx")));
      *     }
      * </pre>
@@ -304,9 +304,9 @@ public final class Err {
      *        try {
      *             Files.writeString(Path.of("/xxx"), "xxx");
      *         } catch (IOException e) {
-     *             throw e;
+     *             throw PanicException.wrap(e);
      *         }
-     *         //上述语句同下，区别是不会因为 e 为预检异常而需要向当前方法作用域内显式声明throws
+     *         //上述语句同下
      *         Err.runOrThrowPanic(() -> Files.writeString(Path.of("/xxx"), "xxx"));
      *     }
      * </pre>

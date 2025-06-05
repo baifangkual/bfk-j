@@ -9,7 +9,7 @@ import java.util.Objects;
  * <pre>
  *  {@code
  *  String str = Stf.f("a,b,{},d,e,\\{},\\\\g", "c");
- *  Assert.eq("a,b,c,d,e,{},\\g", str);
+ *  Assert.eq("a,b,c,d,e,\{},\\g", str);
  *  Assert.throwE(NullPointException.class, ()-> Stf.f(null, "c"));
  *  }
  * </pre>
