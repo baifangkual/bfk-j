@@ -85,6 +85,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     /**
      * 返回所有根节点<br>
      * 返回的 List 的类型是 {@code unmodifiableList}
+     * <p>该方法返回的List仅为Tree当前root的快照，Tree的后续对Root的变更对该方法返回的List不可见
      *
      * @return 根节点
      */
@@ -146,6 +147,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
     /**
      * 砍掉所有根节点，将所有根节点的直接子节点作为新的根节点
+     * <p>该方法可以理解为将所有 {@code node.depth() == 1} 的节点作为新的树根
      * <p>如果树是空树，则什么都不做，否则，树的所有剩余节点的 {@code depth} 减一，
      * 可以想象的，如果持续进行该操作，树最终会成为空树
      * <p>该方法会修改树的节点状态</p>
@@ -1115,6 +1117,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      *
      * @param fnSort 排序函数
      * @return this
+     * @throws NullPointerException 函数为 {@code null}
      */
     public Tree<T> sort(Comparator<? super T> fnSort) {
         Objects.requireNonNull(fnSort, "fnSort is null");
@@ -1134,24 +1137,81 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
     /**
      * 使用给定函数剪掉树中 {@code fnTest.test(n) == false} 的节点
-     * <p>若节点被剪掉，则其所有子节点也会从树中被剪掉
+     * <p>若节点被剪掉，则其所有子节点也会从树中被剪掉，
+     * 即有：若Tree中所有root都不满足 {@code fnTest.test(n) == true}，该树将成为空树
      * <p>该方法会修改树的节点状态</p>
+     * <pre>{@code
+     * Tree<T> tree = ...;
+     * // tree before:
+     * // │/
+     * // │└─ 9
+     * // │   ├─ 2
+     * // │   │  └─ 3
+     * // │   │     └─ 4
+     * // │   └─ 5
+     * // │      └─ 6
+     * tree = tree.filter(n -> n.depth < 1); // (root.depth == 0)
+     * // tree after:
+     * // │/
+     * // │└─ 9
+     * }</pre>
      *
      * @param fnTest 函数
      * @return this
+     * @throws NullPointerException 函数为 {@code null}
      */
     public Tree<T> filter(Predicate<? super Node<T>> fnTest) {
         // 该方法内无需调用 incrementModifyCount，因为 prune 内会调用之
         Objects.requireNonNull(fnTest, "fnTest is null");
-        this.bfs(() -> root,
-                // 仅将不符合的删除
-                (un) -> {
-                    boolean test = fnTest.test(un);
-                    if (!test) un.prune();
-                },
-                FN_ACC_DO_NOTHING, FN_ACC_DO_NOTHING);
+        // 仅将不符合的删除
+        this.forEachBfs((un) -> {
+            boolean test = fnTest.test(un);
+            if (!test) un.mut().prune();
+        });
         return this;
     }
+
+    /**
+     * 使用给定函数寻找树中符合 {@code fnTest.test(n) == true} 的节点
+     * <p>返回的List可读可写，若返回List为 {@code empty}，则证明没有任何一个符合 {@code fnTest.test(n) == true}</p>
+     *
+     * @param fnTest 函数
+     * @return List(find)
+     * @throws NullPointerException 函数为 {@code null}
+     */
+    public List<Node<T>> find(Predicate<? super Node<T>> fnTest) {
+        Objects.requireNonNull(fnTest, "fnTest is null");
+        List<Node<T>> r = new ArrayList<>();
+        this.forEachBfs((un) -> {
+            if (fnTest.test(un)) {
+                r.add(un);
+            }
+        });
+        return r;
+    }
+
+    /**
+     * 使用给定函数寻找树中任意一个符合 {@code fnTest.test(n) == true} 的节点
+     * <p>相较于 {@link #find(Predicate)}，该方法找到任意一个后立即返回。
+     * 通常从root开始向叶子节点寻找
+     *
+     * @param fnTest 函数
+     * @return Optional(Node) | Optional.empty()
+     * @throws NullPointerException 函数为 {@code null}
+     */
+    public Optional<Node<T>> findAny(Predicate<? super Node<T>> fnTest) {
+        Objects.requireNonNull(fnTest, "fnTest is null");
+        Queue<UnsafeNode<T>> queue = new LinkedList<>(root);
+        while (!queue.isEmpty()) {
+            UnsafeNode<T> current = queue.poll();
+            if (fnTest.test(current)) {
+                return Optional.of(current);
+            }
+            if (!current.isLeaf()) queue.addAll(current.unsafeGetChildNode());
+        }
+        return Optional.empty();
+    }
+
 
     private void incrementModifyCount() {
         this.modifyCount += 1;
@@ -1159,9 +1219,11 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
     /**
      * 非递归-BFS遍历
+     * <p>该遍历时允许通过调用 {@code node.mut().prune()} 剪掉当前节点，
+     * 被剪掉的节点其子节点不会被遍历到
      *
      * @param fn 函数-访问每个被遍历到的{@link MutNode}
-     * @throws NullPointerException 给定的节点为空或函数为空时
+     * @throws NullPointerException 函数为 {@code null}
      * @apiNote 函数会访问每个节点，除非清楚在做什么，否则不应该在函数中通过node递归的访问其父或子
      */
     public void forEachBfs(Consumer<? super Node<T>> fn) {
@@ -1170,9 +1232,10 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
     /**
      * 递归-DFS先序遍历
+     * <p>遍历时不允许剪掉节点
      *
      * @param fn 函数-访问每个被遍历到的{@link MutNode}
-     * @throws NullPointerException 给定的节点为空或函数为空时
+     * @throws NullPointerException 函数为 {@code null}
      * @apiNote 函数会访问每个节点，除非清楚在做什么，否则不应该在函数中通过node递归的访问其父或子
      */
     public void forEachDfsPreOrder(Consumer<? super Node<T>> fn) {
@@ -1183,9 +1246,10 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
     /**
      * 递归-DFS后序遍历
+     * <p>遍历时不允许剪掉节点
      *
      * @param fn 函数-访问每个被遍历到的{@link MutNode}
-     * @throws NullPointerException 给定的节点为空或函数为空时
+     * @throws NullPointerException 函数为 {@code null}
      * @apiNote 函数会访问每个节点，除非清楚在做什么，否则不应该在函数中通过node递归的访问其父或子
      */
     public void forEachDfsPostOrder(Consumer<? super Node<T>> fn) {

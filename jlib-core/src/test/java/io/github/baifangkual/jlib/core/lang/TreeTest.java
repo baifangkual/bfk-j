@@ -1168,5 +1168,20 @@ public class TreeTest {
         }
     }
 
+    @Test
+    public void test30() {
+        Tree<Integer> tree = genBigTree(100, 200, 1, 10)
+                .r()
+                .filter(n -> n.depth() < 2);
+        Optional<Tree.Node<Integer>> opt = tree.findAny(n -> n.depth() >= 2);
+        Assertions.assertTrue(opt.isEmpty());
+        Tree<Integer> tr2 = genBigTree(100, 200, 1, 10)
+                .r()
+                .filter(n -> n.data() > 1000 * 10);
+        List<Tree.Node<Integer>> nd = tr2.find(n -> n.data() > 1000 * 10);
+        Assertions.assertEquals(nd.size(), tr2.nodeCount());
+
+    }
+
 
 }
