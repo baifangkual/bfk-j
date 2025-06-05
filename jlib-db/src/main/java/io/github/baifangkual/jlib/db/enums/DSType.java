@@ -1,6 +1,11 @@
 package io.github.baifangkual.jlib.db.enums;
+
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
+import io.github.baifangkual.jlib.db.impl.ds.MysqlDataSource;
+import io.github.baifangkual.jlib.db.impl.ds.OracleDataSource;
+import io.github.baifangkual.jlib.db.impl.ds.PostgresqlDataSource;
+import io.github.baifangkual.jlib.db.impl.ds.SqlServerDataSource;
 import io.github.baifangkual.jlib.db.trait.DataSource;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -39,16 +44,6 @@ public enum DSType {
             "com.microsoft.sqlserver.jdbc.SQLServerDriver",
             List.of(URLType.JDBC_DEFAULT),
             SqlServerDataSource::new
-    ),
-    HIVE(
-            "org.apache.hive.jdbc.HiveDriver",
-            List.of(URLType.JDBC_DEFAULT),
-            HiveDataSource::new
-    ),
-    KINGBASE(
-            "com.kingbase8.Driver",
-            List.of(URLType.JDBC_DEFAULT),
-            KingBaseDataSource::new
     ),
     ;
     //... other impl

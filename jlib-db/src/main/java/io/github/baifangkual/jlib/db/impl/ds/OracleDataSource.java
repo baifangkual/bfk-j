@@ -4,9 +4,13 @@ import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.constants.ConnConfOptions;
 import io.github.baifangkual.jlib.db.entities.Table;
+import io.github.baifangkual.jlib.db.enums.URLType;
+import io.github.baifangkual.jlib.db.exception.DropTableFailException;
 import io.github.baifangkual.jlib.db.exception.IllegalConnectionConfigException;
 import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
+import io.github.baifangkual.jlib.db.trait.DataSource;
 import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
+import io.github.baifangkual.jlib.db.trait.JustSchemaDomainMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.utils.DefaultMetaSupport;
 import io.github.baifangkual.jlib.db.utils.ResultSetConverter;
@@ -35,7 +39,7 @@ import java.util.Optional;
 public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
 
 
-    public OracleDataSource(Config connConfig) {
+    public OracleDataSource(Cfg connConfig) {
         super(connConfig);
     }
 
@@ -44,7 +48,7 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
     private static final String W_THIN = ":thin:@";
 
     @Override
-    protected String buildingJdbcUrl(Config config) {
+    protected String buildingJdbcUrl(Cfg config) {
         /*
          * 对两种方式的 支持 sid 和 servername，这两种方式的路径形式不同
          * jdbc:oracle:thin:@localhost:1521:sid
@@ -52,8 +56,8 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
          * ORA-12504, TNS:listener was not given the SERVICE_NAME in CONNECT_DATA
          */
         final String prefix = urlPrefix(config); // jdbc:oracle
-        final String db = config.unsafeGet(ConnConfOptions.DB); // oracle 的 db 不参与 sql，仅连接使用
-        final URLType ut = config.unsafeGet(ConnConfOptions.JDBC_URL_TYPE);
+        final String db = config.get(ConnConfOptions.DB); // oracle 的 db 不参与 sql，仅连接使用
+        final URLType ut = config.get(ConnConfOptions.JDBC_URL_TYPE);
         final String app = switch (ut) {
             case JDBC_ORACLE_SERVICE_NAME -> S_SLASH;
             case JDBC_ORACLE_SID -> S_COLON;
@@ -62,9 +66,9 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
         return new StringBuilder()
                 .append(prefix)
                 .append(W_THIN)
-                .append(config.unsafeGet(ConnConfOptions.HOST))
+                .append(config.get(ConnConfOptions.HOST))
                 .append(S_COLON)
-                .append(config.unsafeGet(ConnConfOptions.PORT))
+                .append(config.get(ConnConfOptions.PORT))
                 .append(app)
                 .append(db).toString();
     }
@@ -72,10 +76,10 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
     private static final int DEFAULT_ORACLE_PORT = 1521;
 
     @Override
-    protected void preCheckConfig(Config config) {
+    protected void preCheckConfig(Cfg config) {
         // 当用户未给定 URLType 则 使用 servername形式,
         // 当使用 JDBC_DEFAULT 时则转为 JDBC_ORACLE_SERVICE_NAME
-        Optional<URLType> ut = config.get(ConnConfOptions.JDBC_URL_TYPE);
+        Optional<URLType> ut = config.tryGet(ConnConfOptions.JDBC_URL_TYPE);
         if (ut.isPresent()) {
             config.resetIf(ut.get() == URLType.JDBC_DEFAULT,
                     ConnConfOptions.JDBC_URL_TYPE, URLType.JDBC_ORACLE_SERVICE_NAME);
@@ -83,22 +87,22 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
             config.reset(ConnConfOptions.JDBC_URL_TYPE, URLType.JDBC_ORACLE_SERVICE_NAME);
         }
         // 当用户未给定 PORT 则使用oracle 默认端口 1521
-        config.resetIf(config.get(ConnConfOptions.PORT).isEmpty(),
+        config.resetIf(config.tryGet(ConnConfOptions.PORT).isEmpty(),
                 ConnConfOptions.PORT, DEFAULT_ORACLE_PORT);
     }
 
     @Override
-    protected void throwOnConnConfigIllegal(Config config) throws IllegalConnectionConfigException {
-        if (config.get(ConnConfOptions.DB).isEmpty()) {
+    protected void throwOnConnConfigIllegal(Cfg config) throws IllegalConnectionConfigException {
+        if (config.tryGet(ConnConfOptions.DB).isEmpty()) {
             throw new IllegalConnectionConfigException("未配置服务名或SID");
         }
-        if (config.get(ConnConfOptions.USER).isEmpty()) {
+        if (config.tryGet(ConnConfOptions.USER).isEmpty()) {
             throw new IllegalConnectionConfigException("未配置用户名");
         }
     }
 
     @Override
-    protected void postCheckConfig(Config config) {
+    protected void postCheckConfig(Cfg config) {
 
         /*
          throwOnConnConfigIllegal 在该方法之前已经执行，其会检查user 配置与否，遂该处一定不为null
@@ -129,8 +133,8 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
         去掉双引号等试了试，发现都为 invalid table，即明确：oracle中"'"符号不应使用
         遂因为 ”“ 的存在 描述表名 和 schema 名称时，最好都加上该符号
          */
-        String lowSchema = config.get(ConnConfOptions.SCHEMA)
-                .orElse(config.unsafeGet(ConnConfOptions.USER));
+        String lowSchema = config.tryGet(ConnConfOptions.SCHEMA)
+                .orElse(config.get(ConnConfOptions.USER));
         // 如果用户未设置 schema ，则将用户名大写，然后转为 schema存储
         // 无论如何 schema 转为 大写
         String upperCaseSchema = lowSchema.toUpperCase();
@@ -196,7 +200,7 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
             long betweenLeft = ((pageNo - 1) * pageSize) + 1;
             long betweenRight = pageNo * pageSize;
             String fullTableName = SqlSlices.safeAdd(null, schema, table, SqlSlices.DS_MASK);
-            return STF.f(PAGE_QUERY_TEMPLATE, rowNumColName, fullTableName, rowNumColName, betweenLeft, betweenRight);
+            return Stf.f(PAGE_QUERY_TEMPLATE, rowNumColName, fullTableName, rowNumColName, betweenLeft, betweenRight);
         }
 
         /**
@@ -265,9 +269,9 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
          */
         @Override
         public void delTable(DataSource dataSource, String tb) {
-            String schema = dataSource.getConfig().unsafeGet(ConnConfOptions.SCHEMA);
+            String schema = dataSource.getConfig().get(ConnConfOptions.SCHEMA);
             String dropSlice = SqlSlices.safeAdd(null, schema, tb, SqlSlices.DS_MASK);
-            String dropTableIfExistsSql = STF.f(DROP_TABLE_TEMPLATE, dropSlice);
+            String dropTableIfExistsSql = Stf.f(DROP_TABLE_TEMPLATE, dropSlice);
             try (Connection conn = dataSource.getConnection();
                  Statement stmt = conn.createStatement()
             ) {

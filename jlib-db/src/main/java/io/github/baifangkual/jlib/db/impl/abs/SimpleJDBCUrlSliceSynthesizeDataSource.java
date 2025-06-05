@@ -72,11 +72,10 @@ public abstract class SimpleJDBCUrlSliceSynthesizeDataSource extends DefaultJDBC
             // to do fix me 这里的逻辑为了解耦可用默认枚举.name映射或交由下层，不应该在此定义
             prefix = switch (t) {
                 case SQL_SERVER -> "sqlserver";
-                case HIVE -> "hive2";
                 case MYSQL -> "mysql";
                 case ORACLE -> "oracle";
                 case POSTGRESQL -> "postgresql";
-                case KINGBASE -> "kingbase8";
+                //noinspection UnnecessaryDefault
                 default -> throw new IllegalStateException("Unexpected value: " + t);
             };
         }

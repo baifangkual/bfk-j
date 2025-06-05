@@ -8,6 +8,7 @@ import io.github.baifangkual.jlib.db.exception.IllegalConnectionConfigException;
 import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
 import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
+import io.github.baifangkual.jlib.db.trait.SchemaDomainMetaProvider;
 import io.github.baifangkual.jlib.db.utils.DefaultMetaSupport;
 import io.github.baifangkual.jlib.db.utils.ResultSetConverter;
 import io.github.baifangkual.jlib.db.utils.SqlSlices;
@@ -33,26 +34,26 @@ public class PostgresqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource
     // todo dep 这个设定并没有什么卵用?
     private static final String PROP_SCHEMA_KEY = "currentSchema";
 
-    public PostgresqlDataSource(Config connConfig) {
+    public PostgresqlDataSource(Cfg connConfig) {
         super(connConfig);
     }
 
     @Override
-    protected void preCheckConfig(Config config) {
+    protected void preCheckConfig(Cfg config) {
         /*
         用户或可将Schema信息放置在other中，这里将改变Config,
         目前的逻辑是一旦在other中设定currentSchema，则复写Config中直接的Schema设置
          */
-        config.get(ConnConfOptions.JDBC_PARAMS_OTHER)
+        config.tryGet(ConnConfOptions.JDBC_PARAMS_OTHER)
                 .filter(o -> o.containsKey(PROP_SCHEMA_KEY))
                 .map(o -> o.get(PROP_SCHEMA_KEY))
                 .ifPresent(schema -> config.resetIfNotNull(ConnConfOptions.SCHEMA, schema));
     }
 
     @Override
-    protected void throwOnConnConfigIllegal(Config config) throws IllegalConnectionConfigException {
+    protected void throwOnConnConfigIllegal(Cfg config) throws IllegalConnectionConfigException {
         /* 因为DataSource设定在表的上一级，所以Config中必须要有Schema信息 */
-        config.get(ConnConfOptions.SCHEMA)
+        config.tryGet(ConnConfOptions.SCHEMA)
                 .filter(schema -> !schema.isBlank())
                 .orElseThrow(() -> new IllegalConnectionConfigException("psql not found schema"));
     }
@@ -82,7 +83,7 @@ public class PostgresqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource
         @Override
         public Table.Rows tableData(Connection conn, String db, String schema, String table,
                                     Map<String, String> other, Long pageNo, Long pageSize) throws Exception {
-            String sql = STF.f(SELECT_TABLE_TEMPLATE,
+            String sql = Stf.f(SELECT_TABLE_TEMPLATE,
                     SqlSlices.safeAdd(db, null, table, SqlSlices.DS_MASK),
                     pageSize, (pageNo - 1) * pageSize);
             try (Statement stmt = conn.createStatement();

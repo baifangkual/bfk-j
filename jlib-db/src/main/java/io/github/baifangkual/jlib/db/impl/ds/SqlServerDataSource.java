@@ -8,6 +8,7 @@ import io.github.baifangkual.jlib.db.exception.IllegalConnectionConfigException;
 import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
 import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
+import io.github.baifangkual.jlib.db.trait.SchemaDomainMetaProvider;
 import io.github.baifangkual.jlib.db.utils.DefaultMetaSupport;
 import io.github.baifangkual.jlib.db.utils.ResultSetConverter;
 import io.github.baifangkual.jlib.db.utils.SqlSlices;
@@ -41,13 +42,13 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
     private final static String DEFAULT_ENCRYPT = "false";
     private final static String DB_ON_P = "database";
 
-    public SqlServerDataSource(Config connConfig) {
+    public SqlServerDataSource(Cfg connConfig) {
         super(connConfig);
     }
 
     @Override
-    protected void preCheckConfig(Config config) {
-        Map<String, String> other = config.get(ConnConfOptions.JDBC_PARAMS_OTHER).orElse(Map.of());
+    protected void preCheckConfig(Cfg config) {
+        Map<String, String> other = config.tryGet(ConnConfOptions.JDBC_PARAMS_OTHER).orElse(Map.of());
         Map<String, String> newO = new HashMap<>(other);
         // trustServerCertificate encrypt...
         if (!newO.containsKey(TRUST_SERVER_CERTIFICATE)) {
@@ -65,16 +66,16 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
     }
 
     @Override
-    protected String buildingJdbcUrl(Config config) {
+    protected String buildingJdbcUrl(Cfg config) {
         String url = super.buildingJdbcUrl(config);
         String msUrl = url.substring(0, url.lastIndexOf("/"));
-        String dbName = config.unsafeGet(ConnConfOptions.DB);
-        return STF.f("{};{}={}", msUrl, DB_ON_P, dbName);
+        String dbName = config.get(ConnConfOptions.DB);
+        return Stf.f("{};{}={}", msUrl, DB_ON_P, dbName);
     }
 
 
     @Override
-    protected void throwOnConnConfigIllegal(Config config) throws IllegalConnectionConfigException {
+    protected void throwOnConnConfigIllegal(Cfg config) throws IllegalConnectionConfigException {
 
     }
 
@@ -109,7 +110,7 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
         public Table.Rows tableData(Connection conn, String db, String schema, String table,
                                     Map<String, String> other,
                                     Long pageNo, Long pageSize) throws Exception {
-            String sql = STF.f(QUERY_P,
+            String sql = Stf.f(QUERY_P,
                     SqlSlices.safeAdd(db, schema, table, SqlSlices.DS_MASK),
                     (pageNo - 1) * pageSize,
                     pageSize);

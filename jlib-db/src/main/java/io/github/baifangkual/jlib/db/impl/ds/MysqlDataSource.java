@@ -29,15 +29,15 @@ public class MysqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
 
     private static final MetaProvider META_PROVIDER = new MetaProviderImpl();
 
-    public MysqlDataSource(Config connConfig) {
+    public MysqlDataSource(Cfg connConfig) {
         super(connConfig);
     }
 
     @Override
-    protected void throwOnConnConfigIllegal(Config config) throws IllegalConnectionConfigException {
-        if (config.get(ConnConfOptions.USER).isEmpty()) {
+    protected void throwOnConnConfigIllegal(Cfg config) throws IllegalConnectionConfigException {
+        if (config.tryGet(ConnConfOptions.USER).isEmpty()) {
             throw new IllegalConnectionConfigException("mysql username is empty");
-        } else if (config.get(ConnConfOptions.PASSWD).isEmpty()) {
+        } else if (config.tryGet(ConnConfOptions.PASSWD).isEmpty()) {
             throw new IllegalConnectionConfigException("mysql password is empty");
         }
     }
@@ -72,7 +72,7 @@ public class MysqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
                                     Map<String, String> other,
                                     Long pageNo, Long pageSize) throws SQLException {
             // limit 为 要多少行，即pageSize，offset 为 pageNo
-            String sql = STF.f(SELECT_TABLE_TEMPLATE,
+            String sql = Stf.f(SELECT_TABLE_TEMPLATE,
                     SqlSlices.safeAdd(db, null, table, SqlSlices.D_MASK),
                     pageSize, (pageNo - 1) * pageSize);
             try (Statement stmt = conn.createStatement();
