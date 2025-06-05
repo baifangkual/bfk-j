@@ -1539,6 +1539,16 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         List<Node<T>> childNode();
 
         /**
+         * 返回当前节点到根节点的所有节点集合（不包括当前节点）
+         * <p>索引从 0...list.size()-1 分别为 直接parent...间接parent...root，
+         * 即若List为 {@code empty}，则证明当前节点 {@code node.isRoot() == true}，
+         * 返回的List为 unmodifiedList
+         *
+         * @return unmodifiedList
+         */
+        List<Node<T>> path2Root();
+
+        /**
          * 将当前引用转为 {@link MutNode}
          * <pre>{@code
          * Node<T> node = ...;
@@ -1653,6 +1663,13 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         default void tryPrune() {
             if (isPruned()) return;
             prune();
+        }
+
+        @Override
+        default List<Node<T>> path2Root() {
+            if (isPruned()) throw new IllegalStateException("node is pruned");
+            Tree<T> host = unsafeGetHost();
+            return host.findNodeAllParentRef(this);
         }
 
         /**
@@ -1963,15 +1980,15 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
 
     /**
-     * 找给定节点从root到其parent的引用栈，弹栈 {@link Deque#poll()} 顺序为最近的parent...到root，
+     * 找给定节点从root到其parent的引用栈，顺序为最近的parent...到root，
      * 当返回的栈为 empty 栈时，则证明给定的节点就是root其中之一，
-     * 返回的栈是可写的栈 ArrayDeque
+     * 返回 unmodifiedList
      *
      * @param node 需找一溜父节点的节点
      * @return 一溜父节点的栈，empty栈证明当前节点为root其一
      * @throws IllegalStateException 节点被删除了才调该方法找
      */
-    private Deque<UnsafeNode<T>> findNodeAllParentRefReturnStack(UnsafeNode<T> node) {
+    private List<Node<T>> findNodeAllParentRef(UnsafeNode<T> node) {
         if (node.isPruned()) {
             throw new IllegalStateException("node is removed from tree");
         }
@@ -1980,15 +1997,15 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
         // 一个线程删掉了另一个线程调用该方法刷内存可见了
         // 若当前节点深度为0，则证明其为root之一，则其一溜父的栈必为empty，
         // 容量不用加一，因为当为当前节点深度时，不会加入到stack中，遂最多curDepth 个（索引0 到 curDep - 1)
-        Deque<UnsafeNode<T>> dfsTempRouteStack = new ArrayDeque<>(curDepth);
-
+        List<Node<T>> dfsTempRouteStack = new ArrayList<>(curDepth);
         UnsafeNode<T> tempRef = node;
         while (!tempRef.isRoot()) {
             UnsafeNode<T> tempParent = tempRef.unsafeGetParentNode();
-            dfsTempRouteStack.addLast(tempParent);
+            dfsTempRouteStack.add(tempParent);
             tempRef = tempParent;
         }
-        return dfsTempRouteStack;
+        // unmodifiedList warp
+        return dfsTempRouteStack.isEmpty() ? Collections.emptyList() : Collections.unmodifiableList(dfsTempRouteStack);
     }
 
     /*
