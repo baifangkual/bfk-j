@@ -1348,7 +1348,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      * @see #toDisplayStr()
      */
     public String toDisplayStr(int displayDepth,
-                               Function<? super Node<? super T>, ? extends CharSequence> fnNodeDisplayFmt) {
+                               Function<? super Node<T>, ? extends CharSequence> fnNodeDisplayFmt) {
         Objects.requireNonNull(fnNodeDisplayFmt, "fnNodeDisplayFmt is null");
         Err.realIf(displayDepth < -1, IllegalArgumentException::new, "displayDepth < -1");
         if (displayDepth == -1 || isEmpty()) return Const.String.SLASH; // -1 display depth and empty tree display :"/"
@@ -1904,7 +1904,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
     public String toJsonStr(int toJsonDepth,
                             String nodeFieldName,
                             String childArrayFieldName,
-                            Function<? super Node<? super T>, ? extends CharSequence> fnNode2Json) {
+                            Function<? super Node<T>, ? extends CharSequence> fnNode2Json) {
         Objects.requireNonNull(fnNode2Json, "fnNode2Json is null");
         Err.realIf(nodeFieldName == null || nodeFieldName.isBlank(),
                 IllegalArgumentException::new, "given node name is null or blank");

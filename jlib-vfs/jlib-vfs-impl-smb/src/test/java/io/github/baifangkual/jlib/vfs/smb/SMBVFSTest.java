@@ -1,5 +1,14 @@
 package io.github.baifangkual.jlib.vfs.smb;
 
+import io.github.baifangkual.jlib.core.conf.Cfg;
+import io.github.baifangkual.jlib.core.lang.Tree;
+import io.github.baifangkual.jlib.core.util.Stf;
+import io.github.baifangkual.jlib.vfs.*;
+import io.github.baifangkual.jlib.vfs.smb.conf.SMBCfgOptions;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
 /**
  * @author baifangkual
  * @since 2024/8/29
@@ -13,7 +22,7 @@ public class SMBVFSTest {
 //        smbCfg.set(SMBCfgOptions.host, "bfk-pi5.local");
 //        smbCfg.set(SMBCfgOptions.user, "baifangkual");
 //        smbCfg.set(SMBCfgOptions.passwd, "");
-//        smbCfg.set(SMBCfgOptions.share, "");
+//        smbCfg.set(SMBCfgOptions.share, "/rhardisk2tib");
 //
 //        try (VFS vfs = VFSFactory.of(VFSType.smb).orElseThrow().build(smbCfg)) {
 //            VFile root = vfs.root().toFile().orElseThrow();
