@@ -5,11 +5,11 @@
 
     <groupId>io.github.baifangkual</groupId>
     <artifactId>bfk-j</artifactId>
-    <version>0.0.6</version>
+    <version>0.0.7</version>
     <packaging>pom</packaging>
 
     <name>bfk-j</name>
-    <description>bfk java root project</description>
+    <description>bfk java project</description>
     <url>https://github.com/baifangkual/bfk-j</url>
     <scm>
         <connection>scm:git:git://github.com/baifangkual/bfk-j.git</connection>
@@ -31,8 +31,9 @@
     </developers>
 
     <modules>
-        <module>mod-core</module>
-        <module>mod-vfs</module>
+        <module>jlib-core</module>
+        <module>jlib-vfs</module>
+        <module>jlib-db</module>
     </modules>
 
     <properties>
@@ -81,7 +82,7 @@
             <!--            </dependency>-->
             <dependency>
                 <groupId>io.github.baifangkual</groupId>
-                <artifactId>mod-core</artifactId>
+                <artifactId>jlib-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

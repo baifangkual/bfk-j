@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.baifangkual</groupId>
+        <artifactId>bfk-j</artifactId>
+        <version>0.0.7</version>
+    </parent>
+
+    <artifactId>jlib-vfs</artifactId>
+    <name>jlib-vfs</name>
+    <packaging>pom</packaging>
+
+    <description>jlib-vfs 虚拟文件系统模块</description>
+    <url>https://github.com/baifangkual/bfk-j</url>
+    <scm>
+        <connection>scm:git:git://github.com/baifangkual/bfk-j.git</connection>
+        <developerConnection>scm:git:ssh://github.com/baifangkual/bfk-j.git</developerConnection>
+        <url>https://github.com/baifangkual/bfk-j</url>
+    </scm>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <name>bfk</name>
+            <email>baifangkuai@live.com</email>
+            <organizationUrl>https://github.com/baifangkual</organizationUrl>
+        </developer>
+    </developers>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- dep version -->
+        <reversion.apache-common-net>3.11.1</reversion.apache-common-net>
+        <reversion.minio>8.5.12</reversion.minio>
+        <reversion.smbj>0.14.0</reversion.smbj>
+    </properties>
+
+    <modules>
+        <module>jlib-vfs-api</module>
+        <module>jlib-vfs-impl-ftp</module>
+        <module>jlib-vfs-impl-smb</module>
+        <module>jlib-vfs-impl-minio</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.github.baifangkual</groupId>
+                <artifactId>jlib-vfs-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.auto.service</groupId>
+                <artifactId>auto-service</artifactId>
+                <version>${reversion.auto-service}</version>
+                <scope>provided</scope>
+            </dependency>
+            <!-- dep ftp https://commons.apache.org/proper/commons-net/ -->
+            <dependency>
+                <groupId>commons-net</groupId>
+                <artifactId>commons-net</artifactId>
+                <version>${reversion.apache-common-net}</version>
+            </dependency>
+            <!-- dep minio https://min.io/docs/minio/linux/developers/minio-drivers.html#java-sdk -->
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${reversion.minio}</version>
+            </dependency>
+            <!-- dep smb smb2/3 sup https://github.com/hierynomus/smbj -->
+            <dependency>
+                <groupId>com.hierynomus</groupId>
+                <artifactId>smbj</artifactId>
+                <version>${reversion.smbj}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <!-- central-publish 插件配置 -->
+            <!-- 若不需推送至中央仓库，则不配置该插件 -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+            </plugin>
+            <!-- GPG签名配置 -->
+            <!-- 若不需签名，则不配置该插件 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

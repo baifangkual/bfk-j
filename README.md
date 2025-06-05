@@ -1,7 +1,7 @@
 # bfk-j 项目说明
 
-总结工作中写过的java代码并提取部分可重用的代码
-，将部分工作过程中一些java代码存放到该项目模块中,
+总结工作中写过的 java 代码并提取部分可重用的代码
+，将部分工作过程中一些 java 代码存放到该项目模块中,
 可供后续使用。部分测试代码也将在该项目下测试。
 
 ## 设计约束
@@ -24,12 +24,12 @@
 ## 模块简述
 
 * bfk-j 最顶层的模块、父模块，控制各模块间依赖及版本等
-    * mod-core 包含最常用的、核心的可复用代码，涵盖配置类、容器对象、工具类等
-    * mod-vfs 包含虚拟文件系统相关代码
-        * mod-vfs-api 包含虚拟文件系统api接口等相关代码
-        * mod-vfs-impl-ftp 包含对ftp的实现（依赖apache-commons-net）
-        * mod-vfs-impl-smb 包含对smb的实现（依赖smbj）
-        * mod-vfs-impl-minio 包含对minio的实现（依赖minio）
+    * jlib-core 包含最常用的、核心的可复用代码，涵盖配置类、容器对象、工具类等
+    * jlib-vfs 包含虚拟文件系统相关代码
+        * jlib-vfs-api 包含虚拟文件系统api接口等相关代码
+        * jlib-vfs-impl-ftp 包含对ftp的实现（依赖apache-commons-net）
+        * jlib-vfs-impl-smb 包含对smb的实现（依赖smbj）
+        * jlib-vfs-impl-minio 包含对minio的实现（依赖minio）
 
 ## 使用
 
@@ -45,26 +45,26 @@
     <!-- 核心模块 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
-        <artifactId>mod-core</artifactId>
-        <version>0.0.6</version>
+        <artifactId>jlib-core</artifactId>
+        <version>0.0.7</version>
     </dependency>
     <!-- ftp 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
-        <artifactId>mod-vfs-impl-ftp</artifactId>
-        <version>0.0.6</version>
+        <artifactId>jlib-vfs-impl-ftp</artifactId>
+        <version>0.0.7</version>
     </dependency>
     <!-- smb 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
-        <artifactId>mod-vfs-impl-smb</artifactId>
-        <version>0.0.6</version>
+        <artifactId>jlib-vfs-impl-smb</artifactId>
+        <version>0.0.7</version>
     </dependency>
     <!-- minio 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
-        <artifactId>mod-vfs-impl-minio</artifactId>
-        <version>0.0.6</version>
+        <artifactId>jlib-vfs-impl-minio</artifactId>
+        <version>0.0.7</version>
     </dependency>
 </dependencies>
 ```
