@@ -1,10 +1,10 @@
 package io.github.baifangkual.jlib.core.conf;
 
-import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.core.lang.Tup2;
 import io.github.baifangkual.jlib.core.mark.Iter;
 import io.github.baifangkual.jlib.core.panic.Err;
 import io.github.baifangkual.jlib.core.ref.TypeRef;
+import io.github.baifangkual.jlib.core.util.Stf;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -91,6 +91,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
 
     /**
      * 给定一个map，以该map为基础创建配置类，允许该map有值或为empty
+     * <p>该方法仅读取给定的map，不会持有该map的引用</p>
      *
      * @param map Map实现类
      * @return 新配置类

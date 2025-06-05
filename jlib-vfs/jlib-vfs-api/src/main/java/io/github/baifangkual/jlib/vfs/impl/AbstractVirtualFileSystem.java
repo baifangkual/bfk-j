@@ -31,7 +31,7 @@ public abstract class AbstractVirtualFileSystem implements VFS {
             throw new IllegalVFSBuildParamsException("given VFS cfg is null");
         }
         // 对cfg内map做新的map，使内外cfg无关联，当然，map内部更深的引用还是同一个
-        final Cfg ocp = Cfg.ofMap(new HashMap<>(cfg.toReadonlyMap()));
+        final Cfg ocp = Cfg.ofMap(cfg.toReadonlyMap());
         postCfgCopy(ocp);
         this.readonlyCfg = ocp.toReadonly();
         postReadonlyCfgBind(this.readonlyCfg);
