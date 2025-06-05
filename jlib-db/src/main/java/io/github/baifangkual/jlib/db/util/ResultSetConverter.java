@@ -1,12 +1,12 @@
-package io.github.baifangkual.jlib.db.utils;
+package io.github.baifangkual.jlib.db.util;
 
 import io.github.baifangkual.jlib.core.func.Fn2;
 import io.github.baifangkual.jlib.core.lang.Tup2;
-import io.github.baifangkual.jlib.db.entities.Table;
+import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.ResultSetMappingFailException;
 import io.github.baifangkual.jlib.db.exception.ResultSetRowMappingFailException;
-import io.github.baifangkual.jlib.db.function.ResultSetMapping;
-import io.github.baifangkual.jlib.db.function.ResultSetRowMapping;
+import io.github.baifangkual.jlib.db.func.ResultSetMapping;
+import io.github.baifangkual.jlib.db.func.ResultSetRowMapping;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;

@@ -1,4 +1,4 @@
-package io.github.baifangkual.jlib.db.enums;
+package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
@@ -6,7 +6,6 @@ import io.github.baifangkual.jlib.db.impl.ds.MysqlDataSource;
 import io.github.baifangkual.jlib.db.impl.ds.OracleDataSource;
 import io.github.baifangkual.jlib.db.impl.ds.PostgresqlDataSource;
 import io.github.baifangkual.jlib.db.impl.ds.SqlServerDataSource;
-import io.github.baifangkual.jlib.db.trait.DataSource;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -20,7 +19,7 @@ import java.util.function.Function;
  */
 @Getter
 @RequiredArgsConstructor
-public enum DSType {
+public enum DBType {
 
     MYSQL(
             "com.mysql.cj.jdbc.Driver",
@@ -50,11 +49,11 @@ public enum DSType {
 
     static {
         // static check
-        for (DSType t : DSType.values()) {
+        for (DBType t : DBType.values()) {
             if (t.driver == null
                 || t.supportUrlTypes == null
                 || t.datasourceConstructor == null)
-                throw new IllegalStateException(Stf.f("未定义数据库 {} 的 {} 信息", t, DSType.class.getName()));
+                throw new IllegalStateException(Stf.f("未定义数据库 {} 的 {} 信息", t, DBType.class.getName()));
         }
     }
 
@@ -67,9 +66,9 @@ public enum DSType {
      */
     private final List<URLType> supportUrlTypes;
     /**
-     * 数据源 {@link DataSource} 构造函数引用
+     * 数据源 {@link DBC} 构造函数引用
      */
-    private final Function<Cfg, DataSource> datasourceConstructor;
+    private final Function<Cfg, DBC> datasourceConstructor;
 
 
     // use

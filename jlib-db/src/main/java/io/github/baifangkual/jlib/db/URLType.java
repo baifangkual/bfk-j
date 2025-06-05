@@ -1,4 +1,4 @@
-package io.github.baifangkual.jlib.db.enums;
+package io.github.baifangkual.jlib.db;
 
 import lombok.RequiredArgsConstructor;
 

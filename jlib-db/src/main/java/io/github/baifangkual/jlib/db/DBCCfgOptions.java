@@ -1,9 +1,7 @@
-package io.github.baifangkual.jlib.db.constants;
+package io.github.baifangkual.jlib.db;
 
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
-import io.github.baifangkual.jlib.db.enums.DSType;
-import io.github.baifangkual.jlib.db.enums.URLType;
 
 import java.util.Map;
 
@@ -11,10 +9,29 @@ import java.util.Map;
  * @author baifangkual
  * create time 2024/7/12
  */
-public class ConnConfOptions {
-    private ConnConfOptions() {
+public class DBCCfgOptions {
+    private DBCCfgOptions() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
+    public static final Cfg.Option<Long> PAGE_NO = Cfg.Option.of("pageNo")
+            .longType()
+            .defaultValue(1L)
+            .description("分页参数-页码")
+            .build();
+    public static final Cfg.Option<Long> PAGE_SIZE = Cfg.Option.of("pageSize")
+            .longType()
+            .defaultValue(100L)
+            .description("分页参数-页大小")
+            .build();
+    public static final Cfg.Option<Cfg> CONN_POOL_CONFIG = Cfg.Option.of("conn.pool.Cfg")
+            .defaultValue(Cfg.readonlyEmpty())
+            .description("连接池的配置对象")
+            .build();
+    public static final Cfg.Option<Integer> CONN_POOL_MAX_SIZE = Cfg.Option.of("conn.pool.Cfg.maxSize")
+            .defaultValue(5)
+            .description("连接池默认最大连接对象数量")
+            .build();
+
 
     public static final Cfg.Option<String> USER = Cfg.Option.of("jdbc.auth.user")
             .stringType() // 没有默认行为“root”， 因为不是所有数据库默认user都是root
@@ -24,8 +41,8 @@ public class ConnConfOptions {
             .stringType()
             .description("数据库登陆凭证")
             .build();
-    public static final Cfg.Option<DSType> DS_TYPE = Cfg.Option.of("jdbc.datasource.type")
-            .type(DSType.class)
+    public static final Cfg.Option<DBType> DS_TYPE = Cfg.Option.of("jdbc.datasource.type")
+            .type(DBType.class)
             .description("数据源类型")
             .build();
     public static final Cfg.Option<URLType> JDBC_URL_TYPE = Cfg.Option.of("jdbc.url.type")

@@ -7,9 +7,9 @@
 //import com.btrc.datacenter.common.datasource.enums.URLType;
 //import com.btrc.datacenter.common.datasource.trait.DataSource;
 //import com.btrc.datacenter.common.datasource.trait.MetaProvider;
-//import com.btrc.datacenter.common.datasource.utils.DataSourceCreators;
-//import com.btrc.datacenter.common.datasource.utils.DefaultMetaSupport;
-//import com.btrc.datacenter.common.datasource.utils.PropertiesMapConverter;
+//import com.btrc.datacenter.common.datasource.util.DataSourceCreators;
+//import com.btrc.datacenter.common.datasource.util.DefaultMetaSupport;
+//import com.btrc.datacenter.common.datasource.util.PropertiesMapConverter;
 //import org.junit.jupiter.api.Test;
 //
 //import java.sql.*;

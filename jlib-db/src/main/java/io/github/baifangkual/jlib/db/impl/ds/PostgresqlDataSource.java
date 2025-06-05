@@ -2,18 +2,15 @@ package io.github.baifangkual.jlib.db.impl.ds;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.constants.ConnConfOptions;
-import io.github.baifangkual.jlib.db.entities.Table;
-import io.github.baifangkual.jlib.db.exception.IllegalConnectionConfigException;
+import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.Table;
+import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
-import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
-import io.github.baifangkual.jlib.db.trait.MetaProvider;
+import io.github.baifangkual.jlib.db.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.SchemaDomainMetaProvider;
-import io.github.baifangkual.jlib.db.utils.DefaultMetaSupport;
-import io.github.baifangkual.jlib.db.utils.ResultSetConverter;
-import io.github.baifangkual.jlib.db.utils.SqlSlices;
-
-import static io.github.baifangkual.jlib.db.utils.DefaultMetaSupport.*;
+import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
+import io.github.baifangkual.jlib.db.util.ResultSetConverter;
+import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -39,27 +36,27 @@ public class PostgresqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource
     }
 
     @Override
-    protected void preCheckConfig(Cfg config) {
+    protected void preCheckCfg(Cfg cfg) {
         /*
         用户或可将Schema信息放置在other中，这里将改变Config,
         目前的逻辑是一旦在other中设定currentSchema，则复写Config中直接的Schema设置
          */
-        config.tryGet(ConnConfOptions.JDBC_PARAMS_OTHER)
+        cfg.tryGet(DBCCfgOptions.JDBC_PARAMS_OTHER)
                 .filter(o -> o.containsKey(PROP_SCHEMA_KEY))
                 .map(o -> o.get(PROP_SCHEMA_KEY))
-                .ifPresent(schema -> config.resetIfNotNull(ConnConfOptions.SCHEMA, schema));
+                .ifPresent(schema -> cfg.resetIfNotNull(DBCCfgOptions.SCHEMA, schema));
     }
 
     @Override
-    protected void throwOnConnConfigIllegal(Cfg config) throws IllegalConnectionConfigException {
+    protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
         /* 因为DataSource设定在表的上一级，所以Config中必须要有Schema信息 */
-        config.tryGet(ConnConfOptions.SCHEMA)
+        cfg.tryGet(DBCCfgOptions.SCHEMA)
                 .filter(schema -> !schema.isBlank())
-                .orElseThrow(() -> new IllegalConnectionConfigException("psql not found schema"));
+                .orElseThrow(() -> new IllegalDBCCfgException("psql not found schema"));
     }
 
     @Override
-    public MetaProvider getMetaProvider() {
+    public MetaProvider metaProvider() {
         return META_PROVIDER;
     }
 

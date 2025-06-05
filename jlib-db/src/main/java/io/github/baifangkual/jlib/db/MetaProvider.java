@@ -1,8 +1,6 @@
-package io.github.baifangkual.jlib.db.trait;
+package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
-import io.github.baifangkual.jlib.db.constants.ConnConfOptions;
-import io.github.baifangkual.jlib.db.entities.Table;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
 
 import java.sql.Connection;
@@ -15,7 +13,7 @@ import java.util.List;
  * 接收conn对象，根据给定参数返回所需数据源的元数据等<br>
  * 所有类型实现仅描述行为，不应存储状态或可变状态<br>
  * 该不负责关闭从外侧传递的入参{@link Connection}，仅获取部分数据，即该类型当中描述的是获取某种类型数据库的元数据的逻辑<br>
- * 一种类型数据库{@link DataSource}默认行为对应一种类型的{@link MetaProvider}<br>
+ * 一种类型数据库{@link DBC}默认行为对应一种类型的{@link MetaProvider}<br>
  * 示例：
  * <pre>
  *      {@code
@@ -28,7 +26,7 @@ import java.util.List;
  *      }
  * </pre>
  * 重复数据库有默认行为，其他数据库应实现别处<br>
- * 该对象应当仅有实现对某db的部分数据的输出要求，该应为无状态对象或不可变对象，应为无参构造，以便{@link DataSource}对象可方便共享引用该<br>
+ * 该对象应当仅有实现对某db的部分数据的输出要求，该应为无状态对象或不可变对象，应为无参构造，以便{@link DBC}对象可方便共享引用该<br>
  */
 
 public interface MetaProvider {
@@ -50,9 +48,9 @@ public interface MetaProvider {
     /* 要求不得返回整表，因为数据量太大，遂应当在外侧就拦截PageNo和PageSize为null情况，下层不必if适配*/
     Table.Rows tableData(Connection conn, Cfg config, String table, Long pageNo, Long pageSize);
 
-    default List<Table.Meta> tablesMeta(DataSource dataSource) {
-        try (Connection conn = dataSource.getConnection()) {
-            return tablesMeta(conn, dataSource.getConfig());
+    default List<Table.Meta> tablesMeta(DBC dataSource) {
+        try (Connection conn = dataSource.getConn()) {
+            return tablesMeta(conn, dataSource.cfg());
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }
@@ -60,13 +58,13 @@ public interface MetaProvider {
 
     default List<Table.Meta> tablesMeta(Connection conn, String db, String schema) {
         return tablesMeta(conn, Cfg.newCfg()
-                .setIfNotNull(ConnConfOptions.DB, db)
-                .setIfNotNull(ConnConfOptions.SCHEMA, schema));
+                .setIfNotNull(DBCCfgOptions.DB, db)
+                .setIfNotNull(DBCCfgOptions.SCHEMA, schema));
     }
 
-    default List<Table.ColumnMeta> columnsMeta(DataSource dataSource, String table) {
-        try (Connection conn = dataSource.getConnection()) {
-            return columnsMeta(conn, dataSource.getConfig(), table);
+    default List<Table.ColumnMeta> columnsMeta(DBC dataSource, String table) {
+        try (Connection conn = dataSource.getConn()) {
+            return columnsMeta(conn, dataSource.cfg(), table);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }
@@ -74,13 +72,13 @@ public interface MetaProvider {
 
     default List<Table.ColumnMeta> columnsMeta(Connection conn, String db, String schema, String table) {
         return columnsMeta(conn, Cfg.newCfg()
-                .setIfNotNull(ConnConfOptions.DB, db)
-                .setIfNotNull(ConnConfOptions.SCHEMA, schema), table);
+                .setIfNotNull(DBCCfgOptions.DB, db)
+                .setIfNotNull(DBCCfgOptions.SCHEMA, schema), table);
     }
 
-    default Table.Rows tableData(DataSource dataSource, String table, Long pageNo, Long pageSize) {
-        try (Connection conn = dataSource.getConnection()) {
-            return tableData(conn, dataSource.getConfig(), table, pageNo, pageSize);
+    default Table.Rows tableData(DBC dataSource, String table, Long pageNo, Long pageSize) {
+        try (Connection conn = dataSource.getConn()) {
+            return tableData(conn, dataSource.cfg(), table, pageNo, pageSize);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }
@@ -91,31 +89,8 @@ public interface MetaProvider {
                                  String table,
                                  Long pageNo, Long pageSize) {
         return tableData(conn, Cfg.newCfg()
-                .setIfNotNull(ConnConfOptions.DB, db)
-                .setIfNotNull(ConnConfOptions.SCHEMA, schema), table, pageNo, pageSize);
-    }
-
-    /**
-     * 该方法确定保证结果一致性，删除数据库中某表
-     *
-     * @param conn 连接对象
-     * @param db   数据库
-     * @param tb   表名称
-     * @throws Exception 当删除过程出现异常
-     */
-    // todo fixme 通用性 schema nullable
-    void delTable(Connection conn, String db, String tb) throws Exception;
-
-
-    default void delTable(DataSource dataSource, String tb) {
-        // todo fixme 通用性schema nullable处理
-        String db = dataSource.getConfig().get(ConnConfOptions.DB);
-        try (Connection conn = dataSource.getConnection()) {
-            delTable(conn, db, tb);
-        } catch (Exception e) {
-            // todo fixme 异常处理，非该异常
-            throw new IllegalArgumentException(e);
-        }
+                .setIfNotNull(DBCCfgOptions.DB, db)
+                .setIfNotNull(DBCCfgOptions.SCHEMA, schema), table, pageNo, pageSize);
     }
 
 

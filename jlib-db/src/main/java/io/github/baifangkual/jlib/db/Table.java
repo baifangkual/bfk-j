@@ -1,4 +1,4 @@
-package io.github.baifangkual.jlib.db.entities;
+package io.github.baifangkual.jlib.db;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

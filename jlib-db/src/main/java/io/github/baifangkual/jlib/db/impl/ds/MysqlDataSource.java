@@ -2,17 +2,15 @@ package io.github.baifangkual.jlib.db.impl.ds;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.constants.ConnConfOptions;
-import io.github.baifangkual.jlib.db.entities.Table;
-import io.github.baifangkual.jlib.db.exception.IllegalConnectionConfigException;
+import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.Table;
+import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
 import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
-import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.utils.DefaultMetaSupport;
-import io.github.baifangkual.jlib.db.utils.ResultSetConverter;
-import io.github.baifangkual.jlib.db.utils.SqlSlices;
-
-import static io.github.baifangkual.jlib.db.utils.DefaultMetaSupport.*;
+import io.github.baifangkual.jlib.db.MetaProvider;
+import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
+import io.github.baifangkual.jlib.db.util.ResultSetConverter;
+import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -34,16 +32,16 @@ public class MysqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
     }
 
     @Override
-    protected void throwOnConnConfigIllegal(Cfg config) throws IllegalConnectionConfigException {
-        if (config.tryGet(ConnConfOptions.USER).isEmpty()) {
-            throw new IllegalConnectionConfigException("mysql username is empty");
-        } else if (config.tryGet(ConnConfOptions.PASSWD).isEmpty()) {
-            throw new IllegalConnectionConfigException("mysql password is empty");
+    protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
+        if (cfg.tryGet(DBCCfgOptions.USER).isEmpty()) {
+            throw new IllegalDBCCfgException("mysql username is empty");
+        } else if (cfg.tryGet(DBCCfgOptions.PASSWD).isEmpty()) {
+            throw new IllegalDBCCfgException("mysql password is empty");
         }
     }
 
     @Override
-    public MetaProvider getMetaProvider() {
+    public MetaProvider metaProvider() {
         return META_PROVIDER;
     }
 

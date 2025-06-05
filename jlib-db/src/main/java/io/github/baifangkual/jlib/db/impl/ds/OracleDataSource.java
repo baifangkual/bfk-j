@@ -2,21 +2,17 @@ package io.github.baifangkual.jlib.db.impl.ds;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.constants.ConnConfOptions;
-import io.github.baifangkual.jlib.db.entities.Table;
-import io.github.baifangkual.jlib.db.enums.URLType;
+import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.Table;
+import io.github.baifangkual.jlib.db.URLType;
 import io.github.baifangkual.jlib.db.exception.DropTableFailException;
-import io.github.baifangkual.jlib.db.exception.IllegalConnectionConfigException;
+import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
-import io.github.baifangkual.jlib.db.trait.DataSource;
-import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
+import io.github.baifangkual.jlib.db.DBC;
 import io.github.baifangkual.jlib.db.trait.JustSchemaDomainMetaProvider;
-import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.utils.DefaultMetaSupport;
-import io.github.baifangkual.jlib.db.utils.ResultSetConverter;
-import io.github.baifangkual.jlib.db.utils.SqlSlices;
-
-import static io.github.baifangkual.jlib.db.utils.DefaultMetaSupport.*;
+import io.github.baifangkual.jlib.db.MetaProvider;
+import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
+import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -56,19 +52,19 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
          * ORA-12504, TNS:listener was not given the SERVICE_NAME in CONNECT_DATA
          */
         final String prefix = urlPrefix(config); // jdbc:oracle
-        final String db = config.get(ConnConfOptions.DB); // oracle 的 db 不参与 sql，仅连接使用
-        final URLType ut = config.get(ConnConfOptions.JDBC_URL_TYPE);
+        final String db = config.get(DBCCfgOptions.DB); // oracle 的 db 不参与 sql，仅连接使用
+        final URLType ut = config.get(DBCCfgOptions.JDBC_URL_TYPE);
         final String app = switch (ut) {
             case JDBC_ORACLE_SERVICE_NAME -> S_SLASH;
             case JDBC_ORACLE_SID -> S_COLON;
-            default -> throw new IllegalConnectionConfigException("不合适的URL类型");
+            default -> throw new IllegalDBCCfgException("不合适的URL类型");
         };
         return new StringBuilder()
                 .append(prefix)
                 .append(W_THIN)
-                .append(config.get(ConnConfOptions.HOST))
+                .append(config.get(DBCCfgOptions.HOST))
                 .append(S_COLON)
-                .append(config.get(ConnConfOptions.PORT))
+                .append(config.get(DBCCfgOptions.PORT))
                 .append(app)
                 .append(db).toString();
     }
@@ -76,33 +72,33 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
     private static final int DEFAULT_ORACLE_PORT = 1521;
 
     @Override
-    protected void preCheckConfig(Cfg config) {
+    protected void preCheckCfg(Cfg cfg) {
         // 当用户未给定 URLType 则 使用 servername形式,
         // 当使用 JDBC_DEFAULT 时则转为 JDBC_ORACLE_SERVICE_NAME
-        Optional<URLType> ut = config.tryGet(ConnConfOptions.JDBC_URL_TYPE);
+        Optional<URLType> ut = cfg.tryGet(DBCCfgOptions.JDBC_URL_TYPE);
         if (ut.isPresent()) {
-            config.resetIf(ut.get() == URLType.JDBC_DEFAULT,
-                    ConnConfOptions.JDBC_URL_TYPE, URLType.JDBC_ORACLE_SERVICE_NAME);
+            cfg.resetIf(ut.get() == URLType.JDBC_DEFAULT,
+                    DBCCfgOptions.JDBC_URL_TYPE, URLType.JDBC_ORACLE_SERVICE_NAME);
         } else {
-            config.reset(ConnConfOptions.JDBC_URL_TYPE, URLType.JDBC_ORACLE_SERVICE_NAME);
+            cfg.reset(DBCCfgOptions.JDBC_URL_TYPE, URLType.JDBC_ORACLE_SERVICE_NAME);
         }
         // 当用户未给定 PORT 则使用oracle 默认端口 1521
-        config.resetIf(config.tryGet(ConnConfOptions.PORT).isEmpty(),
-                ConnConfOptions.PORT, DEFAULT_ORACLE_PORT);
+        cfg.resetIf(cfg.tryGet(DBCCfgOptions.PORT).isEmpty(),
+                DBCCfgOptions.PORT, DEFAULT_ORACLE_PORT);
     }
 
     @Override
-    protected void throwOnConnConfigIllegal(Cfg config) throws IllegalConnectionConfigException {
-        if (config.tryGet(ConnConfOptions.DB).isEmpty()) {
-            throw new IllegalConnectionConfigException("未配置服务名或SID");
+    protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
+        if (cfg.tryGet(DBCCfgOptions.DB).isEmpty()) {
+            throw new IllegalDBCCfgException("未配置服务名或SID");
         }
-        if (config.tryGet(ConnConfOptions.USER).isEmpty()) {
-            throw new IllegalConnectionConfigException("未配置用户名");
+        if (cfg.tryGet(DBCCfgOptions.USER).isEmpty()) {
+            throw new IllegalDBCCfgException("未配置用户名");
         }
     }
 
     @Override
-    protected void postCheckConfig(Cfg config) {
+    protected void postCheckCfg(Cfg cfg) {
 
         /*
          throwOnConnConfigIllegal 在该方法之前已经执行，其会检查user 配置与否，遂该处一定不为null
@@ -133,20 +129,20 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
         去掉双引号等试了试，发现都为 invalid table，即明确：oracle中"'"符号不应使用
         遂因为 ”“ 的存在 描述表名 和 schema 名称时，最好都加上该符号
          */
-        String lowSchema = config.tryGet(ConnConfOptions.SCHEMA)
-                .orElse(config.get(ConnConfOptions.USER));
+        String lowSchema = cfg.tryGet(DBCCfgOptions.SCHEMA)
+                .orElse(cfg.get(DBCCfgOptions.USER));
         // 如果用户未设置 schema ，则将用户名大写，然后转为 schema存储
         // 无论如何 schema 转为 大写
         String upperCaseSchema = lowSchema.toUpperCase();
-        config.reset(ConnConfOptions.SCHEMA, upperCaseSchema);
+        cfg.reset(DBCCfgOptions.SCHEMA, upperCaseSchema);
 
     }
 
     private static final String CHECK_CONN_SQL = "SELECT 1 FROM DUAL";
 
     @Override
-    public void checkConnection() throws Exception {
-        try (Connection conn = getConnection();
+    public void checkConn() throws Exception {
+        try (Connection conn = getConn();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(CHECK_CONN_SQL)) {
             while (rs.next()) {
@@ -159,7 +155,7 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
     private static final OracleMetaProvider META_PROVIDER = new OracleMetaProvider();
 
     @Override
-    public MetaProvider getMetaProvider() {
+    public MetaProvider metaProvider() {
         return META_PROVIDER;
     }
 
@@ -268,11 +264,11 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
          * 给定 某个 oracle 数据源，和表名，删除指定的表，该方法确保结果一致性
          */
         @Override
-        public void delTable(DataSource dataSource, String tb) {
-            String schema = dataSource.getConfig().get(ConnConfOptions.SCHEMA);
+        public void delTable(DBC dataSource, String tb) {
+            String schema = dataSource.cfg().get(DBCCfgOptions.SCHEMA);
             String dropSlice = SqlSlices.safeAdd(null, schema, tb, SqlSlices.DS_MASK);
             String dropTableIfExistsSql = Stf.f(DROP_TABLE_TEMPLATE, dropSlice);
-            try (Connection conn = dataSource.getConnection();
+            try (Connection conn = dataSource.getConn();
                  Statement stmt = conn.createStatement()
             ) {
                 // 经测试和查看jdbc该API说明，该接口将始终返回false，

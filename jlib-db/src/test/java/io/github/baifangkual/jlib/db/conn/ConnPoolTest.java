@@ -5,7 +5,7 @@
 //import com.btrc.datacenter.common.datasource.enums.DSType;
 //import com.btrc.datacenter.common.datasource.enums.URLType;
 //import com.btrc.datacenter.common.datasource.trait.CloseableDataSource;
-//import com.btrc.datacenter.common.datasource.utils.DataSourceCreators;
+//import com.btrc.datacenter.common.datasource.util.DataSourceCreators;
 //import lombok.extern.slf4j.Slf4j;
 //import org.junit.jupiter.api.Assertions;
 //import org.junit.jupiter.api.Test;

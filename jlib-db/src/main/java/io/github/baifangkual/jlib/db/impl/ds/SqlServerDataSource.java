@@ -2,18 +2,15 @@ package io.github.baifangkual.jlib.db.impl.ds;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.constants.ConnConfOptions;
-import io.github.baifangkual.jlib.db.entities.Table;
-import io.github.baifangkual.jlib.db.exception.IllegalConnectionConfigException;
+import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.Table;
+import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
-import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
-import io.github.baifangkual.jlib.db.trait.MetaProvider;
+import io.github.baifangkual.jlib.db.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.SchemaDomainMetaProvider;
-import io.github.baifangkual.jlib.db.utils.DefaultMetaSupport;
-import io.github.baifangkual.jlib.db.utils.ResultSetConverter;
-import io.github.baifangkual.jlib.db.utils.SqlSlices;
-
-import static io.github.baifangkual.jlib.db.utils.DefaultMetaSupport.*;
+import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
+import io.github.baifangkual.jlib.db.util.ResultSetConverter;
+import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -47,8 +44,8 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
     }
 
     @Override
-    protected void preCheckConfig(Cfg config) {
-        Map<String, String> other = config.tryGet(ConnConfOptions.JDBC_PARAMS_OTHER).orElse(Map.of());
+    protected void preCheckCfg(Cfg cfg) {
+        Map<String, String> other = cfg.tryGet(DBCCfgOptions.JDBC_PARAMS_OTHER).orElse(Map.of());
         Map<String, String> newO = new HashMap<>(other);
         // trustServerCertificate encrypt...
         if (!newO.containsKey(TRUST_SERVER_CERTIFICATE)) {
@@ -57,10 +54,10 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
         if (!newO.containsKey(ENCRYPT)) {
             newO.put(ENCRYPT, DEFAULT_ENCRYPT);
         }
-        config.reset(ConnConfOptions.JDBC_PARAMS_OTHER, newO);
+        cfg.reset(DBCCfgOptions.JDBC_PARAMS_OTHER, newO);
         // database=... eg:;database=master
         if (newO.containsKey(DB_ON_P)) {
-            config.resetIfNotNull(ConnConfOptions.DB, newO.get(DB_ON_P));
+            cfg.resetIfNotNull(DBCCfgOptions.DB, newO.get(DB_ON_P));
         }
 
     }
@@ -69,18 +66,18 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
     protected String buildingJdbcUrl(Cfg config) {
         String url = super.buildingJdbcUrl(config);
         String msUrl = url.substring(0, url.lastIndexOf("/"));
-        String dbName = config.get(ConnConfOptions.DB);
+        String dbName = config.get(DBCCfgOptions.DB);
         return Stf.f("{};{}={}", msUrl, DB_ON_P, dbName);
     }
 
 
     @Override
-    protected void throwOnConnConfigIllegal(Cfg config) throws IllegalConnectionConfigException {
+    protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
 
     }
 
     @Override
-    public MetaProvider getMetaProvider() {
+    public MetaProvider metaProvider() {
         return META_PROVIDER;
     }
 

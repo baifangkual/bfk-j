@@ -100,7 +100,7 @@ public interface Fn<P, V> extends Function<P, R<V>>,
     }
 
     /**
-     * identity function<br>
+     * identity func<br>
      * 返回一个恒等函数 {@code (p) -> p}
      *
      * @param <P> 入参和出参类型

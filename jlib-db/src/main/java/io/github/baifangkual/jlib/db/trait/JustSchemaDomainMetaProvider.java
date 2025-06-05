@@ -2,19 +2,11 @@ package io.github.baifangkual.jlib.db.trait;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.lang.Tup2;
-import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.constants.ConnConfOptions;
-import io.github.baifangkual.jlib.db.entities.Table;
+import io.github.baifangkual.jlib.db.DBC;
+import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.MetaProvider;
+import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
-import io.github.baifangkual.jlib.db.exception.IllegalConnectionConfigException;
-import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
-import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
-import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.utils.DefaultMetaSupport;
-import io.github.baifangkual.jlib.db.utils.ResultSetConverter;
-import io.github.baifangkual.jlib.db.utils.SqlSlices;
-
-import static io.github.baifangkual.jlib.db.utils.DefaultMetaSupport.*;
 
 import java.sql.Connection;
 import java.util.List;
@@ -40,8 +32,8 @@ public interface JustSchemaDomainMetaProvider extends MetaProvider {
                          Long pageNo, Long pageSize) throws Exception;
 
     private Tup2<String, Map<String, String>> unsafeGetSchemaAndOther(Cfg conf) {
-        Map<String, String> other = conf.getOrDefault(ConnConfOptions.JDBC_PARAMS_OTHER);
-        String schema = conf.tryGet( ConnConfOptions.SCHEMA)
+        Map<String, String> other = conf.getOrDefault(DBCCfgOptions.JDBC_PARAMS_OTHER);
+        String schema = conf.tryGet( DBCCfgOptions.SCHEMA)
                 .orElseThrow(() -> new IllegalArgumentException("给定数据库参数的SCHEMA为空"));
         return Tup2.of(schema, other);
     }
@@ -83,7 +75,7 @@ public interface JustSchemaDomainMetaProvider extends MetaProvider {
     }
 
     @Override
-    void delTable(DataSource dataSource, String tb);
+    void delTable(DBC dataSource, String tb);
 
     @Override
     default void delTable(Connection conn, String db, String tb) {

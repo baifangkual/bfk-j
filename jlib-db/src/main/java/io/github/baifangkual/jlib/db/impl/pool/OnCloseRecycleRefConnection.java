@@ -1,20 +1,8 @@
 package io.github.baifangkual.jlib.db.impl.pool;
 
-import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.constants.ConnConfOptions;
-import io.github.baifangkual.jlib.db.entities.Table;
 import io.github.baifangkual.jlib.db.exception.DataSourceConnectionFailException;
-import io.github.baifangkual.jlib.db.exception.IllegalConnectionConfigException;
-import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
-import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
-import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.trait.Pool;
-import io.github.baifangkual.jlib.db.utils.DefaultMetaSupport;
-import io.github.baifangkual.jlib.db.utils.ResultSetConverter;
-import io.github.baifangkual.jlib.db.utils.SqlSlices;
 
-import static io.github.baifangkual.jlib.db.utils.DefaultMetaSupport.*;
 import lombok.NonNull;
 
 import java.sql.*;

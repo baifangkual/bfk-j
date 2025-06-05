@@ -1,4 +1,4 @@
-package io.github.baifangkual.jlib.db.function;
+package io.github.baifangkual.jlib.db.func;
 
 import io.github.baifangkual.jlib.core.func.Fn;
 

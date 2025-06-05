@@ -7,7 +7,7 @@
 //import com.btrc.datacenter.common.datasource.enums.URLType;
 //import com.btrc.datacenter.common.datasource.trait.CloseableDataSource;
 //import com.btrc.datacenter.common.datasource.trait.MetaProvider;
-//import com.btrc.datacenter.common.datasource.utils.DataSourceCreators;
+//import com.btrc.datacenter.common.datasource.util.DataSourceCreators;
 //import org.junit.jupiter.api.Test;
 //
 //import java.sql.Connection;

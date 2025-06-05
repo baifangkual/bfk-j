@@ -38,7 +38,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <!-- dep jdbc API Driver-->
-        <reversion.mysql-driver>8.3.0</reversion.mysql-driver>
+        <reversion.mysql-driver>8.4.0</reversion.mysql-driver>
         <reversion.sqlserver-driver>12.6.2.jre11</reversion.sqlserver-driver>
         <reversion.oracle-driver>21.9.0.0</reversion.oracle-driver>
         <reversion.postgresql-driver>42.7.3</reversion.postgresql-driver>

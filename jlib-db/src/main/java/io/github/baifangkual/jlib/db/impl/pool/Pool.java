@@ -1,4 +1,4 @@
-package io.github.baifangkual.jlib.db.trait;
+package io.github.baifangkual.jlib.db.impl.pool;
 
 /**
  * @author baifangkual

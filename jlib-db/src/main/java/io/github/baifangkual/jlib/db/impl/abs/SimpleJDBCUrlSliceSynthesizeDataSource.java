@@ -3,8 +3,8 @@ package io.github.baifangkual.jlib.db.impl.abs;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.panic.Err;
-import io.github.baifangkual.jlib.db.constants.ConnConfOptions;
-import io.github.baifangkual.jlib.db.enums.DSType;
+import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.DBType;
 
 import java.util.Optional;
 
@@ -13,7 +13,7 @@ import java.util.Optional;
  * create time 2024/7/12
  * 行为，要求子类只提供url部分切片，该处有jdbcUrl默认行为合成，适用于大部分数据源类型的jdbc url
  */
-public abstract class SimpleJDBCUrlSliceSynthesizeDataSource extends DefaultJDBCUrlFormatDataSource {
+public abstract class SimpleJDBCUrlSliceSynthesizeDataSource extends DefaultJdbcUrlPaddingDBC {
 
 
     private static final String HEADER = "jdbc:";
@@ -48,13 +48,13 @@ public abstract class SimpleJDBCUrlSliceSynthesizeDataSource extends DefaultJDBC
         sqlserver连接参数也可无db
         遂该处为通用如 db nullable
          */
-        final String db = config.tryGet(ConnConfOptions.DB).orElse(null);
+        final String db = config.tryGet(DBCCfgOptions.DB).orElse(null);
         final StringBuilder sb = new StringBuilder()
                 .append(prefix)
                 .append(S1)
-                .append(config.get(ConnConfOptions.HOST))
+                .append(config.get(DBCCfgOptions.HOST))
                 .append(MP)
-                .append(config.get(ConnConfOptions.PORT));
+                .append(config.get(DBCCfgOptions.PORT));
         if (db != null) {
             sb.append(SL).append(db);
         }
@@ -67,7 +67,7 @@ public abstract class SimpleJDBCUrlSliceSynthesizeDataSource extends DefaultJDBC
         if (pOpt.isPresent()) {
             prefix = pOpt.get();
         } else {
-            DSType t = config.tryGet(ConnConfOptions.DS_TYPE)
+            DBType t = config.tryGet(DBCCfgOptions.DS_TYPE)
                     .orElseThrow(() -> new IllegalArgumentException("dsType is null"));
             // to do fix me 这里的逻辑为了解耦可用默认枚举.name映射或交由下层，不应该在此定义
             prefix = switch (t) {
@@ -80,7 +80,7 @@ public abstract class SimpleJDBCUrlSliceSynthesizeDataSource extends DefaultJDBC
             };
         }
         Err.realIf(prefix.isBlank(), IllegalStateException::new,
-                "datasource type: {} jdbc url prefix undefined", config.get(ConnConfOptions.DS_TYPE));
+                "datasource type: {} jdbc url prefix undefined", config.get(DBCCfgOptions.DS_TYPE));
         return prefix.startsWith(HEADER) ? prefix : HEADER + prefix;
     }
 

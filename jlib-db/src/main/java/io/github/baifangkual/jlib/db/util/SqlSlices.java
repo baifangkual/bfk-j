@@ -1,4 +1,4 @@
-package io.github.baifangkual.jlib.db.utils;
+package io.github.baifangkual.jlib.db.util;
 
 import lombok.NonNull;
 
