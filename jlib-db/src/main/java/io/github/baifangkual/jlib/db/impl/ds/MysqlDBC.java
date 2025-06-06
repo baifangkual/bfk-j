@@ -5,9 +5,9 @@ import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
+import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
-import io.github.baifangkual.jlib.db.MetaProvider;
+import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
 import io.github.baifangkual.jlib.db.util.ResultSetConverter;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
@@ -20,15 +20,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * mysql dbc impl
+ *
  * @author baifangkual
- * create time 2024/7/11
+ * @since 2024/7/11
  */
-public class MysqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
+public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
 
     private static final MetaProvider META_PROVIDER = new MetaProviderImpl();
 
-    public MysqlDataSource(Cfg connConfig) {
-        super(connConfig);
+    public MysqlDBC(Cfg cfg) {
+        super(cfg);
     }
 
     @Override
@@ -44,8 +46,6 @@ public class MysqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
     public MetaProvider metaProvider() {
         return META_PROVIDER;
     }
-
-
 
 
     public static class MetaProviderImpl implements DatabaseDomainMetaProvider {
@@ -73,16 +73,12 @@ public class MysqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
             String sql = Stf.f(SELECT_TABLE_TEMPLATE,
                     SqlSlices.safeAdd(db, null, table, SqlSlices.D_MASK),
                     pageSize, (pageNo - 1) * pageSize);
+            //noinspection SqlSourceToSinkFlow
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(sql)) {
                 List<Object[]> rL = ResultSetConverter.rows(rs);
                 return new Table.Rows().setRows(rL);
             }
-        }
-
-        @Override
-        public void delTable(Connection conn, String db, String tb) throws Exception {
-            throw new UnsupportedOperationException("Not implemented yet.");
         }
 
     }

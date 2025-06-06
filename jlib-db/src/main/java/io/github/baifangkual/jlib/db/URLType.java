@@ -8,6 +8,9 @@ import lombok.RequiredArgsConstructor;
  * jdbc url 格式描述, 部分数据库有多种jdbcUrl格式支持要求，
  * 与DSType关系为一对多
  */
+@Deprecated // todo 20250607 删除，该应用面小，可仅为oracle特化，
+            //  控制 url构型有多种方式，没必要专门弄个 enum
+            //  若后续需控制，则在 buildJdbcUrl内可从cfg中配置项控制
 @RequiredArgsConstructor
 public enum URLType {
 

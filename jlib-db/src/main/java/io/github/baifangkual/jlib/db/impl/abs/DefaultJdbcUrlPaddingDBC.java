@@ -2,66 +2,83 @@ package io.github.baifangkual.jlib.db.impl.abs;
 
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
+import io.github.baifangkual.jlib.core.panic.Err;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
-import io.github.baifangkual.jlib.db.util.PropMapc;
+import io.github.baifangkual.jlib.db.DBType;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.Optional;
 
 /**
+ * 抽象类，要求下级实现行为：
+ * 子类只提供url部分切片，该处有jdbcUrl默认行为合成，适用于大部分数据源类型的jdbc url
+ *
  * @author baifangkual
- * create time 2024/7/11
+ * @since 2024/7/12
  */
-public abstract class DefaultJdbcUrlPaddingDBC extends AbstractDBC {
+public abstract class DefaultJdbcUrlPaddingDBC extends JdbcUrlPaddingDBC {
 
-    @SuppressWarnings("SqlNoDataSourceInspection")
-    private static final String DEFAULT_CHECK_CONN_SQL = "SELECT 1";
-    private static final String DEFAULT_PROP_KEY_USER = "user";
-    private static final String DEFAULT_PROP_KEY_PASSWD = "password";
+    private static final String HEADER = "jdbc:";
+    private static final String SL = "/";
+    private static final String MP = ":";
+    private static final String S1 = "://";
 
-    private final String jdbcUrl;
-    private final Properties prop;
-
-    public DefaultJdbcUrlPaddingDBC(Cfg cfg) {
-        super(cfg);
-        Cfg readOnlyCfg = cfg();
-        String jdbcUrl = buildingJdbcUrl(readOnlyCfg);
-        // 不应修改原对象，仅只读
-        Map<String, String> params = new HashMap<>(readOnlyCfg.getOrDefault(DBCCfgOptions.JDBC_PARAMS_OTHER));
-        // tod o 部分数据库或部分连接类型并不需要用户名和密码 遂该处找不到不应强制抛出异常
-        readOnlyCfg.tryGet(DBCCfgOptions.USER)
-                .ifPresent(un -> params.put(DEFAULT_PROP_KEY_USER, un));
-        readOnlyCfg.tryGet(DBCCfgOptions.PASSWD)
-                .ifPresent(pw -> params.put(DEFAULT_PROP_KEY_PASSWD, pw));
-        Properties prop = PropMapc.convert(params);
-        // tod o 额外参数设定，应当在别处 ？ 这非与数据源类型相关的专有参数，而是连接相关的参数
-        DriverManager.setLoginTimeout(readOnlyCfg.getOrDefault(DBCCfgOptions.CONN_TIMEOUT_SEC));
-        this.jdbcUrl = jdbcUrl;
-        this.prop = prop;
-    }
-
-
-    protected abstract String buildingJdbcUrl(Cfg Cfg);
-
-    @Override
-    public Connection getConn() throws Exception {
-        return DriverManager.getConnection(jdbcUrl, prop);
+    public DefaultJdbcUrlPaddingDBC(Cfg connCfg) {
+        super(connCfg);
     }
 
     @Override
-    public void checkConn() throws Exception {
-        try (Connection conn = getConn();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(DEFAULT_CHECK_CONN_SQL)) {
-            while (rs.next()) {
-                int i = rs.getInt(1);
-                if (i == 1) return;
-            }
+    protected String buildingJdbcUrl(Cfg readonlyCfg) {
+        final String prefix = jdbcUrlPrefix(readonlyCfg);
+        /*
+        部分数据库连接可不需要db参数，遂这里db可以为null，不设置该
+        hive 没有db概念，jdbc API 标准中返回的也仅为schema
+        sqlserver连接参数也可无db
+        遂该处为通用如 db nullable
+         */
+        final String db = readonlyCfg.tryGet(DBCCfgOptions.DB).orElse(null);
+        final StringBuilder sb = new StringBuilder()
+                .append(prefix)
+                .append(S1)
+                .append(readonlyCfg.get(DBCCfgOptions.HOST))
+                .append(MP)
+                .append(readonlyCfg.get(DBCCfgOptions.PORT));
+        if (db != null) {
+            sb.append(SL).append(db);
         }
+        return sb.toString();
     }
+
+    protected String jdbcUrlPrefix(Cfg readonlyCfg) {
+        Optional<String> pOpt = tryGetJdbcUrlPrefix();
+        String prefix;
+        if (pOpt.isPresent()) {
+            prefix = pOpt.get();
+        } else {
+            DBType t = type();
+            // to do fix me 这里的逻辑为了解耦可用默认枚举.name映射或交由下层，不应该在此定义
+            prefix = switch (t) {
+                case SQL_SERVER -> "sqlserver";
+                case MYSQL -> "mysql";
+                case ORACLE -> "oracle";
+                case POSTGRESQL -> "postgresql";
+                //noinspection UnnecessaryDefault
+                default -> throw new IllegalStateException("not found database jdbcUrl prefix of type: " + t);
+            };
+        }
+        Err.realIf(prefix.isBlank(), IllegalStateException::new,
+                "datasource type: {} jdbc url prefix undefined", type());
+        return prefix.startsWith(HEADER) ? prefix : HEADER + prefix;
+    }
+
+    /**
+     * 下层数据库可覆盖该默认实现：提供其Jdbc协议的Url前缀，
+     * 形如：postgresql sqlserver...
+     *
+     * @return jdbc协议的Url前缀
+     */
+    protected Optional<String> tryGetJdbcUrlPrefix() {
+        return Optional.empty();
+    }
+
+
 }

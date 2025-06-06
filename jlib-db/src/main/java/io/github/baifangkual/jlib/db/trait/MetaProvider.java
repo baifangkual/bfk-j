@@ -1,6 +1,9 @@
-package io.github.baifangkual.jlib.db;
+package io.github.baifangkual.jlib.db.trait;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
+import io.github.baifangkual.jlib.db.DBC;
+import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
 
 import java.sql.Connection;
@@ -50,7 +53,7 @@ public interface MetaProvider {
 
     default List<Table.Meta> tablesMeta(DBC dataSource) {
         try (Connection conn = dataSource.getConn()) {
-            return tablesMeta(conn, dataSource.cfg());
+            return tablesMeta(conn, dataSource.readonlyCfg());
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }
@@ -64,7 +67,7 @@ public interface MetaProvider {
 
     default List<Table.ColumnMeta> columnsMeta(DBC dataSource, String table) {
         try (Connection conn = dataSource.getConn()) {
-            return columnsMeta(conn, dataSource.cfg(), table);
+            return columnsMeta(conn, dataSource.readonlyCfg(), table);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }
@@ -78,7 +81,7 @@ public interface MetaProvider {
 
     default Table.Rows tableData(DBC dataSource, String table, Long pageNo, Long pageSize) {
         try (Connection conn = dataSource.getConn()) {
-            return tableData(conn, dataSource.cfg(), table, pageNo, pageSize);
+            return tableData(conn, dataSource.readonlyCfg(), table, pageNo, pageSize);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }

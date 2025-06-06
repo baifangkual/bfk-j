@@ -2,9 +2,10 @@ package io.github.baifangkual.jlib.db.exception;
 
 
 /**
+ * 查询时异常包装，语法错误致使查询失败等
+ *
  * @author baifangkual
- * create time 2024/7/15
- * 查询时异常
+ * @since 2024/7/15
  */
 public class DBQueryFailException extends IllegalStateException {
     public DBQueryFailException() {

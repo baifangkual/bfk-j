@@ -1,8 +1,10 @@
 package io.github.baifangkual.jlib.db.exception;
 
 /**
+ * jdbc {@link java.sql.ResultSet} 读取值过程错误导致的异常
+ *
  * @author baifangkual
- * create time 2024/7/25
+ * @since 2024/7/25
  */
 public class ResultSetMappingFailException extends ResultSetRowMappingFailException {
     public ResultSetMappingFailException() {

@@ -1,7 +1,7 @@
 package io.github.baifangkual.jlib.db.util;
 
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.func.ResultSetRowMapping;
+import io.github.baifangkual.jlib.db.func.RsRowMapping;
 
 import lombok.NonNull;
 
@@ -81,10 +81,6 @@ public class DefaultMetaSupport {
     public static final String DEF_COL_DECIMAL_DIGITS = "DECIMAL_DIGITS";
 
 
-    // todo fixme 补充说明并标准化名称
-    // todo fixme 该不应该定义在这里，因为这不是标准化定义的
-    public static final String DEL_TAB_SQL = "DROP TABLE IF EXISTS {}.{}";
-
     /**
      * 使用给定的连接对象，根据给定参数，返回多个表的元数据,
      * 该方法需注意，因{@link Table.Meta}对象无法表示表类型，遂TableTypes未筛选的结果，无法表示类型，
@@ -154,7 +150,7 @@ public class DefaultMetaSupport {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetConverter#rows(ResultSet, ResultSetRowMapping)}
+     * 复杂转换请用{@link ResultSetConverter#rows(ResultSet, RsRowMapping)}
      *
      * @param conn               连接对象
      * @param db                 数据库名
@@ -179,7 +175,7 @@ public class DefaultMetaSupport {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetConverter#rows(ResultSet, ResultSetRowMapping)}
+     * 复杂转换请用{@link ResultSetConverter#rows(ResultSet, RsRowMapping)}
      *
      * @param conn                          连接对象
      * @param db                            数据库名
@@ -222,7 +218,7 @@ public class DefaultMetaSupport {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetConverter#rows(ResultSet, ResultSetRowMapping)}
+     * 复杂转换请用{@link ResultSetConverter#rows(ResultSet, RsRowMapping)}
      *
      * @param conn       连接对象
      * @param db         数据库名
@@ -237,7 +233,7 @@ public class DefaultMetaSupport {
                                                     String db,
                                                     String schema,
                                                     @NonNull String table,
-                                                    ResultSetRowMapping<? extends ROW> rowMapping) throws Exception {
+                                                    RsRowMapping<? extends ROW> rowMapping) throws Exception {
         DatabaseMetaData metaData = conn.getMetaData();
         try (ResultSet colMeta = metaData.getColumns(db, schema, table, null);) {
             return ResultSetConverter.rows(colMeta, rowMapping);

@@ -5,8 +5,8 @@ import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
-import io.github.baifangkual.jlib.db.MetaProvider;
+import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
+import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.SchemaDomainMetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
 import io.github.baifangkual.jlib.db.util.ResultSetConverter;
@@ -19,20 +19,19 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * psql dbc impl
+ *
  * @author baifangkual
- * create time 2024/7/12
+ * @since 2024/7/12
  */
-public class PostgresqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
+public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
 
     private static final MetaProvider META_PROVIDER = new MetaProviderImpl();
-    /*
-    psql 并未像mysql那样提供查询table和
-    */
-    // todo dep 这个设定并没有什么卵用?
+
     private static final String PROP_SCHEMA_KEY = "currentSchema";
 
-    public PostgresqlDataSource(Cfg connConfig) {
-        super(connConfig);
+    public PostgresqlDBC(Cfg cfg) {
+        super(cfg);
     }
 
     @Override
@@ -83,6 +82,7 @@ public class PostgresqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource
             String sql = Stf.f(SELECT_TABLE_TEMPLATE,
                     SqlSlices.safeAdd(db, null, table, SqlSlices.DS_MASK),
                     pageSize, (pageNo - 1) * pageSize);
+            //noinspection SqlSourceToSinkFlow
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(sql);) {
                 List<Object[]> rL = ResultSetConverter.rows(rs);
@@ -90,9 +90,5 @@ public class PostgresqlDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource
             }
         }
 
-        @Override
-        public void delTable(Connection conn, String db, String tb) throws Exception {
-            throw new UnsupportedOperationException("Not implemented yet.");
-        }
     }
 }

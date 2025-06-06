@@ -2,9 +2,10 @@ package io.github.baifangkual.jlib.db.exception;
 
 
 /**
+ * jdbc {@link java.sql.ResultSet} 读取值过程错误导致的异常-行转换异常
+ *
  * @author baifangkual
- * create time 2024/7/15
- * 行转换异常
+ * @since 2024/7/15
  */
 public class ResultSetRowMappingFailException extends IllegalStateException {
     public ResultSetRowMappingFailException() {

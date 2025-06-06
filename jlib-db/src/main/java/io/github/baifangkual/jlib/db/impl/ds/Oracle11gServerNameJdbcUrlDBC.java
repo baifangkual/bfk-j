@@ -4,13 +4,10 @@ import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.URLType;
-import io.github.baifangkual.jlib.db.exception.DropTableFailException;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
-import io.github.baifangkual.jlib.db.DBC;
+import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.JustSchemaDomainMetaProvider;
-import io.github.baifangkual.jlib.db.MetaProvider;
+import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
@@ -23,65 +20,51 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
+ * oracle dbc impl<br>
+ * <p>20241024: 该实现仅在oracle 11g版本上进行了测试，其他oracle版本或不支持
+ *
  * @author baifangkual
- * create time 2024/10/24
- * <p>
- * oracle 数据库 datasource实现<br>
- * 20241024：当前在oracle 11g版本上进行了测试，其他oracle版本或不支持
+ * @since 2024/10/24
  */
-public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
+public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
 
 
-    public OracleDataSource(Cfg connConfig) {
-        super(connConfig);
+    public Oracle11gServerNameJdbcUrlDBC(Cfg cfg) {
+        super(cfg);
     }
 
     private static final String S_COLON = ":";
     private static final String S_SLASH = "/";
-    private static final String W_THIN = ":thin:@";
+    private static final String JDBC_P = "jdbc:oracle:thin:@//";
 
     @Override
-    protected String buildingJdbcUrl(Cfg config) {
+    protected String buildingJdbcUrl(Cfg readonlyCfg) {
         /*
          * 对两种方式的 支持 sid 和 servername，这两种方式的路径形式不同
          * jdbc:oracle:thin:@localhost:1521:sid
          * jdbc:oracle:thin:@localhost:1521/serviceName
          * ORA-12504, TNS:listener was not given the SERVICE_NAME in CONNECT_DATA
+         * 20250607 废除对Sid的支持，因Sid正逐步被弃用，仅支持serviceName,
+         * 即 jdbc:oracle:thin:@//localhost:1521/serviceName
          */
-        final String prefix = urlPrefix(config); // jdbc:oracle
-        final String db = config.get(DBCCfgOptions.DB); // oracle 的 db 不参与 sql，仅连接使用
-        final URLType ut = config.get(DBCCfgOptions.JDBC_URL_TYPE);
-        final String app = switch (ut) {
-            case JDBC_ORACLE_SERVICE_NAME -> S_SLASH;
-            case JDBC_ORACLE_SID -> S_COLON;
-            default -> throw new IllegalDBCCfgException("不合适的URL类型");
-        };
+        final String db = readonlyCfg.get(DBCCfgOptions.DB);
+        //noinspection StringBufferReplaceableByString
         return new StringBuilder()
-                .append(prefix)
-                .append(W_THIN)
-                .append(config.get(DBCCfgOptions.HOST))
+                .append(JDBC_P)
+                .append(readonlyCfg.get(DBCCfgOptions.HOST))
                 .append(S_COLON)
-                .append(config.get(DBCCfgOptions.PORT))
-                .append(app)
-                .append(db).toString();
+                .append(readonlyCfg.get(DBCCfgOptions.PORT))
+                .append(S_SLASH)
+                .append(db)
+                .toString();
     }
 
     private static final int DEFAULT_ORACLE_PORT = 1521;
 
     @Override
     protected void preCheckCfg(Cfg cfg) {
-        // 当用户未给定 URLType 则 使用 servername形式,
-        // 当使用 JDBC_DEFAULT 时则转为 JDBC_ORACLE_SERVICE_NAME
-        Optional<URLType> ut = cfg.tryGet(DBCCfgOptions.JDBC_URL_TYPE);
-        if (ut.isPresent()) {
-            cfg.resetIf(ut.get() == URLType.JDBC_DEFAULT,
-                    DBCCfgOptions.JDBC_URL_TYPE, URLType.JDBC_ORACLE_SERVICE_NAME);
-        } else {
-            cfg.reset(DBCCfgOptions.JDBC_URL_TYPE, URLType.JDBC_ORACLE_SERVICE_NAME);
-        }
         // 当用户未给定 PORT 则使用oracle 默认端口 1521
         cfg.resetIf(cfg.tryGet(DBCCfgOptions.PORT).isEmpty(),
                 DBCCfgOptions.PORT, DEFAULT_ORACLE_PORT);
@@ -90,10 +73,10 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
     @Override
     protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
         if (cfg.tryGet(DBCCfgOptions.DB).isEmpty()) {
-            throw new IllegalDBCCfgException("未配置服务名或SID");
+            throw new IllegalDBCCfgException("oracle 未配置服务名");
         }
         if (cfg.tryGet(DBCCfgOptions.USER).isEmpty()) {
-            throw new IllegalDBCCfgException("未配置用户名");
+            throw new IllegalDBCCfgException("oracle 未配置用户名");
         }
     }
 
@@ -138,6 +121,7 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
 
     }
 
+    @SuppressWarnings("SqlNoDataSourceInspection")
     private static final String CHECK_CONN_SQL = "SELECT 1 FROM DUAL";
 
     @Override
@@ -152,7 +136,7 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
         }
     }
 
-    private static final OracleMetaProvider META_PROVIDER = new OracleMetaProvider();
+    private static final Oracle11gMetaProvider META_PROVIDER = new Oracle11gMetaProvider();
 
     @Override
     public MetaProvider metaProvider() {
@@ -160,7 +144,7 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
     }
 
 
-    public static class OracleMetaProvider implements JustSchemaDomainMetaProvider {
+    public static class Oracle11gMetaProvider implements JustSchemaDomainMetaProvider {
 
         @Override
         public List<Table.Meta> tablesMeta(Connection conn, String schema,
@@ -230,6 +214,7 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
             // 防止列名重名而造成混淆，遂每次重新生成列名
             String rowNumCol = "row" + LocalDateTime.now().format(RANDOM_ROW_COL_NAME);
             String sql = pageQuery(rowNumCol, pageNo, pageSize, schema, table);
+            //noinspection SqlSourceToSinkFlow
             try (Statement stat = conn.createStatement();
                  ResultSet rs = stat.executeQuery(sql)) {
                 return handlerPageQueryResultSet(rs, rowNumCol);
@@ -260,24 +245,5 @@ public class OracleDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
                 END;
                 """;
 
-        /**
-         * 给定 某个 oracle 数据源，和表名，删除指定的表，该方法确保结果一致性
-         */
-        @Override
-        public void delTable(DBC dataSource, String tb) {
-            String schema = dataSource.cfg().get(DBCCfgOptions.SCHEMA);
-            String dropSlice = SqlSlices.safeAdd(null, schema, tb, SqlSlices.DS_MASK);
-            String dropTableIfExistsSql = Stf.f(DROP_TABLE_TEMPLATE, dropSlice);
-            try (Connection conn = dataSource.getConn();
-                 Statement stmt = conn.createStatement()
-            ) {
-                // 经测试和查看jdbc该API说明，该接口将始终返回false，
-                // 该false表示执行的sql不会产生ResultSet
-                // 当其他异常时（非表不存在的异常）则stmt.execute抛出SQLException
-                stmt.execute(dropTableIfExistsSql);
-            } catch (Exception e) {
-                throw new DropTableFailException(e.getMessage(), e);
-            }
-        }
     }
 }

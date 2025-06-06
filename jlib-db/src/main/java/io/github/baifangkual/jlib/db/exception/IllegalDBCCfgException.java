@@ -1,10 +1,10 @@
 package io.github.baifangkual.jlib.db.exception;
 
 /**
+ * 错误的连接参数导致的-连接参数异常(外界提供的连接参数格式类型等不对时）
+ *
  * @author baifangkual
- * create time 2024/7/11
- * <p>
- * 表示 连接参数异常
+ * @since 2024/7/11
  */
 public class IllegalDBCCfgException extends IllegalArgumentException {
 

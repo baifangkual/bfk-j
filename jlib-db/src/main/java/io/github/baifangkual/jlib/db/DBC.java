@@ -2,9 +2,10 @@ package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
-import io.github.baifangkual.jlib.db.exception.DataSourceConnectionFailException;
-import io.github.baifangkual.jlib.db.func.ResultSetMapping;
-import io.github.baifangkual.jlib.db.func.ResultSetRowMapping;
+import io.github.baifangkual.jlib.db.exception.JdbcConnectionFailException;
+import io.github.baifangkual.jlib.db.func.RsMapping;
+import io.github.baifangkual.jlib.db.func.RsRowMapping;
+import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.util.ResultSetConverter;
 
 import java.sql.Connection;
@@ -22,7 +23,7 @@ import java.util.Optional;
  * 数据源实体抽象, 当被创建出来时，应当是不可变对象，该对象被创建出来后，便可以获取一个数据源的Connection对象<br>
  * 所有底层DataSource（关于数据库的）仅描述从{@link Cfg} 对象构建{@link Connection}对象过程，
  * 即该底层实现不负责存储和管理{@link Connection}，仅负责提供,遂也不会持有被自己创建的连接对象的引用，{@link Connection}的管理在他者实现,
- * 若需使用能够管理自己创建的数据源的{@link DBC},应使用{@link DBCPool}<br>
+ * 若需使用能够管理自己创建的数据源的{@link DBC},应使用{@link PooledDBC}<br>
  * 需明确该类型提供的get方法语义和create方法语义不同，create语义已被删除，目前尚未有create语义<br>
  * 该类型构造方式:
  * <pre>
@@ -52,21 +53,9 @@ import java.util.Optional;
  * </pre>
  */
 public interface DBC {
-    /**
-     * 获取该数据源的配置信息，不应该在DataSource对象已经创建后修改调用该方法返回的Config对象，
-     * 目前未对该返回的对象做Readonly限制，后续或有
-     *
-     * @return {@link Cfg}
-     */
-    Cfg cfg();
 
-    /**
-     * 获取该数据源类型数据库元数据提供者，提供者为无状态对象，不可变，线程安全，获取数据源的元数据可使用该方法给定的对象,
-     * 或直接调用数据源对象的委托方法，见{@link #tablesMeta()}
-     *
-     * @return {@link MetaProvider}
-     */
-    MetaProvider metaProvider();
+
+    DBType type();
 
     /**
      * 检查该类型数据源的连接是否正常，也即给定的参数能否连接到一个数据源，在数据源服务运行（或数据文件存在）的情况下，
@@ -87,17 +76,17 @@ public interface DBC {
     Connection getConn() throws Exception;
 
     /**
-     * 执行sql查询并返回结果，返回的结果将根据给定的{@link ResultSetRowMapping}函数进行转换,
-     * 与{@link #execQuery(ResultSetMapping, String)}不同，要求的函数不应负责{@link ResultSet#next()}的调用，
-     * 也因此，该函数{@link ResultSetRowMapping}应仅从{@link ResultSet}中获取某一行的数据并返回{@link ROW}即可
+     * 执行sql查询并返回结果，返回的结果将根据给定的{@link RsRowMapping}函数进行转换,
+     * 与{@link #execQuery(RsMapping, String)}不同，要求的函数不应负责{@link ResultSet#next()}的调用，
+     * 也因此，该函数{@link RsRowMapping}应仅从{@link ResultSet}中获取某一行的数据并返回{@link ROW}即可
      *
      * @param sql        要执行的sql查询语句
      * @param rowMapping ResultSet中行的转换方法，该函数不应负责{@link ResultSet#next()}的调用
      * @param <ROW>      ResultSet中行转换为的行对象
      * @return ResultSet中多个行, 构成了List[ROW...]
-     * @see ResultSetRowMapping
+     * @see RsRowMapping
      */
-    default <ROW> List<ROW> execQuery(String sql, ResultSetRowMapping<? extends ROW> rowMapping) {
+    default <ROW> List<ROW> execQuery(String sql, RsRowMapping<? extends ROW> rowMapping) {
         try (Connection conn = getConn();
              Statement stat = conn.createStatement();
              ResultSet rs = stat.executeQuery(sql)) {
@@ -108,7 +97,7 @@ public interface DBC {
     }
 
     /**
-     * 执行sql查询并返回结果，返回的结果将根据给定的{@link ResultSetMapping}函数进行转换，该函数{@link ResultSetMapping}
+     * 执行sql查询并返回结果，返回的结果将根据给定的{@link RsMapping}函数进行转换，该函数{@link RsMapping}
      * 拥有{@link ResultSet}的完全控制权力，遂该函数内应负责显示调用{@link ResultSet#next()}方法，函数将{@link ResultSet}完全
      * 转为{@link ROWS}类型对象，该结果对象或可包含多行数据
      *
@@ -116,9 +105,9 @@ public interface DBC {
      * @param sql              要执行的sql查询语句
      * @param <ROWS>           返回值，查询结果
      * @return 查询结果对象
-     * @see ResultSetMapping
+     * @see RsMapping
      */
-    default <ROWS> ROWS execQuery(ResultSetMapping<? extends ROWS> resultSetMapping, String sql) {
+    default <ROWS> ROWS execQuery(RsMapping<? extends ROWS> resultSetMapping, String sql) {
         try (Connection conn = getConn();
              Statement stat = conn.createStatement();
              ResultSet rs = stat.executeQuery(sql)) {
@@ -135,7 +124,7 @@ public interface DBC {
         try {
             checkConn();
         } catch (Exception e) {
-            throw new DataSourceConnectionFailException(e);
+            throw new JdbcConnectionFailException(e);
         }
     }
 
@@ -167,6 +156,20 @@ public interface DBC {
     }
 
     /**
+     * 获取该数据源的配置信息
+     *
+     * @return {@link Cfg}
+     */
+    Cfg readonlyCfg();
+
+    /**
+     * 获取该数据源类型数据库元数据提供者
+     *
+     * @return {@link MetaProvider}
+     */
+    MetaProvider metaProvider();
+
+    /**
      * 获取该数据源下所有表的元信息
      *
      * @return 所有表的元信息
@@ -174,12 +177,11 @@ public interface DBC {
     default List<Table.Meta> tablesMeta() {
         try (Connection conn = getConn()) {
             MetaProvider metaProvider = metaProvider();
-            return metaProvider.tablesMeta(conn, cfg());
+            return metaProvider.tablesMeta(conn, readonlyCfg());
         } catch (Exception e) {
-            throw new DataSourceConnectionFailException(e.getMessage(), e);
+            throw new JdbcConnectionFailException(e.getMessage(), e);
         }
     }
-
 
 
 }

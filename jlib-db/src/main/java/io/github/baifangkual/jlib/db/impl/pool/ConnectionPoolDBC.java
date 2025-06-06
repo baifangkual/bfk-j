@@ -5,8 +5,9 @@ import io.github.baifangkual.jlib.core.panic.Err;
 import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.*;
 import io.github.baifangkual.jlib.db.exception.ConnectionCloseFailException;
-import io.github.baifangkual.jlib.db.exception.DataSourceConnectionFailException;
-
+import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
+import io.github.baifangkual.jlib.db.exception.JdbcConnectionFailException;
+import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.Connection;
@@ -21,16 +22,13 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * @author baifangkual
- * create time 2024/7/25
- * <p>
- * CloseableDataSource实现，
- * Connection 连接池的简单实现 内部有引用实际使用的数据源{@link DBC}类型，
- * 该实现线程安全（应确保不同的线程持有不同的{@link Connection}对象），因该类型实现{@link DBCPool}，所以对调用方来说，
- * 安全的使用该类型的方式应是通过CloseableDataSource接口<br>
+ * {@code PooledDBC} 实现，
+ * <p>Connection 连接池的简单实现 内部有引用实际使用的数据源{@link DBC}类型，
+ * 该实现线程安全（应确保不同的线程持有不同的{@link Connection}对象），因该类型实现{@link PooledDBC}，所以对调用方来说，
+ * 安全的使用该类型的方式应是通过 {@code PooledDBC} 接口
  * <p>
  * 该类型的实现的行为说明：<br>
- * 类型构造时需要参数maxPoolSize,表示连接池的最大大小;<br>
+ * 类型构造时需要参数maxPoolSize,表示连接池的最大大小<br>
  * 类型构造完成后，默认不会立即创建连接对象，当连接需求进来时{@link #getConn()},将开始创建连接对象并管理其;<br>
  * 当连接需求进来时（外侧需求获取连接），该类型有空闲的连接对象时，将直接返回空闲的连接对象，若无空闲的连接对象且当前已创建的
  * 连接对象数小于{@link #maxPoolSize}值时，将会创建新的连接对象并返回，若无空闲的连接对象并且已创建的连接对象数量以达到
@@ -38,35 +36,33 @@ import java.util.concurrent.locks.ReentrantLock;
  * 才能够被唤醒并获取到连接对象；<br>
  * 当外侧调用该类型的{@link #close()}时，该首先会检查由该管理的所有连接对象是否已经被回收，若都已经被回收，则真正关闭所有连接对象，
  * 若有连接对象未被回收，则调用{@link #close()}的线程将阻塞在此，直到所有连接对象都已被其他线程使用完成（被回收）才开始真正关闭该类型；<br>
- * 该类型实际返回的{@link Connection}实现为{@link OnCloseRecycleRefConnection},当该连接对象被关闭时，后续的在连接对象上的方法调用都将抛出异常;<br>
+ * 该类型实际返回的{@link Connection}实现为{@link OnCloseRecycleRefConnection},当该连接对象被关闭后，后续的在连接对象上的方法调用都将抛出异常;<br>
  * 当该类型被关闭时，后续的其他方法调用都将抛出异常，除了{@link #recycle(OnCloseRecycleRefConnection)}方法，因为该方法是回收连接对象的方法，
  * 但{@link #recycle(OnCloseRecycleRefConnection)}不应由该的使用方显式调用，因为使用方调用{@link Connection}的{@link Connection#close()}方法时，
  * 将会触发该回收方法，所以使用方仅需保证自己使用完链接对象后能够成功调用连接对象的{@link Connection#close()}方法即可;<br>
  * 该类型的{@link #close()}方法被调用后，将不能再次调用{@link #close()}方法，第二次调用该会抛出异常；<br>
- * 该类型当前（20240730）实现的额外说明：<br>
+ *
+ * @author baifangkual
+ * @implNote 该类型当前（20240730）实现的额外说明：<br>
  * 实现后进行了简单测试检查其是否存在线程安全问题，未见线程安全问题，未见死锁<br>
  * 当前实现未有类似于 await(time) 方法，遂因无空闲连接及close时有对象未被回收的情况，调用的线程会被无限期阻塞，
- * 倘若外侧线程在返回借用时发生异常等情况，这可能会造成一定的问题<br>
+ * 倘若外侧线程在返回借用时发生异常等情况，这可能会造成一定的问题，遂最好在try-with-resource语法块内使用获取的连接，即可保证调用使用Conn的close<br>
  * 当前实现未有类似于 借用检查器 的实现，遂没有针对连接被借用了而追查借用是否使用超时等机制<br>
- * 当前实现的借用回收{@link #recycle(OnCloseRecycleRefConnection)} 未有检查被借用对象是否属于自己的检查<br>
+ * 当前实现的借用回收{@link #recycle(OnCloseRecycleRefConnection)} 未有检查被借用对象是否属于自己的检查，
+ * 但默认实现的池化的Conn内有自身所属的Pool的引用，遂没事<br>
  * 当前实现在回收连接对象时没有回滚、提交、关闭{@link Connection}对象的{@link Connection#createStatement()}等机制，这些行为应由外侧调用方完成<br>
- * 当前实现未有连接保活等措施，遂当前连接对象活性及生命周期等，依赖于数据库自身的实现（conn是否需要保活我未知）<br>
- * 有计划后续实现类似 reOpen 方法，但我要开始写文档了，先就不写该实现了<br>
- * 该类型的实现的各方面（性能、安全性等）需持续优化或改进，后续或可应实现类似 reOpen方法 <br>
- * <p>
- * 调用方不应该摸到这里，该的构造方式应当为{@link DBCFactory#createConnPool(Cfg)}等,
- * 使用方式见{@link DBCPool}说明<br>
- * 或者，你已有{@link DBC}类型实例，则可使用{@link #ConnectionPoolProxyDataSource(DBC, int)} 创建该<br>
- * @see DBCPool
- * @see DBCPool#getConn()
+ * 当前实现未有连接保活等措施，遂当前连接对象活性及生命周期等，依赖于数据库自身的Conn实现<br>
+ * @see PooledDBC
+ * @see PooledDBC#getConn()
  * @see DBC
  * @see OnCloseRecycleRefConnection
  * @see OnCloseRecycleRefConnection#close()
+ * @since 2024/7/25
  */
 @Slf4j
-public class ConnectionPoolProxyDataSource implements Pool<OnCloseRecycleRefConnection>, DBCPool {
+public class ConnectionPoolDBC implements Poolable<OnCloseRecycleRefConnection>, PooledDBC {
 
-    private static final String CLOSED_MSG = "该CloseableDataSource已经被关闭";
+    private static final String CLOSED_MSG = "ConnectionPoolDBC closed";
 
     private final AtomicBoolean open = new AtomicBoolean(true);
     private final Lock lock = new ReentrantLock();
@@ -78,6 +74,7 @@ public class ConnectionPoolProxyDataSource implements Pool<OnCloseRecycleRefConn
     private final int maxPoolSize;
     private final AtomicInteger curr = new AtomicInteger(0);
     // 该当前未用，因为就一个maxPoolSize参数，后续可能多，即有用
+    @SuppressWarnings("FieldCanBeLocal")
     private final Cfg poolConfig;
     private final Cfg connConfig;
     private final DBC dataSource;
@@ -86,49 +83,41 @@ public class ConnectionPoolProxyDataSource implements Pool<OnCloseRecycleRefConn
     private final BlockingDeque<OnCloseRecycleRefConnection> queue;
 
 
-    public ConnectionPoolProxyDataSource(Cfg config) {
-        this(DBCFactory.create(config));
+    public ConnectionPoolDBC(Cfg cfg) {
+        this(DBCFactory.build(cfg));
     }
 
-    public ConnectionPoolProxyDataSource(DBC dataSource) {
-        this(dataSource, dataSource.cfg()
+    public ConnectionPoolDBC(DBC dbc) {
+        this(dbc, dbc.readonlyCfg()
                 .getOrDefault(DBCCfgOptions.CONN_POOL_CONFIG)
                 .getOrDefault(DBCCfgOptions.CONN_POOL_MAX_SIZE));
     }
 
-    public ConnectionPoolProxyDataSource(DBC dataSource, int maxPoolSize) {
-        this.dataSource = dataSource;
-        this.metaProvider = dataSource.metaProvider();
-        this.connConfig = dataSource.cfg();
+    public ConnectionPoolDBC(DBC dbc, int maxPoolSize) {
+        Err.realIf(maxPoolSize < 1, IllegalDBCCfgException::new, "maxPoolSize < 1");
+        this.dataSource = dbc;
+        this.metaProvider = dbc.metaProvider();
+        this.connConfig = dbc.readonlyCfg();
         this.poolConfig = connConfig.getOrDefault(DBCCfgOptions.CONN_POOL_CONFIG);
         this.maxPoolSize = maxPoolSize;
         this.queue = new LinkedBlockingDeque<>(maxPoolSize);
         if (log.isDebugEnabled()) {
-            log.debug("create pool proxy connection, maxPoolSize: {}, dataSource:{}", this.maxPoolSize, this.dataSource);
+            log.debug("create PooledDBC, maxPoolSize: {}, DBC:{}", this.maxPoolSize, this.dataSource);
         }
     }
 
 
-    private Connection createNewConnection() throws Exception {
+    private Connection newConn() throws Exception {
         return this.dataSource.getConn();
     }
 
-    private OnCloseRecycleRefConnection createNewWrapConn() throws Exception {
+    private OnCloseRecycleRefConnection newWrapConn() throws Exception {
         if (curr.get() >= maxPoolSize) {
             throw new IllegalStateException(Stf
                     .f("连接池持有的连接已到达最大连接数，不可再创建新连接, max:{}", maxPoolSize));
         }
         final int curId = curr.incrementAndGet();
-        /*
-        当高并发情况下，多个线程涌进来时，可能第一层条件尚未拦截到，遂该处还应该拦截一次
-        20240729更改：borrow使用锁，不会有多个进来，但该处先不删
-         */
-        if (curId > maxPoolSize) {
-            curr.set(maxPoolSize);
-            throw new IllegalStateException(Stf
-                    .f("连接池持有的连接已到达最大连接数，不可再创建新连接, max:{}", maxPoolSize));
-        }
-        Connection connRef = createNewConnection();
+        Connection connRef = newConn();
         return new OnCloseRecycleRefConnection(curId, connRef, this);
     }
 
@@ -163,7 +152,7 @@ public class ConnectionPoolProxyDataSource implements Pool<OnCloseRecycleRefConn
                 // 队列中无，表示大伙都忙，忙，忙点好阿，
                 // 否则，判断是否可再创建，若可再创建，创建之，直接使用，因回收时会将其添加到队列，所以不用管
             } else if (curr.get() < maxPoolSize) {
-                ref = createNewWrapConn();
+                ref = newWrapConn();
                 // 否则，表示已经不能再创建了，线程阻塞至此
             } else {
                 // 终止条件：1.已经被标记为关闭，由close唤醒
@@ -186,15 +175,14 @@ public class ConnectionPoolProxyDataSource implements Pool<OnCloseRecycleRefConn
         } catch (InterruptedException e) {
             log.error("线程收到中断，恢复中断信号，由外层处理");
             Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
         } catch (Exception e) {
             // 该处的异常是由创建conn时可能产生的，将直接向外侧抛出
             // Err.throwPanic(e);
-            throw new DataSourceConnectionFailException(e);
+            throw new JdbcConnectionFailException(e);
         } finally {
             lock.unlock();
         }
-        // 不会运行至此，只为编译通过
-        throw new IllegalStateException();
     }
 
     /**
@@ -302,6 +290,12 @@ public class ConnectionPoolProxyDataSource implements Pool<OnCloseRecycleRefConn
         }
     }
 
+    /*
+    todo Cleaner test impl
+        private static final Cleaner CLEANER = Cleaner.create();
+        private static final class PooledBDCClean {}
+     */
+
 
     @Override
     public void close() throws Exception {
@@ -342,7 +336,7 @@ public class ConnectionPoolProxyDataSource implements Pool<OnCloseRecycleRefConn
     }
 
     @Override
-    public Cfg cfg() {
+    public Cfg readonlyCfg() {
         Err.realIf(!open.get(), IllegalStateException::new, CLOSED_MSG);
         return connConfig;
     }
@@ -351,6 +345,12 @@ public class ConnectionPoolProxyDataSource implements Pool<OnCloseRecycleRefConn
     public MetaProvider metaProvider() {
         Err.realIf(!open.get(), IllegalStateException::new, CLOSED_MSG);
         return metaProvider;
+    }
+
+    @Override
+    public DBType type() {
+        Err.realIf(!open.get(), IllegalStateException::new, CLOSED_MSG);
+        return dataSource.type();
     }
 
     @Override
@@ -365,14 +365,9 @@ public class ConnectionPoolProxyDataSource implements Pool<OnCloseRecycleRefConn
     }
 
     @Override
-    public String getJdbcUrl() {
-        return dataSource.getJdbcUrl();
-    }
-
-    @Override
     public List<Table.Meta> tablesMeta() {
         Err.realIf(!open.get(), IllegalStateException::new, CLOSED_MSG);
-        return DBCPool.super.tablesMeta();
+        return PooledDBC.super.tablesMeta();
     }
 
 }

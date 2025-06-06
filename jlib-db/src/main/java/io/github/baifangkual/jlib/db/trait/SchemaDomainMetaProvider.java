@@ -4,7 +4,6 @@ import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.lang.Tup2;
 import io.github.baifangkual.jlib.core.panic.Err;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
-import io.github.baifangkual.jlib.db.MetaProvider;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
 import lombok.NonNull;

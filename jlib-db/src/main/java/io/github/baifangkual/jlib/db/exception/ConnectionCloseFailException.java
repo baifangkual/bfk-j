@@ -1,8 +1,10 @@
 package io.github.baifangkual.jlib.db.exception;
 
 /**
+ * 数据库连接关闭过程的异常包装
+ *
  * @author baifangkual
- * create time 2024/7/29
+ * @since 2024/7/29
  */
 public class ConnectionCloseFailException extends IllegalStateException {
 

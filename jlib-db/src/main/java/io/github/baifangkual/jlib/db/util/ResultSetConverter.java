@@ -5,8 +5,8 @@ import io.github.baifangkual.jlib.core.lang.Tup2;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.ResultSetMappingFailException;
 import io.github.baifangkual.jlib.db.exception.ResultSetRowMappingFailException;
-import io.github.baifangkual.jlib.db.func.ResultSetMapping;
-import io.github.baifangkual.jlib.db.func.ResultSetRowMapping;
+import io.github.baifangkual.jlib.db.func.RsMapping;
+import io.github.baifangkual.jlib.db.func.RsRowMapping;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -24,17 +24,17 @@ public class ResultSetConverter {
     }
 
     /**
-     * 调用方给定{@link ResultSet}和操作ResultSet中行的函数{@link ResultSetRowMapping},返回多行数据，
+     * 调用方给定{@link ResultSet}和操作ResultSet中行的函数{@link RsRowMapping},返回多行数据，
      * 该方法不负责调用{@link ResultSet#close()}
      *
      * @param rs         JDBC QUERY查询结果对象,该对象有状态
      * @param rowMapping 描述对{@link ResultSet}中行的操作，因为描述的为对行的操作，
      *                   遂该函数内不应显式调用{@link ResultSet#next()}，除非你有特殊需求（比如跳行读取）
-     * @param <ROW>      通过{@link ResultSetRowMapping}函数操作行和返回的对应行的结果
+     * @param <ROW>      通过{@link RsRowMapping}函数操作行和返回的对应行的结果
      * @return list[ROW...]
      */
     public static <ROW> List<ROW> rows(ResultSet rs,
-                                       ResultSetRowMapping<? extends ROW> rowMapping) {
+                                       RsRowMapping<? extends ROW> rowMapping) {
         try {
             List<ROW> rows = new ArrayList<>();
             while (rs.next()) {
@@ -47,16 +47,16 @@ public class ResultSetConverter {
     }
 
     /**
-     * 给定操作整个{@link ResultSet}的函数{@link ResultSetMapping}和{@link ResultSet},返回通过函数转换而来的结果对象，该方法
-     * 不同于{@link #rows(ResultSet, ResultSetRowMapping)}方法，要求给定的函数为操作整个{@link ResultSet}的函数，遂要获取多行数据，应
+     * 给定操作整个{@link ResultSet}的函数{@link RsMapping}和{@link ResultSet},返回通过函数转换而来的结果对象，该方法
+     * 不同于{@link #rows(ResultSet, RsRowMapping)}方法，要求给定的函数为操作整个{@link ResultSet}的函数，遂要获取多行数据，应
      * 显式在函数体中调用{@link ResultSet#next()}
      *
      * @param resultSetMapping 操作整个{@link ResultSet}的函数
      * @param rs               JDBC QUERY 结果对象
-     * @param <ROWS>           表示通过{@link ResultSetMapping}函数操作后返回的结果类型
+     * @param <ROWS>           表示通过{@link RsMapping}函数操作后返回的结果类型
      * @return ROWS OBJ
      */
-    public static <ROWS> ROWS rows(ResultSetMapping<? extends ROWS> resultSetMapping,
+    public static <ROWS> ROWS rows(RsMapping<? extends ROWS> resultSetMapping,
                                    ResultSet rs) {
         try {
             return resultSetMapping.map(rs);
@@ -66,7 +66,7 @@ public class ResultSetConverter {
     }
 
     /**
-     * 与{@link #rows(ResultSet, ResultSetRowMapping)} 相似，不过该函数为{@link Fn2}，即能够操作{@link ResultSet}的某一行，并且
+     * 与{@link #rows(ResultSet, RsRowMapping)} 相似，不过该函数为{@link Fn2}，即能够操作{@link ResultSet}的某一行，并且
      * 第二个参数也形容了结果集中一行的列的个数
      *
      * @param rs         JDBC QUERY 结果集
@@ -129,30 +129,5 @@ public class ResultSetConverter {
         }
     }
 
-    /**
-     * 该方法设定要返回结果集{@link ResultSet}的元数据，通过JDBC API的定义的方法使用，遂正确性依赖于各个数据库支持的正确性，
-     * 该方法目前尚不完善，不应使用，后续或补充或废弃
-     *
-     * @param meta {@link ResultSet#getMetaData()}
-     * @return ResultSet元数据
-     * @throws Exception 当过程发生异常
-     * @deprecated 该未有测试且没时间写，后续或补充或废弃，当前不应使用
-     */
-    @Deprecated
-    private static List<Table.ColumnMeta> meta(ResultSetMetaData meta) throws Exception {
-        int colCount = meta.getColumnCount();
-        List<Table.ColumnMeta> columnMetas = new ArrayList<>(colCount);
-        for (int i = 1; i <= colCount; i++) {
-            String colName = meta.getColumnName(i);
-            String colTypeName = meta.getColumnTypeName(i);
-            String colLabel = meta.getColumnLabel(i); // sql as value
-            Table.ColumnMeta columnMeta = new Table.ColumnMeta()
-                    .setName(colName)
-                    .setTypeName(colTypeName)
-                    .setComment(colLabel);
-            columnMetas.add(columnMeta);
-        }
-        return columnMetas;
-    }
 
 }

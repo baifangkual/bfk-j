@@ -4,7 +4,6 @@ import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.lang.Tup2;
 import io.github.baifangkual.jlib.db.DBC;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
-import io.github.baifangkual.jlib.db.MetaProvider;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
 
@@ -74,14 +73,5 @@ public interface JustSchemaDomainMetaProvider extends MetaProvider {
         }
     }
 
-    @Override
-    void delTable(DBC dataSource, String tb);
-
-    @Override
-    default void delTable(Connection conn, String db, String tb) {
-        // 请更换上层接口暴露的参数，上层参数并不能兼容该 JustSchemaDomainMetaProvider 实现，遂
-        // 这里的逻辑暂时搁置，并等待上层接口逻辑变更
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 
 }

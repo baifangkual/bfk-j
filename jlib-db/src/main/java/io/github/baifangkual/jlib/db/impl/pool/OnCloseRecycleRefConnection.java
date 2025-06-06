@@ -1,8 +1,7 @@
 package io.github.baifangkual.jlib.db.impl.pool;
 
 import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.exception.DataSourceConnectionFailException;
-
+import io.github.baifangkual.jlib.db.exception.JdbcConnectionFailException;
 import lombok.NonNull;
 
 import java.sql.*;
@@ -12,27 +11,29 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * @author baifangkual
- * create time 2024/7/26
- * <p>
+ * 连接池中使用的 Conn 代理
  * 代理{@link Connection}对象，当{@link Connection#close()}发生时，将自己返回给原有引用地方，
- * 该应该作为连接池中对象而不是直接使用,当前（20240729）该对象的生命周期与{@link ConnectionPoolProxyDataSource}相关<br>
- * 该对象实际是由{@link Pool}类型实现对象创建的，当前也即{@link ConnectionPoolProxyDataSource}
+ * 该应该作为连接池中对象而不是直接使用,当前（20240729）该对象的生命周期与{@link ConnectionPoolDBC}相关<br>
+ * 该对象实际是由{@link Poolable}类型实现对象创建的，当前也即{@link ConnectionPoolDBC}
+ *
+ * @author baifangkual
+ * @since 2024/7/26
  */
-public class OnCloseRecycleRefConnection implements Connection, Pool.Borrowable {
+@SuppressWarnings("SqlSourceToSinkFlow")
+public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowable {
 
     private static final String CLOSED_CONNECTION = "Connection is closed";
     private static final String UN_OPEN_CONNECTION = "un open connection";
 
     private final int id;
     private final Connection delegate;
-    private final Pool<OnCloseRecycleRefConnection> pool;
+    private final Poolable<OnCloseRecycleRefConnection> pool;
     private final AtomicBoolean inUse = new AtomicBoolean(false);
 
     OnCloseRecycleRefConnection(int id,
                                 @NonNull Connection delegate,
-                                @NonNull Pool<OnCloseRecycleRefConnection> pool) {
-        if (delegate instanceof Pool.Borrowable) {
+                                @NonNull Poolable<OnCloseRecycleRefConnection> pool) {
+        if (delegate instanceof Poolable.Borrowable) {
             throw new IllegalArgumentException("Connection is a recyclable connection");
         }
         this.id = id;
@@ -92,11 +93,6 @@ public class OnCloseRecycleRefConnection implements Connection, Pool.Borrowable 
         return id == that.id;
     }
 
-    /**
-     * 仅限{@link java.util.concurrent.BlockingDeque#contains(Object)} 使用
-     *
-     * @return hash
-     */
     @Override
     public int hashCode() {
         return id;
@@ -104,6 +100,7 @@ public class OnCloseRecycleRefConnection implements Connection, Pool.Borrowable 
 
     @Override
     public String toString() {
+        // 该内，不应在调用pool的toString，防止Pool的ToString等因循环引用...
         return Stf.f("OnCloseRecycleRefConnection[id:{}, ref:{}, inUse:{}]", id, delegate, inUse.get());
     }
 
@@ -364,13 +361,13 @@ public class OnCloseRecycleRefConnection implements Connection, Pool.Borrowable 
 
     @Override
     public void setClientInfo(String name, String value) throws SQLClientInfoException {
-        if (isClosed()) throw new DataSourceConnectionFailException(CLOSED_CONNECTION);
+        if (isClosed()) throw new JdbcConnectionFailException(CLOSED_CONNECTION);
         delegate.setClientInfo(name, value);
     }
 
     @Override
     public void setClientInfo(Properties properties) throws SQLClientInfoException {
-        if (isClosed()) throw new DataSourceConnectionFailException(CLOSED_CONNECTION);
+        if (isClosed()) throw new JdbcConnectionFailException(CLOSED_CONNECTION);
         delegate.setClientInfo(properties);
     }
 
@@ -464,12 +461,14 @@ public class OnCloseRecycleRefConnection implements Connection, Pool.Borrowable 
         delegate.setShardingKey(shardingKey);
     }
 
+    @SuppressWarnings("SpellCheckingInspection")
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
         if (isClosed()) throw new SQLException(CLOSED_CONNECTION);
         return delegate.unwrap(iface);
     }
 
+    @SuppressWarnings("SpellCheckingInspection")
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         if (isClosed()) throw new SQLException(CLOSED_CONNECTION);

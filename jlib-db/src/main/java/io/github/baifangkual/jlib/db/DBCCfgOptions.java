@@ -13,6 +13,7 @@ public class DBCCfgOptions {
     private DBCCfgOptions() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
+
     public static final Cfg.Option<Long> PAGE_NO = Cfg.Option.of("pageNo")
             .longType()
             .defaultValue(1L)
@@ -28,7 +29,7 @@ public class DBCCfgOptions {
             .description("连接池的配置对象")
             .build();
     public static final Cfg.Option<Integer> CONN_POOL_MAX_SIZE = Cfg.Option.of("conn.pool.Cfg.maxSize")
-            .defaultValue(5)
+            .defaultValue(10)
             .description("连接池默认最大连接对象数量")
             .build();
 
@@ -44,11 +45,6 @@ public class DBCCfgOptions {
     public static final Cfg.Option<DBType> DS_TYPE = Cfg.Option.of("jdbc.datasource.type")
             .type(DBType.class)
             .description("数据源类型")
-            .build();
-    public static final Cfg.Option<URLType> JDBC_URL_TYPE = Cfg.Option.of("jdbc.url.type")
-            .type(URLType.class)
-            .defaultValue(URLType.JDBC_DEFAULT)
-            .description("数据库连接所使用的JDBC协议的URL类型，不同数据库或有不同实现，默认使用JDBC_DEFAULT")
             .build();
     public static final Cfg.Option<String> HOST = Cfg.Option.of("jdbc.host")
             .stringType()

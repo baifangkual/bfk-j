@@ -3,7 +3,6 @@ package io.github.baifangkual.jlib.db.trait;
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.panic.Err;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
-import io.github.baifangkual.jlib.db.MetaProvider;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
 

@@ -5,8 +5,8 @@ import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.impl.abs.SimpleJDBCUrlSliceSynthesizeDataSource;
-import io.github.baifangkual.jlib.db.MetaProvider;
+import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
+import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.SchemaDomainMetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
 import io.github.baifangkual.jlib.db.util.ResultSetConverter;
@@ -20,10 +20,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * sqlserver dbc impl
+ *
  * @author baifangkual
- * create time 2024/7/19
+ * @since 2024/7/19
  */
-public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource {
+public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
 
     private final static MetaProvider META_PROVIDER = new MeteProviderImpl();
     /*
@@ -39,8 +41,8 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
     private final static String DEFAULT_ENCRYPT = "false";
     private final static String DB_ON_P = "database";
 
-    public SqlServerDataSource(Cfg connConfig) {
-        super(connConfig);
+    public SqlServerDBC(Cfg cfg) {
+        super(cfg);
     }
 
     @Override
@@ -63,10 +65,10 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
     }
 
     @Override
-    protected String buildingJdbcUrl(Cfg config) {
-        String url = super.buildingJdbcUrl(config);
+    protected String buildingJdbcUrl(Cfg readonlyCfg) {
+        String url = super.buildingJdbcUrl(readonlyCfg);
         String msUrl = url.substring(0, url.lastIndexOf("/"));
-        String dbName = config.get(DBCCfgOptions.DB);
+        String dbName = readonlyCfg.get(DBCCfgOptions.DB);
         return Stf.f("{};{}={}", msUrl, DB_ON_P, dbName);
     }
 
@@ -111,6 +113,7 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
                     SqlSlices.safeAdd(db, schema, table, SqlSlices.DS_MASK),
                     (pageNo - 1) * pageSize,
                     pageSize);
+            //noinspection SqlSourceToSinkFlow
             try (Statement stat = conn.createStatement();
                  ResultSet rs = stat.executeQuery(sql)) {
                 List<Object[]> rL = ResultSetConverter.rows(rs);
@@ -118,9 +121,5 @@ public class SqlServerDataSource extends SimpleJDBCUrlSliceSynthesizeDataSource 
             }
         }
 
-        @Override
-        public void delTable(Connection conn, String db, String tb) throws Exception {
-            throw new UnsupportedOperationException("Not implemented yet.");
-        }
     }
 }
