@@ -2,8 +2,8 @@ package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.lang.R;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.func.FnRSRowCollector;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.util.ResultSetc;
 
 import java.sql.Connection;
@@ -170,22 +170,31 @@ public interface DBC {
     /**
      * 给定表名，查询表中符合分页要求的行
      *
-     * @param table    表名
-     * @param pageNo   页码-分页参数-最小值为1
-     * @param pageSize 页大小-分页参数-最小值为1
+     * @param table                表名
+     * @param pageNo               页码-分页参数-最小值为1
+     * @param pageSize             页大小-分页参数-最小值为1
+     * @param fnResultSetCollector 函数-描述完整读取 {@link ResultSet} 并将其中的数据行转为 {@link ROWS} 的过程
+     * @param <ROWS>               表示表中数据对象的类型
      * @return 表中符合分页要求的行
      */
-    Table.Rows tableData(String table, long pageNo, long pageSize);
+    <ROWS> ROWS tableData(String table, long pageNo, long pageSize,
+                          FnResultSetCollector<? extends ROWS> fnResultSetCollector);
 
     /**
      * 给定表名，查询表中所有行
      *
-     * @param table 表名
+     * @param table                表名
+     * @param fnResultSetCollector 函数-描述完整读取 {@link ResultSet} 并将其中的数据行转为 {@link ROWS} 的过程
      * @return 表中所有行
-     * @apiNote 该方法在表过大时可能造成堆内存溢出，若不明确表大小，建议调用 {@link #tableData(String, long, long)}
+     * @apiNote 该方法实际是委托至 {@link #tableData(String, long, long, FnResultSetCollector)} 方法并给定分页参数默认值
+     * {@code pageNo = 1L, pageSize = Long.MAX_VALUE}，这可能会对数据库造成一定的计算性能消耗，
+     * 且可能数据库的分页参数并不支持 Long.MAX_VALUE 这么大，遂该方法后续应重写为简单的表查询即可，而不应该委托至分页查询，
+     * 而且 {@code tableData} 系方法参数及返回值已修改，通过 {@link FnResultSetCollector} 函数，外界可自由控制读取行数，
+     * 遂对于原本的分页查询实现 {@link #tableData(String, long, long, FnResultSetCollector)}，可能应做到覆盖
      */
-    default Table.Rows tableData(String table) {
-        return tableData(table, 1L, Long.MAX_VALUE);
+    default <ROWS> ROWS tableData(String table,
+                                  FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
+        return tableData(table, 1L, Long.MAX_VALUE, fnResultSetCollector);
     }
 
 

@@ -5,6 +5,7 @@ import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.NoSchemaJustDBMetaProvider;
@@ -71,10 +72,11 @@ public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
         private static final String SELECT_TABLE_TEMPLATE = "SELECT * FROM {} LIMIT {} OFFSET {}";
 
         @Override
-        public Table.Rows tableData(Connection conn,
-                                    String db, String table,
-                                    Map<String, String> other,
-                                    Long pageNo, Long pageSize) throws SQLException {
+        public <ROWS> ROWS tableData(Connection conn,
+                                     String db, String table,
+                                     Map<String, String> other,
+                                     Long pageNo, Long pageSize,
+                                     FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws SQLException {
             // limit 为 要多少行，即pageSize，offset 为 pageNo
             String sql = Stf.f(SELECT_TABLE_TEMPLATE,
                     SqlSlices.safeAdd(db, null, table, SqlSlices.D_MASK),
@@ -82,8 +84,7 @@ public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
             //noinspection SqlSourceToSinkFlow
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(sql)) {
-                List<Object[]> rL = ResultSetc.rows(rs);
-                return new Table.Rows().setRows(rL);
+                return ResultSetc.rows(fnResultSetCollector, rs);
             }
         }
 

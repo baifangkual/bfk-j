@@ -2,11 +2,12 @@ package io.github.baifangkual.jlib.db.util;
 
 import io.github.baifangkual.jlib.db.exception.ResultSetMappingFailException;
 import io.github.baifangkual.jlib.db.exception.ResultSetRowMappingFailException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.func.FnRSRowCollector;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -72,7 +73,7 @@ public class ResultSetc {
     public static List<Object[]> rows(ResultSet rs) {
         try {
             int colNum = rs.getMetaData().getColumnCount();
-            List<Object[]> rows = new ArrayList<>();
+            List<Object[]> rows = new LinkedList<>();
             while (rs.next()) {
                 Object[] row = new Object[colNum];
                 for (int i = 1; i <= colNum; i++) {

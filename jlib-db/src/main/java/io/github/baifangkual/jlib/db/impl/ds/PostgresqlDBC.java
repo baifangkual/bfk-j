@@ -5,6 +5,7 @@ import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.HasDbAndSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
@@ -81,16 +82,16 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
         private static final String SELECT_TABLE_TEMPLATE = "SELECT * FROM {} LIMIT {} OFFSET {}";
 
         @Override
-        public Table.Rows tableData(Connection conn, String db, String schema, String table,
-                                    Map<String, String> other, Long pageNo, Long pageSize) throws Exception {
+        public <ROWS> ROWS tableData(Connection conn, String db, String schema, String table,
+                                     Map<String, String> other, Long pageNo, Long pageSize,
+                                     FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception {
             String sql = Stf.f(SELECT_TABLE_TEMPLATE,
                     SqlSlices.safeAdd(db, schema, table, SqlSlices.DS_MASK),
                     pageSize, (pageNo - 1) * pageSize);
             //noinspection SqlSourceToSinkFlow
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(sql);) {
-                List<Object[]> rL = ResultSetc.rows(rs);
-                return new Table.Rows().setRows(rL);
+                return ResultSetc.rows(fnResultSetCollector, rs);
             }
         }
 

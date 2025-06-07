@@ -5,6 +5,7 @@ import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.db.*;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.impl.pool.ConnPoolDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 
@@ -70,11 +71,12 @@ public abstract class AbsDBC implements DBC {
         }
     }
 
-    public Table.Rows tableData(String table, long pageNo, long pageSize) {
+    public <ROWS> ROWS tableData(String table, long pageNo, long pageSize,
+                                 FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
         Objects.requireNonNull(table, "given table is null");
         MetaProvider metaProvider = metaProvider();
         try (Connection conn = getConn()) {
-            return metaProvider.tableData(conn, readonlyCfg(), table, pageNo, pageSize);
+            return metaProvider.tableData(conn, readonlyCfg(), table, pageNo, pageSize, fnResultSetCollector);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }

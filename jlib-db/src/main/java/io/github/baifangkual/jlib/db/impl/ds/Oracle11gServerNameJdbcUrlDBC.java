@@ -6,10 +6,12 @@ import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.NoDBJustSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultJdbcMetaSupports;
+import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
@@ -19,6 +21,9 @@ import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
+
+import static io.github.baifangkual.jlib.db.util.SqlSlices.DS_MASK;
 
 /**
  * oracle dbc impl<br>
@@ -170,22 +175,60 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
          */
         @SuppressWarnings("SpellCheckingInspection")
         private static final String PAGE_QUERY_TEMPLATE = """
-                SELECT * FROM (
+                SELECT {} FROM (
                     SELECT e.*, ROWNUM AS "{}" FROM {} e
                 ) WHERE "{}" BETWEEN {} AND {}""";
 
-        private static String pageQuery(String rowNumColName, Long pageNo, Long pageSize, String schema, String table) {
+        /**
+         * 因为oracle 分页查询使用了  {@link #PAGE_QUERY_TEMPLATE} 做模板查询，
+         * 遂查询结果的最后一列的名称应当为 给定的随机数拼接的列名称，该列被忽略，
+         * 通过 {@link #queryTableFullColName(Connection, String, String)} 找到所有实际的列名，
+         * 然后仅 select 实际的列名列，这些列名为防止与关键字装上，
+         * 遂左右都包了 {@value SqlSlices#DS_MASK}，按照oracle11g设定，
+         * 包裹后将大小写敏感，这可能会影响到 re.getByName...
+         */
+        private static String pageQuery(List<String> tableFullColName,
+                                        String rowNumColName,
+                                        Long pageNo,
+                                        Long pageSize,
+                                        String schema,
+                                        String table) {
+            if (pageNo < 1 || pageSize < 1) {
+                throw new IllegalArgumentException("pageNo and pageSize must be greater than 1!");
+            }
+            final StringJoiner sj = new StringJoiner(", ");
+            // 左右括起来，防止 select 遇到关键字
+            tableFullColName.forEach(cn -> sj.add(SqlSlices.wrapLR(cn, DS_MASK)));
+            final String safeFullCols = sj.toString();
             long betweenLeft = ((pageNo - 1) * pageSize) + 1;
             long betweenRight = pageNo * pageSize;
-            String fullTableName = SqlSlices.safeAdd(null, schema, table, SqlSlices.DS_MASK);
-            return Stf.f(PAGE_QUERY_TEMPLATE, rowNumColName, fullTableName, rowNumColName, betweenLeft, betweenRight);
+            String fullTableName = SqlSlices.safeAdd(null, schema, table, DS_MASK);
+            return Stf.f(PAGE_QUERY_TEMPLATE,
+                    safeFullCols,
+                    rowNumColName, fullTableName,
+                    rowNumColName, betweenLeft, betweenRight);
         }
+
+        /**
+         * 查某表中所有列的列名，不关闭给定的Conn
+         */
+        private List<String> queryTableFullColName(Connection conn,
+                                                   String schema,
+                                                   String table) throws Exception {
+            return this.columnsMeta(conn, schema, table, Map.of())
+                    .stream()
+                    .map(Table.ColumnMeta::name).toList();
+        }
+
 
         /**
          * 将分页查询的结果转为 {@link Table.Rows}对象，
          * 因为oracle 分页查询使用了  {@link #PAGE_QUERY_TEMPLATE} 做模板查询，
          * 遂查询结果的最后一列的名称应当为 给定的随机数拼接的列名称，该列被忽略
+         *
+         * @deprecated 因 Table.Rows类型打算废弃，该方法无用，已使用
          */
+        @Deprecated(forRemoval = true)
         private static Table.Rows handlerPageQueryResultSet(ResultSet rs, String rowNumColName) throws SQLException {
             int columnCount = rs.getMetaData().getColumnCount();
             String colName = rs.getMetaData().getColumnName(columnCount);
@@ -207,15 +250,18 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
         }
 
         @Override
-        public Table.Rows tableData(Connection conn, String schema, String table,
-                                    Map<String, String> other, Long pageNo, Long pageSize) throws Exception {
+        public <ROWS> ROWS tableData(Connection conn, String schema, String table,
+                                     Map<String, String> other, Long pageNo, Long pageSize,
+                                     FnResultSetCollector<? extends ROWS> fnResultSetCollector
+        ) throws Exception {
             // 防止列名重名而造成混淆，遂每次重新生成列名
             String rngRowNumCol = "row" + Rng.nextFixLenLarge(20);
-            String sql = pageQuery(rngRowNumCol, pageNo, pageSize, schema, table);
+            List<String> tableFullColName = queryTableFullColName(conn, schema, table);
+            String sql = pageQuery(tableFullColName, rngRowNumCol, pageNo, pageSize, schema, table);
             //noinspection SqlSourceToSinkFlow
             try (Statement stat = conn.createStatement();
                  ResultSet rs = stat.executeQuery(sql)) {
-                return handlerPageQueryResultSet(rs, rngRowNumCol);
+                return ResultSetc.rows(fnResultSetCollector, rs);
             }
         }
 

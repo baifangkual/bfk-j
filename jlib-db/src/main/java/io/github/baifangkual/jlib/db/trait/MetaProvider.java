@@ -3,8 +3,10 @@ package io.github.baifangkual.jlib.db.trait;
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.db.DBC;
 import io.github.baifangkual.jlib.db.Table;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.List;
 
 /**
@@ -48,16 +50,18 @@ public interface MetaProvider {
      * 给定一个可用的连接对象和一个 {@link DBC} 的 {@link Cfg} 和 表名 以及要查询的行的分页信息，
      * 使用给定的连接对象查询某库下某表中符合分页的行
      *
-     * @param conn     连接对象
-     * @param config   配置-内应含有该查询中必要的信息
-     * @param table    要查询的表名
-     * @param pageNo   页码-分页参数
-     * @param pageSize 页大小-分页参数
+     * @param conn                 连接对象
+     * @param config               配置-内应含有该查询中必要的信息
+     * @param table                要查询的表名
+     * @param pageNo               页码-分页参数
+     * @param pageSize             页大小-分页参数
+     * @param fnResultSetCollector 函数-描述完整读取 {@link ResultSet} 并将其中的数据行转为 {@link ROWS} 的过程
      * @return 表下符合分页的行信息
      * @apiNote 该方法是保守的，因为表中该数据量不确定，遂若表过大，
      * 给定较小的参数分页读取不会造成堆内存溢出
      */
-    Table.Rows tableData(Connection conn, Cfg config, String table, Long pageNo, Long pageSize);
+    <ROWS> ROWS tableData(Connection conn, Cfg config, String table, Long pageNo, Long pageSize,
+                          FnResultSetCollector<? extends ROWS> fnResultSetCollector);
 
 
 }

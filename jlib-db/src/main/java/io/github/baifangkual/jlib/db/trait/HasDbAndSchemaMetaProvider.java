@@ -5,6 +5,7 @@ import io.github.baifangkual.jlib.core.lang.Tup2;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 
 import java.sql.Connection;
 import java.util.List;
@@ -27,9 +28,10 @@ interface HasDbAndSchemaMetaProvider extends MetaProvider {
                                        String table,
                                        Map<String, String> other) throws Exception;
 
-    Table.Rows tableData(Connection conn, String db, String schema, String table,
-                         Map<String, String> other,
-                         Long pageNo, Long pageSize) throws Exception;
+    <ROWS> ROWS tableData(Connection conn, String db, String schema, String table,
+                          Map<String, String> other,
+                          Long pageNo, Long pageSize,
+                          FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception;
 
     private Tup2<String, String> unsafeGetDbAndSchemaFromCfg(Cfg config) {
         final String db = config.get(DBCCfgOptions.db);
@@ -49,14 +51,15 @@ interface HasDbAndSchemaMetaProvider extends MetaProvider {
     }
 
     @Override
-    default Table.Rows tableData(Connection conn, Cfg config,
-                                 String table,
-                                 Long pageNo,
-                                 Long pageSize) {
+    default <ROWS> ROWS tableData(Connection conn, Cfg config,
+                                  String table,
+                                  Long pageNo,
+                                  Long pageSize,
+                                  FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
         try {
             Tup2<String, String> t2 = unsafeGetDbAndSchemaFromCfg(config);
             final Map<String, String> other = config.getOrDefault(DBCCfgOptions.jdbcOtherParams);
-            return tableData(conn, t2.l(), t2.r(), table, other, pageNo, pageSize);
+            return tableData(conn, t2.l(), t2.r(), table, other, pageNo, pageSize, fnResultSetCollector);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }
