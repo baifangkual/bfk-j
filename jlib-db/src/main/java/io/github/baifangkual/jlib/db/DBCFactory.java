@@ -1,8 +1,10 @@
 package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
-import io.github.baifangkual.jlib.db.impl.pool.ConnectionPoolDBC;
-import lombok.extern.slf4j.Slf4j;
+import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
+import io.github.baifangkual.jlib.db.exception.JdbcConnectionFailException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.DriverManager;
 import java.util.*;
@@ -17,9 +19,9 @@ import java.util.stream.Collectors;
  * @author baifangkual
  * @since 2024/7/11
  */
-@Slf4j
 public final class DBCFactory {
 
+    private static final Logger log = LoggerFactory.getLogger(DBCFactory.class);
 
     private static final List<DBType> SUPPORTED_TYPES;
 
@@ -80,34 +82,9 @@ public final class DBCFactory {
      * @param cfg 连接配置
      * @return {@link DBC}
      */
-    public static DBC build(Cfg cfg) {
-        DBType DBType = cfg.get(DBCCfgOptions.DS_TYPE);
+    public static DBC build(Cfg cfg) throws IllegalDBCCfgException, JdbcConnectionFailException {
+        DBType DBType = cfg.get(DBCCfgOptions.type);
         return DBType.getFnDBCConstructor().apply(cfg);
-    }
-
-    /**
-     * 根据给定的连接信息，创建 {@link PooledDBC} 连接池
-     *
-     * @param cfg         连接配置
-     * @param maxPoolSize 连接池最大连接数
-     * @return {@link PooledDBC}
-     */
-    public static PooledDBC buildPooled(Cfg cfg, int maxPoolSize) {
-        Cfg pc = cfg.tryGet(DBCCfgOptions.CONN_POOL_CONFIG).orElse(Cfg.newCfg());
-        return buildPooled(cfg.reset(DBCCfgOptions.CONN_POOL_CONFIG,
-                pc.reset(DBCCfgOptions.CONN_POOL_MAX_SIZE, maxPoolSize)));
-    }
-
-    /**
-     * 根据给定的连接信息，创建 {@link PooledDBC} 连接池
-     * <p>最大连接数使用默认值 {@link DBCCfgOptions#CONN_POOL_MAX_SIZE}</p>
-     *
-     * @param cfg 连接配置
-     * @return {@link PooledDBC}
-     * @see #buildPooled(Cfg, int)
-     */
-    public static PooledDBC buildPooled(Cfg cfg) {
-        return new ConnectionPoolDBC(cfg);
     }
 
 }

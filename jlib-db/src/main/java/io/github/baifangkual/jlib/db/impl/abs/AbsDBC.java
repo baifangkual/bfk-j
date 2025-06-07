@@ -2,12 +2,14 @@ package io.github.baifangkual.jlib.db.impl.abs;
 
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
-import io.github.baifangkual.jlib.db.DBC;
-import io.github.baifangkual.jlib.db.DBCCfgOptions;
-import io.github.baifangkual.jlib.db.DBType;
+import io.github.baifangkual.jlib.db.*;
+import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
+import io.github.baifangkual.jlib.db.impl.pool.ConnPoolDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 
+import java.sql.Connection;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -18,8 +20,8 @@ import java.util.Objects;
  */
 public abstract class AbsDBC implements DBC {
 
-    protected final Cfg readonlyCfg;
-    protected final DBType dbType;
+    private final Cfg readonlyCfg;
+    private final DBType dbType;
 
     /**
      * 该构造或可应为所有实现的父类，该类规范构造的生命周期过程，pre -> check -> post,
@@ -35,8 +37,60 @@ public abstract class AbsDBC implements DBC {
         preCheckCfg(cf);
         throwOnIllegalCfg(cf);
         postCheckCfg(cf);
-        this.dbType = cf.get(DBCCfgOptions.DS_TYPE);
+        this.dbType = cf.get(DBCCfgOptions.type);
         this.readonlyCfg = cf.toReadonly();
+    }
+
+    @Override
+    public PooledDBC pooled(int maxPoolSize) {
+        return new ConnPoolDBC(this, maxPoolSize);
+    }
+
+    @Override
+    public PooledDBC pooled() {
+        return pooled(readonlyCfg().getOrDefault(DBCCfgOptions.maxPoolSize));
+    }
+
+    /**
+     * 获取该数据源下所有表的元信息
+     *
+     * @return 所有表的元信息
+     */
+    public List<Table.Meta> tablesMeta() {
+        MetaProvider metaProvider = metaProvider();
+        try (Connection conn = getConn()) {
+            return metaProvider.tablesMeta(conn, readonlyCfg());
+        } catch (Exception e) {
+            throw new DBQueryFailException(e.getMessage(), e);
+        }
+    }
+
+    public List<Table.ColumnMeta> columnsMeta(String table) {
+        Objects.requireNonNull(table, "given table is null");
+        MetaProvider metaProvider = metaProvider();
+        try (Connection conn = getConn()) {
+            return metaProvider.columnsMeta(conn, readonlyCfg(), table);
+        } catch (Exception e) {
+            throw new DBQueryFailException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 给定表名，查询表中符合分页要求的行
+     *
+     * @param table    表名
+     * @param pageNo   页码-分页参数-最小值为1
+     * @param pageSize 页大小-分页参数-最小值为1
+     * @return 表中符合分页要求的行
+     */
+    public Table.Rows tableData(String table, long pageNo, long pageSize) {
+        Objects.requireNonNull(table, "given table is null");
+        MetaProvider metaProvider = metaProvider();
+        try (Connection conn = getConn()) {
+            return metaProvider.tableData(conn, readonlyCfg(), table, pageNo, pageSize);
+        } catch (Exception e) {
+            throw new DBQueryFailException(e.getMessage(), e);
+        }
     }
 
     @Override
@@ -44,12 +98,12 @@ public abstract class AbsDBC implements DBC {
         return dbType;
     }
 
-    @Override
+
     public Cfg readonlyCfg() {
         return readonlyCfg;
     }
 
-    @Override
+
     public abstract MetaProvider metaProvider();
 
     /**

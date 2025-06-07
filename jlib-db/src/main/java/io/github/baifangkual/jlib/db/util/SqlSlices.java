@@ -1,14 +1,14 @@
 package io.github.baifangkual.jlib.db.util;
 
-import lombok.NonNull;
-
 import java.util.StringJoiner;
 
 /**
- * @author baifangkual
- * create time 2024/7/15
- * <p>
  * sql语句残片的操作工具
+ *
+ * @author baifangkual
+ * @apiNote 该工具类内方法不会进行各项参数非空性等校验，
+ * 校验均应由外界调用者进行
+ * @since 2024/7/15
  */
 public class SqlSlices {
     private SqlSlices() {
@@ -37,7 +37,7 @@ public class SqlSlices {
      * @param wrapC  包裹当中每个元素的符号，不同数据库有不同
      * @return str sql残片
      */
-    public static String safeAdd(String db, String schema, @NonNull String table, String wrapC) {
+    public static String safeAdd(String db, String schema, String table, String wrapC) {
         StringJoiner sj = new StringJoiner(P_MASK);
         if (db != null) {
             sj.add(wrapLR(db, wrapC));
@@ -55,7 +55,7 @@ public class SqlSlices {
      * @param wrapC   包裹给定字符串的左右两边添加的字符串
      * @return "wrapC" + "nameRef" + "wrapC"
      */
-    public static String wrapLR(@NonNull String nameRef, String wrapC) {
+    public static String wrapLR(String nameRef, String wrapC) {
         return wrapC + nameRef + wrapC;
     }
 
@@ -66,7 +66,7 @@ public class SqlSlices {
      * @param r 右字符串
      * @return l + " " + r
      */
-    public static String addLR(@NonNull String l, @NonNull String r) {
+    public static String addLR(String l, String r) {
         return l + W_MASK + r;
     }
 

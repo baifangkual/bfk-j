@@ -1,11 +1,8 @@
 //package io.github.baifangkual.jlib.db.conn;
 //
-//import com.btrc.datacenter.common.core.config.Config;
-//import com.btrc.datacenter.common.datasource.entities.ConnectionConfig;
-//import com.btrc.datacenter.common.datasource.enums.DSType;
-//import com.btrc.datacenter.common.datasource.enums.URLType;
-//import com.btrc.datacenter.common.datasource.trait.CloseableDataSource;
-//import com.btrc.datacenter.common.datasource.util.DataSourceCreators;
+//import io.github.baifangkual.jlib.core.conf.Cfg;
+//import io.github.baifangkual.jlib.db.DBCFactory;
+//import io.github.baifangkual.jlib.db.PooledDBC;
 //import lombok.extern.slf4j.Slf4j;
 //import org.junit.jupiter.api.Assertions;
 //import org.junit.jupiter.api.Test;
@@ -25,23 +22,11 @@
 //    @Test
 //    public void maxCreatedTest() throws Exception {
 //
-//
-//        Config config = new ConnectionConfig()
-//                .setHost("47.109.100.44")
-//                .setPort(1433)
-//                .setDbName("master")
-//                .setSchema("dbo")
-//                .setUser("sa")
-//                .setPasswd("mssql_3a8WXG")
-//                .setDsType(DSType.SQL_SERVER)
-//                .setUrlType(URLType.JDBC_DEFAULT).toConfig();
-//
-//        CloseableDataSource connPool = DataSourceCreators.createConnPool(config, 3);
-//
-//
+//        Cfg cfg = Cfg.newCfg();
+//        PooledDBC connPool = DBCFactory.build(cfg).pooled();
 //        CompletableFuture.runAsync(() -> {
 //            try {
-//                Connection c1 = connPool.getConnection();
+//                Connection c1 = connPool.getConn();
 //                TimeUnit.SECONDS.sleep(5);
 //                c1.close();
 //            } catch (Exception e) {
@@ -50,7 +35,7 @@
 //        });
 //        CompletableFuture.runAsync(() -> {
 //            try {
-//                Connection c2 = connPool.getConnection();
+//                Connection c2 = connPool.getConn();
 //                TimeUnit.SECONDS.sleep(5);
 //                c2.close();
 //            } catch (Exception e) {
@@ -59,7 +44,7 @@
 //        });
 //        CompletableFuture.runAsync(() -> {
 //            try {
-//                Connection c3 = connPool.getConnection();
+//                Connection c3 = connPool.getConn();
 //                TimeUnit.SECONDS.sleep(5);
 //                c3.close();
 //            } catch (Exception e) {
@@ -70,7 +55,7 @@
 //        TimeUnit.SECONDS.sleep(2);
 //        // await
 //        log.info("main start get conn");
-//        Connection c4 = connPool.getConnection();
+//        Connection c4 = connPool.getConn();
 //        log.info("main end get conn");
 //        TimeUnit.SECONDS.sleep(1);
 //        log.info("main start close conn");
@@ -86,24 +71,12 @@
 //
 //    @Test
 //    public void testGetLockOne() throws Exception {
-//
-//        Config config = new ConnectionConfig()
-//                .setHost("47.109.100.44")
-//                .setPort(1433)
-//                .setDbName("master")
-//                .setSchema("dbo")
-//                .setUser("sa")
-//                .setPasswd("mssql_3a8WXG")
-//                .setDsType(DSType.SQL_SERVER)
-//                .setUrlType(URLType.JDBC_DEFAULT).toConfig();
-//
-//        CloseableDataSource connPool = DataSourceCreators.createConnPool(config, 1);
-//
-//
+//        Cfg cfg = Cfg.newCfg();
+//        PooledDBC connPool = DBCFactory.build(cfg).pooled();
 //        CompletableFuture.runAsync(() -> {
 //            try {
 //                log.info("Thread:{}, start get conn", Thread.currentThread().getName());
-//                Connection c1 = connPool.getConnection();
+//                Connection c1 = connPool.getConn();
 //                log.info("Thread:{}, end get conn", Thread.currentThread().getName());
 //                log.info("Thread:{}, has conn, conn:{}", Thread.currentThread().getName(), c1);
 //                log.info("Thread:{}, start sleep", Thread.currentThread().getName());
@@ -116,11 +89,10 @@
 //                throw new RuntimeException(e);
 //            }
 //        });
-//
 //        log.info("subThread start, main sleep 2sec");
 //        TimeUnit.SECONDS.sleep(2);
 //        log.info("Thread:{}, start get conn", Thread.currentThread().getName());
-//        Connection c2 = connPool.getConnection();
+//        Connection c2 = connPool.getConn();
 //        log.info("Thread:{}, end get conn, conn:{}", Thread.currentThread().getName(), c2);
 //        log.info("Thread:{}, start sleep", Thread.currentThread().getName());
 //        TimeUnit.SECONDS.sleep(2);
@@ -137,23 +109,14 @@
 //    @Test
 //    public void testGetLockOneBefClose() throws Exception {
 //
-//        Config config = new ConnectionConfig()
-//                .setHost("47.109.100.44")
-//                .setPort(1433)
-//                .setDbName("master")
-//                .setSchema("dbo")
-//                .setUser("sa")
-//                .setPasswd("mssql_3a8WXG")
-//                .setDsType(DSType.SQL_SERVER)
-//                .setUrlType(URLType.JDBC_DEFAULT).toConfig();
-//
-//        CloseableDataSource connPool = DataSourceCreators.createConnPool(config, 1);
+//        Cfg cfg = Cfg.newCfg();
+//        PooledDBC connPool = DBCFactory.build(cfg).pooled();
 //
 //
 //        CompletableFuture.runAsync(() -> {
 //            try {
 //                log.info("Thread:{}, start get conn", Thread.currentThread().getName());
-//                Connection c1 = connPool.getConnection();
+//                Connection c1 = connPool.getConn();
 //                log.info("Thread:{}, end get conn", Thread.currentThread().getName());
 //                log.info("Thread:{}, has conn, conn:{}", Thread.currentThread().getName(), c1);
 //                log.info("Thread:{}, start sleep", Thread.currentThread().getName());
@@ -178,49 +141,26 @@
 //
 //    @Test
 //    public void testReCloseConn() throws Exception {
-//        Config config = new ConnectionConfig()
-//                .setHost("47.109.100.44")
-//                .setPort(1433)
-//                .setDbName("master")
-//                .setSchema("dbo")
-//                .setUser("sa")
-//                .setPasswd("mssql_3a8WXG")
-//                .setDsType(DSType.SQL_SERVER)
-//                .setUrlType(URLType.JDBC_DEFAULT).toConfig();
-//
+//        Cfg cfg = Cfg.newCfg();
 //        Assertions.assertThrows(IllegalStateException.class, () -> {
-//
-//            try (CloseableDataSource connPool = DataSourceCreators.createConnPool(config, 1)) {
-//                Connection c = connPool.getConnection();
+//            try (PooledDBC connPool = DBCFactory.build(cfg).pooled();) {
+//                Connection c = connPool.getConn();
 //                c.close();
 //                c.close();
 //            }
-//
 //        });
 //
 //    }
 //
 //    @Test
 //    public void testReCloseConnPool() {
-//
-//        Config config = new ConnectionConfig()
-//                .setHost("47.109.100.44")
-//                .setPort(1433)
-//                .setDbName("master")
-//                .setSchema("dbo")
-//                .setUser("sa")
-//                .setPasswd("mssql_3a8WXG")
-//                .setDsType(DSType.SQL_SERVER)
-//                .setUrlType(URLType.JDBC_DEFAULT).toConfig();
-//
+//        Cfg cfg = Cfg.newCfg();
 //        Assertions.assertThrows(IllegalStateException.class, () -> {
-//
-//            CloseableDataSource connPool = DataSourceCreators.createConnPool(config, 1);
-//            Connection c = connPool.getConnection();
+//            PooledDBC connPool = DBCFactory.build(cfg).pooled();
+//            Connection c = connPool.getConn();
 //            c.close();
 //            connPool.close();
 //            connPool.close();
-//
 //        });
 //    }
 //

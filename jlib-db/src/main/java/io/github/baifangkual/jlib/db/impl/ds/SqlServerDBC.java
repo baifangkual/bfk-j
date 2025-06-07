@@ -7,9 +7,9 @@ import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.trait.SchemaDomainMetaProvider;
-import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
-import io.github.baifangkual.jlib.db.util.ResultSetConverter;
+import io.github.baifangkual.jlib.db.trait.HasDbAndSchemaMetaProvider;
+import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
+import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
@@ -47,7 +47,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
 
     @Override
     protected void preCheckCfg(Cfg cfg) {
-        Map<String, String> other = cfg.tryGet(DBCCfgOptions.JDBC_PARAMS_OTHER).orElse(Map.of());
+        Map<String, String> other = cfg.tryGet(DBCCfgOptions.jdbcOtherParams).orElse(Map.of());
         Map<String, String> newO = new HashMap<>(other);
         // trustServerCertificate encrypt...
         if (!newO.containsKey(TRUST_SERVER_CERTIFICATE)) {
@@ -56,10 +56,10 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
         if (!newO.containsKey(ENCRYPT)) {
             newO.put(ENCRYPT, DEFAULT_ENCRYPT);
         }
-        cfg.reset(DBCCfgOptions.JDBC_PARAMS_OTHER, newO);
+        cfg.reset(DBCCfgOptions.jdbcOtherParams, newO);
         // database=... eg:;database=master
         if (newO.containsKey(DB_ON_P)) {
-            cfg.resetIfNotNull(DBCCfgOptions.DB, newO.get(DB_ON_P));
+            cfg.resetIfNotNull(DBCCfgOptions.db, newO.get(DB_ON_P));
         }
 
     }
@@ -68,7 +68,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
     protected String buildingJdbcUrl(Cfg readonlyCfg) {
         String url = super.buildingJdbcUrl(readonlyCfg);
         String msUrl = url.substring(0, url.lastIndexOf("/"));
-        String dbName = readonlyCfg.get(DBCCfgOptions.DB);
+        String dbName = readonlyCfg.get(DBCCfgOptions.db);
         return Stf.f("{};{}={}", msUrl, DB_ON_P, dbName);
     }
 
@@ -83,7 +83,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
         return META_PROVIDER;
     }
 
-    public static class MeteProviderImpl implements SchemaDomainMetaProvider {
+    public static class MeteProviderImpl implements HasDbAndSchemaMetaProvider {
 
         @Override
         public List<Table.Meta> tablesMeta(Connection conn, String db, String schema, Map<String, String> other) throws Exception {
@@ -91,7 +91,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
             https://learn.microsoft.com/zh-cn/sql/connect/jdbc/reference/gettables-method-sqlserverdatabasemetadata?view=sql-server-ver16
             MSSQL JDBC getTables实现中 REMARKS列始终为null，后或可从 INFORMATION_SCHEMA.TABLES 中获取
             */
-            return DefaultMetaSupport.tablesMeta(conn, db, schema);
+            return DefaultMetaSupports.tablesMeta(conn, db, schema);
         }
 
         @Override
@@ -100,7 +100,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
             https://learn.microsoft.com/zh-cn/sql/connect/jdbc/reference/getcolumns-method-sqlserverdatabasemetadata?view=sql-server-ver16
             MSSQL JDBC getColumns实现中 REMARKS列始终为null，后或可从 INFORMATION_SCHEMA.TABLES 中获取
             */
-            return DefaultMetaSupport.simpleColumnsMeta(conn, db, schema, table);
+            return DefaultMetaSupports.simpleColumnsMeta(conn, db, schema, table);
         }
 
         private static final String QUERY_P = "SELECT * FROM {} ORDER BY (SELECT NULL) OFFSET {} ROWS FETCH NEXT {} ROWS ONLY";
@@ -116,7 +116,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
             //noinspection SqlSourceToSinkFlow
             try (Statement stat = conn.createStatement();
                  ResultSet rs = stat.executeQuery(sql)) {
-                List<Object[]> rL = ResultSetConverter.rows(rs);
+                List<Object[]> rL = ResultSetc.rows(rs);
                 return new Table.Rows().setRows(rL);
             }
         }

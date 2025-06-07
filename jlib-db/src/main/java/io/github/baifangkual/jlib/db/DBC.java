@@ -1,22 +1,23 @@
 package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
+import io.github.baifangkual.jlib.core.lang.R;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
-import io.github.baifangkual.jlib.db.exception.JdbcConnectionFailException;
-import io.github.baifangkual.jlib.db.func.RsMapping;
-import io.github.baifangkual.jlib.db.func.RsRowMapping;
-import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.util.ResultSetConverter;
+import io.github.baifangkual.jlib.db.func.FnResultSetMapping;
+import io.github.baifangkual.jlib.db.func.FnResultSetRowMapping;
+import io.github.baifangkual.jlib.db.util.ResultSetc;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
-import java.util.Optional;
 
 /**
+ * todo doc rewrite ....................
+ *
  * @author baifangkual
  * create time 2024/7/11
+ * <b>数据库连接器（Database Connector）</b>
  * <p>
  * 原本想使用java API的{@link javax.sql.DataSource} 接口，但该接口需要 complie作用域依赖数据源driver实现，
  * 为不耦合驱动器driver，遂使用该类型抽象<br>
@@ -58,13 +59,27 @@ public interface DBC {
     DBType type();
 
     /**
+     * 检查连接是否可用，与{@link #assertConn()} 相比，该方法在检查失败时将返回{@link Boolean#FALSE}
+     *
+     * @return 布尔值, true为连接可用，false为连接不可用
+     */
+    default boolean testConn() {
+        try {
+            assertConn();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * 检查该类型数据源的连接是否正常，也即给定的参数能否连接到一个数据源，在数据源服务运行（或数据文件存在）的情况下，
      * 也即表示给定的参数是否正确，当检查不通过，该方法将抛出异常，
-     * 若希望返回boolean类型表示连接与否，可使用{@link #tryCheckConnection()}
+     * 若希望返回boolean类型表示连接与否，可使用{@link #testConn()}
      *
      * @throws Exception 当尝试连接数据源失败
      */
-    void checkConn() throws Exception;
+    void assertConn() throws Exception;
 
     /**
      * 该类型{@link DBC}的该方法实现将创建一个新的Connection对象，该不负责conn对象的管理和关闭等，
@@ -76,111 +91,107 @@ public interface DBC {
     Connection getConn() throws Exception;
 
     /**
-     * 执行sql查询并返回结果，返回的结果将根据给定的{@link RsRowMapping}函数进行转换,
-     * 与{@link #execQuery(RsMapping, String)}不同，要求的函数不应负责{@link ResultSet#next()}的调用，
-     * 也因此，该函数{@link RsRowMapping}应仅从{@link ResultSet}中获取某一行的数据并返回{@link ROW}即可
+     * 尝试获取一个连接对象，获取失败时返回{@link R.Err}载荷异常（获取失败原因）
      *
-     * @param sql        要执行的sql查询语句
-     * @param rowMapping ResultSet中行的转换方法，该函数不应负责{@link ResultSet#next()}的调用
-     * @param <ROW>      ResultSet中行转换为的行对象
-     * @return ResultSet中多个行, 构成了List[ROW...]
-     * @see RsRowMapping
+     * @return {@code R.Ok(Connection)} | {@code R.Err(Exception)}
      */
-    default <ROW> List<ROW> execQuery(String sql, RsRowMapping<? extends ROW> rowMapping) {
+    default R<Connection> tryGetConn() {
+        return R.ofFnCallable(this::getConn);
+    }
+
+    /**
+     * 执行sql查询并返回结果，返回的结果将根据给定的{@link FnResultSetRowMapping}函数进行转换,
+     * 与{@link #execQuery(FnResultSetMapping, String)}不同，要求的函数不应负责{@link ResultSet#next()}的调用，
+     * 也因此，该函数{@link FnResultSetRowMapping}应仅从{@link ResultSet}中获取某一行的数据并返回{@link ROW}即可
+     *
+     * @param sql      要执行的sql查询语句
+     * @param fnRowMap ResultSet中行的转换方法，该函数不应负责{@link ResultSet#next()}的调用
+     * @param <ROW>    ResultSet中行转换为的行对象
+     * @return ResultSet中多个行, 构成了List[ROW...]
+     * @see FnResultSetRowMapping
+     */
+    default <ROW> List<ROW> execQuery(String sql, FnResultSetRowMapping<? extends ROW> fnRowMap) {
+        //noinspection SqlSourceToSinkFlow
         try (Connection conn = getConn();
              Statement stat = conn.createStatement();
              ResultSet rs = stat.executeQuery(sql)) {
-            return ResultSetConverter.rows(rs, rowMapping);
+            return ResultSetc.rows(rs, fnRowMap);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }
     }
 
     /**
-     * 执行sql查询并返回结果，返回的结果将根据给定的{@link RsMapping}函数进行转换，该函数{@link RsMapping}
+     * 执行sql查询并返回结果，返回的结果将根据给定的{@link FnResultSetMapping}函数进行转换，该函数{@link FnResultSetMapping}
      * 拥有{@link ResultSet}的完全控制权力，遂该函数内应负责显示调用{@link ResultSet#next()}方法，函数将{@link ResultSet}完全
      * 转为{@link ROWS}类型对象，该结果对象或可包含多行数据
      *
-     * @param resultSetMapping 入参为ResultSet，返回值为{@link ROWS},该函数或应负责{@link ResultSet#next()}的调用
-     * @param sql              要执行的sql查询语句
-     * @param <ROWS>           返回值，查询结果
+     * @param fnRsMap 入参为ResultSet，返回值为{@link ROWS},该函数或应负责{@link ResultSet#next()}的调用
+     * @param sql     要执行的sql查询语句
+     * @param <ROWS>  返回值，查询结果
      * @return 查询结果对象
-     * @see RsMapping
+     * @see FnResultSetMapping
      */
-    default <ROWS> ROWS execQuery(RsMapping<? extends ROWS> resultSetMapping, String sql) {
+    default <ROWS> ROWS execQuery(FnResultSetMapping<? extends ROWS> fnRsMap, String sql) {
+        //noinspection SqlSourceToSinkFlow
         try (Connection conn = getConn();
              Statement stat = conn.createStatement();
              ResultSet rs = stat.executeQuery(sql)) {
-            return ResultSetConverter.rows(resultSetMapping, rs);
+            return ResultSetc.rows(fnRsMap, rs);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }
     }
 
     /**
-     * 检查连接是否可用，与{@link #checkConn()}相比，该方法在检查失败时将抛出运行时异常
+     * 以当前数据库连接器为蓝本，创建一个连接池
+     * <p>一个数据库连接器可创建多个连接池，创建的连接池彼此互不影响</p>
+     *
+     * @param maxPoolSize 最大连接数
+     * @return 连接池
+     * @see #pooled()
      */
-    default void throwableCheckConnection() {
-        try {
-            checkConn();
-        } catch (Exception e) {
-            throw new JdbcConnectionFailException(e);
-        }
-    }
+    PooledDBC pooled(int maxPoolSize);
 
     /**
-     * 检查连接是否可用，与{@link #throwableCheckConnection()}相比，该方法在检查失败时将返回{@link Boolean#FALSE}
+     * 以当前数据库连接器为蓝本，创建一个连接池
+     * <p>一个数据库连接器可创建多个连接池，创建的连接池彼此互不影响</p>
+     * <p>该方法将使用构造该数据库连接器时的Cfg配置 {@link DBCCfgOptions#maxPoolSize}，
+     * 若没有该项配置，则使用该项配置的默认值</p>
      *
-     * @return 布尔值, true为连接可用，false为连接不可用
+     * @return 连接池
+     * @see #pooled(int)
      */
-    default boolean tryCheckConnection() {
-        try {
-            throwableCheckConnection();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /**
-     * 尝试获取一个连接对象，获取失败时返回{@link Optional#empty()}，该方法将不会抛出异常
-     *
-     * @return {@link Optional}
-     */
-    default Optional<Connection> tryGetConnection() {
-        try {
-            return Optional.ofNullable(getConn());
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * 获取该数据源的配置信息
-     *
-     * @return {@link Cfg}
-     */
-    Cfg readonlyCfg();
-
-    /**
-     * 获取该数据源类型数据库元数据提供者
-     *
-     * @return {@link MetaProvider}
-     */
-    MetaProvider metaProvider();
+    PooledDBC pooled();
 
     /**
      * 获取该数据源下所有表的元信息
      *
      * @return 所有表的元信息
      */
-    default List<Table.Meta> tablesMeta() {
-        try (Connection conn = getConn()) {
-            MetaProvider metaProvider = metaProvider();
-            return metaProvider.tablesMeta(conn, readonlyCfg());
-        } catch (Exception e) {
-            throw new JdbcConnectionFailException(e.getMessage(), e);
-        }
+    List<Table.Meta> tablesMeta();
+
+    List<Table.ColumnMeta> columnsMeta(String table);
+
+    /**
+     * 给定表名，查询表中符合分页要求的行
+     *
+     * @param table    表名
+     * @param pageNo   页码-分页参数-最小值为1
+     * @param pageSize 页大小-分页参数-最小值为1
+     * @return 表中符合分页要求的行
+     */
+    Table.Rows tableData(String table, long pageNo, long pageSize);
+
+    /**
+     * 给定表名，查询表中所有行
+     *
+     * @param table 表名
+     * @return 表中所有行
+     * @apiNote 该方法在表过大时可能造成堆内存溢出，若不明确表大小，建议调用 {@link #tableData(String, long, long)}
+     */
+    default Table.Rows tableData(String table) {
+        return tableData(table, 1L, Long.MAX_VALUE);
     }
 
 

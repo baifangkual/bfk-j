@@ -28,12 +28,14 @@ public interface Poolable<T extends Poolable.Borrowable> {
     interface Borrowable {
         /**
          * 该方法被调用时将this(self)放回池中
-         * <p>20250607：现在看来，该接口声明不太好，因为要达成这样的行为，
+         */
+        void recycleSelf();
+        /*
+         * 20250607：现在看来，该接口声明不太好，因为要达成这样的行为，
          * 必须要Borrowable实例能访问到Poolable实例，
          * 或者说，Borrowable直接或间接的持有了Poolable的引用，
          * 要知道，不是所有场景的Borrowable都适合这样，遂该接口及
          * Poolable接口不应扩大至jlib-core内的trait
          */
-        void recycleSelf();
     }
 }

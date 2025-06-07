@@ -2,7 +2,6 @@ package io.github.baifangkual.jlib.db.trait;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.lang.Tup2;
-import io.github.baifangkual.jlib.db.DBC;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
@@ -12,12 +11,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * 只有schema而没有db概念的数据库类型的元数据提供者
+ *
  * @author baifangkual
- * create time 2024/10/24
- * <p>
- * 描述只有schema而没有库 或不能通过在一个jdbc url中访问其他库的 类型的数据库的元数据提供者
+ * @since 2024/10/24
  */
-public interface JustSchemaDomainMetaProvider extends MetaProvider {
+public interface NoDBJustSchemaMetaProvider extends MetaProvider {
 
 
     List<Table.Meta> tablesMeta(Connection conn, String schema,
@@ -31,16 +30,15 @@ public interface JustSchemaDomainMetaProvider extends MetaProvider {
                          Long pageNo, Long pageSize) throws Exception;
 
     private Tup2<String, Map<String, String>> unsafeGetSchemaAndOther(Cfg conf) {
-        Map<String, String> other = conf.getOrDefault(DBCCfgOptions.JDBC_PARAMS_OTHER);
-        String schema = conf.tryGet( DBCCfgOptions.SCHEMA)
-                .orElseThrow(() -> new IllegalArgumentException("给定数据库参数的SCHEMA为空"));
+        Map<String, String> other = conf.getOrDefault(DBCCfgOptions.jdbcOtherParams);
+        String schema = conf.get(DBCCfgOptions.schema);
         return Tup2.of(schema, other);
     }
 
     @Override
     default List<Table.Meta> tablesMeta(Connection conn, Cfg config) {
-        Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);
         try {
+            Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);
             return this.tablesMeta(conn, t2.l(), t2.r());
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
@@ -49,8 +47,8 @@ public interface JustSchemaDomainMetaProvider extends MetaProvider {
 
     @Override
     default List<Table.ColumnMeta> columnsMeta(Connection conn, Cfg config, String table) {
-        Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);
         try {
+            Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);
             return this.columnsMeta(conn, t2.l(), table, t2.r());
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
@@ -59,14 +57,8 @@ public interface JustSchemaDomainMetaProvider extends MetaProvider {
 
     @Override
     default Table.Rows tableData(Connection conn, Cfg config, String table, Long pageNo, Long pageSize) {
-        if (pageNo == null || pageSize == null) {
-            throw new IllegalArgumentException("分页参数不得为空");
-        }
-        if (pageNo < 1 || pageSize < 1) {
-            throw new IllegalArgumentException("pageNo、pageSize不得小于1");
-        }
-        Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);
         try {
+            Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);
             return this.tableData(conn, t2.l(), table, t2.r(), pageNo, pageSize);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);

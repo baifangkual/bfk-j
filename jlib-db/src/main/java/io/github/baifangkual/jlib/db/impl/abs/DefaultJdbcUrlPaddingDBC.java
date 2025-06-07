@@ -35,13 +35,13 @@ public abstract class DefaultJdbcUrlPaddingDBC extends JdbcUrlPaddingDBC {
         sqlserver连接参数也可无db
         遂该处为通用如 db nullable
          */
-        final String db = readonlyCfg.tryGet(DBCCfgOptions.DB).orElse(null);
+        final String db = readonlyCfg.tryGet(DBCCfgOptions.db).orElse(null);
         final StringBuilder sb = new StringBuilder()
                 .append(prefix)
                 .append(S1)
-                .append(readonlyCfg.get(DBCCfgOptions.HOST))
+                .append(readonlyCfg.get(DBCCfgOptions.host))
                 .append(MP)
-                .append(readonlyCfg.get(DBCCfgOptions.PORT));
+                .append(readonlyCfg.get(DBCCfgOptions.port));
         if (db != null) {
             sb.append(SL).append(db);
         }

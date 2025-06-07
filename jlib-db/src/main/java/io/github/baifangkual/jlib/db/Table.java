@@ -60,6 +60,8 @@ public class Table {
     public static class Rows implements Iterable<Object[]> {
         private List<Object[]> rows;
 
+        // todo 改为 泛型，然后能够反映 行数，列数等
+        //   提供Map方法，将 Object[] 变为某个对象，map方法应提供函数
 
         public List<List<Object>> toList() {
             return toList(Function.identity());
@@ -85,6 +87,8 @@ public class Table {
         @SuppressWarnings("NullableProblems")
         @Override
         public Iterator<Object[]> iterator() {
+            // 该无法转变为 indexed，因为查出来的可能不是表里的从头查，
+            // 即这种情况下索引对不上
             Iterator<Object[]> it = rows.iterator();
             return new Iterator<>() {
                 @Override

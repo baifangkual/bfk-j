@@ -6,9 +6,9 @@ import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
-import io.github.baifangkual.jlib.db.trait.JustSchemaDomainMetaProvider;
+import io.github.baifangkual.jlib.db.trait.NoDBJustSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
+import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
@@ -49,13 +49,13 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
          * 20250607 废除对Sid的支持，因Sid正逐步被弃用，仅支持serviceName,
          * 即 jdbc:oracle:thin:@//localhost:1521/serviceName
          */
-        final String db = readonlyCfg.get(DBCCfgOptions.DB);
+        final String db = readonlyCfg.get(DBCCfgOptions.db);
         //noinspection StringBufferReplaceableByString
         return new StringBuilder()
                 .append(JDBC_P)
-                .append(readonlyCfg.get(DBCCfgOptions.HOST))
+                .append(readonlyCfg.get(DBCCfgOptions.host))
                 .append(S_COLON)
-                .append(readonlyCfg.get(DBCCfgOptions.PORT))
+                .append(readonlyCfg.get(DBCCfgOptions.port))
                 .append(S_SLASH)
                 .append(db)
                 .toString();
@@ -66,16 +66,16 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
     @Override
     protected void preCheckCfg(Cfg cfg) {
         // 当用户未给定 PORT 则使用oracle 默认端口 1521
-        cfg.resetIf(cfg.tryGet(DBCCfgOptions.PORT).isEmpty(),
-                DBCCfgOptions.PORT, DEFAULT_ORACLE_PORT);
+        cfg.resetIf(cfg.tryGet(DBCCfgOptions.port).isEmpty(),
+                DBCCfgOptions.port, DEFAULT_ORACLE_PORT);
     }
 
     @Override
     protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
-        if (cfg.tryGet(DBCCfgOptions.DB).isEmpty()) {
+        if (cfg.tryGet(DBCCfgOptions.db).isEmpty()) {
             throw new IllegalDBCCfgException("oracle 未配置服务名");
         }
-        if (cfg.tryGet(DBCCfgOptions.USER).isEmpty()) {
+        if (cfg.tryGet(DBCCfgOptions.user).isEmpty()) {
             throw new IllegalDBCCfgException("oracle 未配置用户名");
         }
     }
@@ -112,12 +112,12 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
         去掉双引号等试了试，发现都为 invalid table，即明确：oracle中"'"符号不应使用
         遂因为 ”“ 的存在 描述表名 和 schema 名称时，最好都加上该符号
          */
-        String lowSchema = cfg.tryGet(DBCCfgOptions.SCHEMA)
-                .orElse(cfg.get(DBCCfgOptions.USER));
+        String lowSchema = cfg.tryGet(DBCCfgOptions.schema)
+                .orElse(cfg.get(DBCCfgOptions.user));
         // 如果用户未设置 schema ，则将用户名大写，然后转为 schema存储
         // 无论如何 schema 转为 大写
         String upperCaseSchema = lowSchema.toUpperCase();
-        cfg.reset(DBCCfgOptions.SCHEMA, upperCaseSchema);
+        cfg.reset(DBCCfgOptions.schema, upperCaseSchema);
 
     }
 
@@ -125,7 +125,7 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
     private static final String CHECK_CONN_SQL = "SELECT 1 FROM DUAL";
 
     @Override
-    public void checkConn() throws Exception {
+    public void assertConn() throws Exception {
         try (Connection conn = getConn();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(CHECK_CONN_SQL)) {
@@ -144,14 +144,14 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
     }
 
 
-    public static class Oracle11gMetaProvider implements JustSchemaDomainMetaProvider {
+    public static class Oracle11gMetaProvider implements NoDBJustSchemaMetaProvider {
 
         @Override
         public List<Table.Meta> tablesMeta(Connection conn, String schema,
                                            Map<String, String> other) throws Exception {
             // 经测试，oracle 获取表的元数据 的 行为和 sqlserver类似：都不能获取表的描述
             // TABLE_CAT 始终为 null
-            return DefaultMetaSupport.tablesMeta(conn, null, schema);
+            return DefaultMetaSupports.tablesMeta(conn, null, schema);
         }
 
         @Override
@@ -159,7 +159,7 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
                                                   Map<String, String> other) throws Exception {
             // REMARKS 始终为 null 获取不到表描述
             // TABLE_CAT 始终为 null
-            return DefaultMetaSupport.simpleColumnsMeta(conn, null, schema, table);
+            return DefaultMetaSupports.simpleColumnsMeta(conn, null, schema, table);
         }
 
         /**

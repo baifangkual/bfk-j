@@ -6,10 +6,10 @@ import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
-import io.github.baifangkual.jlib.db.trait.DatabaseDomainMetaProvider;
+import io.github.baifangkual.jlib.db.trait.NoSchemaJustDBMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
-import io.github.baifangkual.jlib.db.util.ResultSetConverter;
+import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
+import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
@@ -35,9 +35,9 @@ public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
 
     @Override
     protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
-        if (cfg.tryGet(DBCCfgOptions.USER).isEmpty()) {
+        if (cfg.tryGet(DBCCfgOptions.user).isEmpty()) {
             throw new IllegalDBCCfgException("mysql username is empty");
-        } else if (cfg.tryGet(DBCCfgOptions.PASSWD).isEmpty()) {
+        } else if (cfg.tryGet(DBCCfgOptions.passwd).isEmpty()) {
             throw new IllegalDBCCfgException("mysql password is empty");
         }
     }
@@ -48,18 +48,18 @@ public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
     }
 
 
-    public static class MetaProviderImpl implements DatabaseDomainMetaProvider {
+    public static class MetaProviderImpl implements NoSchemaJustDBMetaProvider {
 
 
         @Override
         public List<Table.Meta> tablesMeta(Connection conn, String db, Map<String, String> other) throws Exception {
-            return DefaultMetaSupport.tablesMeta(conn, db, null);
+            return DefaultMetaSupports.tablesMeta(conn, db, null);
         }
 
         @Override
         public List<Table.ColumnMeta> columnsMeta(Connection conn, String db, String table,
                                                   Map<String, String> other) throws Exception {
-            return DefaultMetaSupport.simpleColumnsMeta(conn, db, null, table);
+            return DefaultMetaSupports.simpleColumnsMeta(conn, db, null, table);
         }
 
         private static final String SELECT_TABLE_TEMPLATE = "SELECT * FROM {} LIMIT {} OFFSET {}";
@@ -76,7 +76,7 @@ public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
             //noinspection SqlSourceToSinkFlow
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(sql)) {
-                List<Object[]> rL = ResultSetConverter.rows(rs);
+                List<Object[]> rL = ResultSetc.rows(rs);
                 return new Table.Rows().setRows(rL);
             }
         }

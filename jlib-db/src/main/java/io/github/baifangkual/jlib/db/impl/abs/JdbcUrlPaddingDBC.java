@@ -34,18 +34,18 @@ public abstract class JdbcUrlPaddingDBC extends AbsDBC {
         Cfg readOnlyCfg = readonlyCfg();
         String jdbcUrl = buildingJdbcUrl(readOnlyCfg);
         // 不应修改原对象，仅只读
-        Map<String, String> params = new HashMap<>(readOnlyCfg.getOrDefault(DBCCfgOptions.JDBC_PARAMS_OTHER));
+        Map<String, String> params = new HashMap<>(readOnlyCfg.getOrDefault(DBCCfgOptions.jdbcOtherParams));
         // tod o 部分数据库或部分连接类型并不需要用户名和密码 遂该处找不到不应强制抛出异常
-        readOnlyCfg.tryGet(DBCCfgOptions.USER)
+        readOnlyCfg.tryGet(DBCCfgOptions.user)
                 .ifPresent(un -> params.put(DEFAULT_PROP_KEY_USER, un));
-        readOnlyCfg.tryGet(DBCCfgOptions.PASSWD)
+        readOnlyCfg.tryGet(DBCCfgOptions.passwd)
                 .ifPresent(pw -> params.put(DEFAULT_PROP_KEY_PASSWD, pw));
         Properties prop = PropMapc.convert(params);
         // tod o 额外参数设定，应当在别处 ？ 这非与数据源类型相关的专有参数，而是连接相关的参数
         // JDBC 的 DriverManager 只提供了静态方法 setLoginTimeout，这会相互影响 不同 DBC 构建过程的设定
         // 尤其在多线程环境下，发现不同的数据库提供商提供了不同的该参数配置可设定到 prop中
         // 遂后续可修改为 放置在 prop中的 timeOut
-        DriverManager.setLoginTimeout(readOnlyCfg.getOrDefault(DBCCfgOptions.CONN_TIMEOUT_SEC));
+        DriverManager.setLoginTimeout(readOnlyCfg.getOrDefault(DBCCfgOptions.connTimeoutSecond));
         this.jdbcUrl = jdbcUrl;
         this.prop = prop;
     }
@@ -59,7 +59,7 @@ public abstract class JdbcUrlPaddingDBC extends AbsDBC {
     }
 
     @Override
-    public void checkConn() throws Exception {
+    public void assertConn() throws Exception {
         try (Connection conn = getConn();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(DEFAULT_CHECK_CONN_SQL)) {

@@ -1,23 +1,22 @@
 package io.github.baifangkual.jlib.db.util;
 
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.func.RsRowMapping;
-
-import lombok.NonNull;
+import io.github.baifangkual.jlib.db.func.FnResultSetRowMapping;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.util.List;
+import java.util.Objects;
 
 /**
+ * 部分数据库的Jdbc默认行为，公共逻辑，或者说简化
+ *
  * @author baifangkual
- * create time 2024/7/16
- * <p>
- * 默认行为定义至此，存储公共逻辑，或者说简化
+ * @since 2024/7/16
  */
-public class DefaultMetaSupport {
-    private DefaultMetaSupport() {
+public class DefaultMetaSupports {
+    private DefaultMetaSupports() {
         throw new IllegalStateException("Utility class");
     }
 
@@ -28,6 +27,7 @@ public class DefaultMetaSupport {
     /**
      * jdbc API中表示表所在schema所在列的列名
      */
+    @SuppressWarnings("SpellCheckingInspection")
     public static final String DEF_T_SCHEMA_COL_NAME = "TABLE_SCHEM";
     /**
      * jdbc API中表示普通表所属类型的所在列的列名称
@@ -82,41 +82,6 @@ public class DefaultMetaSupport {
 
 
     /**
-     * 使用给定的连接对象，根据给定参数，返回多个表的元数据,
-     * 该方法需注意，因{@link Table.Meta}对象无法表示表类型，遂TableTypes未筛选的结果，无法表示类型，
-     * 若需表示类型，应拓展该方法返回值可表示类型
-     *
-     * @param conn                连接对象
-     * @param db                  数据库名称
-     * @param schema              nullable，部分数据库没有
-     * @param tableTypes          索要的表的类型
-     * @param tableNameColName    表名所在的列的名称
-     * @param tableCommentColName 表注释所在的列的名称
-     * @param dbColName           表所在的数据库的数据库名称所在列的列的名称
-     * @param schemaColName       表所在的模式所在列的列的名称
-     * @return 多个表的元数据
-     * @throws Exception 当给定参数使逻辑运行异常时
-     */
-    public static List<Table.Meta> tablesMeta(Connection conn,
-                                              String db,
-                                              String schema,
-                                              String[] tableTypes,
-                                              String tableNameColName,
-                                              String tableCommentColName,
-                                              String dbColName,
-                                              String schemaColName) throws Exception {
-        DatabaseMetaData metaData = conn.getMetaData();
-        try (ResultSet tables = metaData.getTables(db, schema, null, tableTypes);) {
-            return ResultSetConverter.rows(tables,
-                    (rs) -> new Table.Meta()
-                            .setDb(rs.getString(dbColName))
-                            .setSchema(rs.getString(schemaColName))
-                            .setName(rs.getString(tableNameColName))
-                            .setComment(rs.getString(tableCommentColName)));
-        }
-    }
-
-    /**
      * @see #tablesMeta(Connection, String, String, String[], String, String, String, String)
      */
     public static List<Table.Meta> tablesMeta(Connection conn,
@@ -149,8 +114,59 @@ public class DefaultMetaSupport {
     }
 
     /**
+     * 使用给定的连接对象，根据给定参数，返回多个表的元数据,
+     * 该方法需注意，因{@link Table.Meta}对象无法表示表类型，遂TableTypes未筛选的结果，无法表示类型，
+     * 若需表示类型，应拓展该方法返回值可表示类型
+     *
+     * @param conn                连接对象
+     * @param db                  数据库名称
+     * @param schema              nullable，部分数据库没有
+     * @param tableTypes          索要的表的类型
+     * @param tableNameColName    表名所在的列的名称
+     * @param tableCommentColName 表注释所在的列的名称
+     * @param dbColName           表所在的数据库的数据库名称所在列的列的名称
+     * @param schemaColName       表所在的模式所在列的列的名称
+     * @return 多个表的元数据
+     * @throws Exception 当给定参数使逻辑运行异常时
+     */
+    public static List<Table.Meta> tablesMeta(Connection conn,
+                                              String db,
+                                              String schema,
+                                              String[] tableTypes,
+                                              String tableNameColName,
+                                              String tableCommentColName,
+                                              String dbColName,
+                                              String schemaColName) throws Exception {
+        DatabaseMetaData metaData = conn.getMetaData();
+        try (ResultSet tables = metaData.getTables(db, schema, null, tableTypes);) {
+            return ResultSetc.rows(tables,
+                    (rs) -> new Table.Meta()
+                            .setDb(rs.getString(dbColName))
+                            .setSchema(rs.getString(schemaColName))
+                            .setName(rs.getString(tableNameColName))
+                            .setComment(rs.getString(tableCommentColName)));
+        }
+    }
+
+    /**
+     * @param conn   连接对象
+     * @param db     数据库名
+     * @param schema 数据库模式名称（部分数据库有该）
+     * @param table  表名称
+     * @return [ColMeta...]
+     * @throws Exception 当给定参数使逻辑运行异常时
+     * @see #simpleColumnsMeta(Connection, String, String, String, String, String, String)
+     */
+    public static List<Table.ColumnMeta> simpleColumnsMeta(Connection conn,
+                                                           String db,
+                                                           String schema,
+                                                           String table) throws Exception {
+        return simpleColumnsMeta(conn, db, schema, table, DEF_COL_COL_NAME, DEF_COL_COL_TYPE, DEF_COL_COMMENT);
+    }
+
+    /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetConverter#rows(ResultSet, RsRowMapping)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnResultSetRowMapping)}
      *
      * @param conn               连接对象
      * @param db                 数据库名
@@ -165,7 +181,7 @@ public class DefaultMetaSupport {
     public static List<Table.ColumnMeta> simpleColumnsMeta(Connection conn,
                                                            String db,
                                                            String schema,
-                                                           @NonNull String table,
+                                                           String table,
                                                            String colNameColName,
                                                            String colTypeNameColName,
                                                            String colCommentColName) throws Exception {
@@ -175,7 +191,7 @@ public class DefaultMetaSupport {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetConverter#rows(ResultSet, RsRowMapping)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnResultSetRowMapping)}
      *
      * @param conn                          连接对象
      * @param db                            数据库名
@@ -194,7 +210,7 @@ public class DefaultMetaSupport {
     public static List<Table.ColumnMeta> simpleColumnsMeta(Connection conn,
                                                            String db,
                                                            String schema,
-                                                           @NonNull String table,
+                                                           String table,
                                                            String colNameColName,
                                                            String colTypeNameColName,
                                                            String colCommentColName,
@@ -218,7 +234,7 @@ public class DefaultMetaSupport {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetConverter#rows(ResultSet, RsRowMapping)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnResultSetRowMapping)}
      *
      * @param conn       连接对象
      * @param db         数据库名
@@ -232,27 +248,14 @@ public class DefaultMetaSupport {
     public static <ROW> List<ROW> simpleColumnsMeta(Connection conn,
                                                     String db,
                                                     String schema,
-                                                    @NonNull String table,
-                                                    RsRowMapping<? extends ROW> rowMapping) throws Exception {
+                                                    String table,
+                                                    FnResultSetRowMapping<? extends ROW> rowMapping) throws Exception {
+        Objects.requireNonNull(table, "given table is null");
         DatabaseMetaData metaData = conn.getMetaData();
         try (ResultSet colMeta = metaData.getColumns(db, schema, table, null);) {
-            return ResultSetConverter.rows(colMeta, rowMapping);
+            return ResultSetc.rows(colMeta, rowMapping);
         }
     }
 
-    /**
-     * @param conn   连接对象
-     * @param db     数据库名
-     * @param schema 数据库模式名称（部分数据库有该）
-     * @param table  表名称
-     * @return [ColMeta...]
-     * @throws Exception 当给定参数使逻辑运行异常时
-     * @see #simpleColumnsMeta(Connection, String, String, String, String, String, String)
-     */
-    public static List<Table.ColumnMeta> simpleColumnsMeta(Connection conn,
-                                                           String db,
-                                                           String schema,
-                                                           @NonNull String table) throws Exception {
-        return simpleColumnsMeta(conn, db, schema, table, DEF_COL_COL_NAME, DEF_COL_COL_TYPE, DEF_COL_COMMENT);
-    }
+
 }

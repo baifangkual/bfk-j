@@ -2,16 +2,19 @@ package io.github.baifangkual.jlib.db.impl.pool;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.panic.Err;
+import io.github.baifangkual.jlib.core.trait.Closeable;
 import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.*;
+import io.github.baifangkual.jlib.db.DBC;
+import io.github.baifangkual.jlib.db.PooledDBC;
 import io.github.baifangkual.jlib.db.exception.ConnectionCloseFailException;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.exception.JdbcConnectionFailException;
+import io.github.baifangkual.jlib.db.impl.abs.AbsDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
-import java.util.List;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -59,56 +62,52 @@ import java.util.concurrent.locks.ReentrantLock;
  * @see OnCloseRecycleRefConnection#close()
  * @since 2024/7/25
  */
-@Slf4j
-public class ConnectionPoolDBC implements Poolable<OnCloseRecycleRefConnection>, PooledDBC {
+public class ConnPoolDBC extends AbsDBC
+        implements Poolable<OnCloseRecycleRefConnection>, PooledDBC, Closeable {
 
+    private static final Logger log = LoggerFactory.getLogger(ConnPoolDBC.class);
     private static final String CLOSED_MSG = "ConnectionPoolDBC closed";
 
     private final AtomicBoolean open = new AtomicBoolean(true);
+    private final AtomicInteger curr = new AtomicInteger(0);
     private final Lock lock = new ReentrantLock();
     // close await
     private final Condition cdClo = lock.newCondition();
     // borrow await
     private final Condition cdBor = lock.newCondition();
-
+    // max
     private final int maxPoolSize;
-    private final AtomicInteger curr = new AtomicInteger(0);
-    // 该当前未用，因为就一个maxPoolSize参数，后续可能多，即有用
-    @SuppressWarnings("FieldCanBeLocal")
-    private final Cfg poolConfig;
-    private final Cfg connConfig;
-    private final DBC dataSource;
+    // ref real ,read dbc config in absDBC readonlyCfg
+    // this class can use readonlyCfg() get that.
+    private final DBC realDbc;
+    // provider real
     private final MetaProvider metaProvider;
 
     private final BlockingDeque<OnCloseRecycleRefConnection> queue;
 
-
-    public ConnectionPoolDBC(Cfg cfg) {
-        this(DBCFactory.build(cfg));
+    public ConnPoolDBC(AbsDBC dbc, int maxPoolSize) {
+        this(dbc, dbc.readonlyCfg(), dbc.metaProvider(), maxPoolSize);
     }
 
-    public ConnectionPoolDBC(DBC dbc) {
-        this(dbc, dbc.readonlyCfg()
-                .getOrDefault(DBCCfgOptions.CONN_POOL_CONFIG)
-                .getOrDefault(DBCCfgOptions.CONN_POOL_MAX_SIZE));
-    }
-
-    public ConnectionPoolDBC(DBC dbc, int maxPoolSize) {
+    private ConnPoolDBC(DBC dbc, Cfg dbcCfg, MetaProvider metaProvider, int maxPoolSize) {
+        super(dbcCfg);
         Err.realIf(maxPoolSize < 1, IllegalDBCCfgException::new, "maxPoolSize < 1");
-        this.dataSource = dbc;
-        this.metaProvider = dbc.metaProvider();
-        this.connConfig = dbc.readonlyCfg();
-        this.poolConfig = connConfig.getOrDefault(DBCCfgOptions.CONN_POOL_CONFIG);
+        this.realDbc = dbc;
+        this.metaProvider = metaProvider;
         this.maxPoolSize = maxPoolSize;
         this.queue = new LinkedBlockingDeque<>(maxPoolSize);
         if (log.isDebugEnabled()) {
-            log.debug("create PooledDBC, maxPoolSize: {}, DBC:{}", this.maxPoolSize, this.dataSource);
+            log.debug("create PooledDBC, maxPoolSize: {}, DBC:{}", this.maxPoolSize, this.realDbc);
         }
     }
 
+    @Override
+    public PooledDBC pooled(int maxPoolSize) {
+        return new ConnPoolDBC(this.realDbc, readonlyCfg(), this.metaProvider, maxPoolSize);
+    }
 
     private Connection newConn() throws Exception {
-        return this.dataSource.getConn();
+        return this.realDbc.getConn();
     }
 
     private OnCloseRecycleRefConnection newWrapConn() throws Exception {
@@ -336,38 +335,26 @@ public class ConnectionPoolDBC implements Poolable<OnCloseRecycleRefConnection>,
     }
 
     @Override
-    public Cfg readonlyCfg() {
-        Err.realIf(!open.get(), IllegalStateException::new, CLOSED_MSG);
-        return connConfig;
-    }
-
-    @Override
     public MetaProvider metaProvider() {
-        Err.realIf(!open.get(), IllegalStateException::new, CLOSED_MSG);
         return metaProvider;
     }
 
     @Override
-    public DBType type() {
-        Err.realIf(!open.get(), IllegalStateException::new, CLOSED_MSG);
-        return dataSource.type();
+    protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
+        // this cfg is real dbc cfg, so maybe can't find any pooled conf
+        // so do nothing...
     }
 
     @Override
-    public void checkConn() throws Exception {
+    public void assertConn() throws Exception {
         Err.realIf(!open.get(), IllegalStateException::new, CLOSED_MSG);
-        dataSource.checkConn();
+        realDbc.assertConn();
     }
 
     @Override
-    public Connection getConn() throws Exception {
+    public Connection getConn() {
+        // 这里不用判断 open，因为borrow内有该判断
         return borrow();
-    }
-
-    @Override
-    public List<Table.Meta> tablesMeta() {
-        Err.realIf(!open.get(), IllegalStateException::new, CLOSED_MSG);
-        return PooledDBC.super.tablesMeta();
     }
 
 }

@@ -12,7 +12,7 @@ import java.sql.ResultSet;
  * @since 2024/7/15
  */
 @FunctionalInterface
-public interface RsRowMapping<ROW> extends Fn<ResultSet, ROW> {
+public interface FnResultSetRowMapping<ROW> extends Fn<ResultSet, ROW> {
 
 
     ROW map(ResultSet rs) throws Exception;

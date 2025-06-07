@@ -16,7 +16,7 @@ import java.util.List;
  */
 
 @FunctionalInterface
-public interface RsMapping<ROWS> extends Fn<ResultSet, ROWS> {
+public interface FnResultSetMapping<ROWS> extends Fn<ResultSet, ROWS> {
 
     ROWS map(ResultSet rs) throws Exception;
 
@@ -26,11 +26,11 @@ public interface RsMapping<ROWS> extends Fn<ResultSet, ROWS> {
     }
 
 
-    static <ROW> RsMapping<List<ROW>> fnListRowsByRsRowMapping(RsRowMapping<ROW> rsRowMapping) {
+    static <ROW> FnResultSetMapping<List<ROW>> fnListRowsByRsRowMapping(FnResultSetRowMapping<ROW> fnResultSetRowMapping) {
         return (rs) -> {
             List<ROW> list = new ArrayList<>();
             while (rs.next()) {
-                list.add(rsRowMapping.map(rs));
+                list.add(fnResultSetRowMapping.map(rs));
             }
             return list;
         };

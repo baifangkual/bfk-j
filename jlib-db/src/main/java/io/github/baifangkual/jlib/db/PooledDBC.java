@@ -1,9 +1,8 @@
 package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.trait.Closeable;
-import io.github.baifangkual.jlib.db.func.RsMapping;
-import io.github.baifangkual.jlib.db.func.RsRowMapping;
-import io.github.baifangkual.jlib.db.impl.pool.ConnectionPoolDBC;
+import io.github.baifangkual.jlib.db.func.FnResultSetMapping;
+import io.github.baifangkual.jlib.db.func.FnResultSetRowMapping;
 
 import java.sql.Connection;
 
@@ -12,52 +11,40 @@ import java.sql.Connection;
  * <p>线程安全，能够管理自己生产的 {@link Connection} 对象生命周期，
  * 相对于仅能提供Connection对象的不可变的 {@link DBC} 类型，该类型在生命周期内内部状态将会有变化<br>
  * 该类型的构造过程应如 {@link DBC} 类型一样，将构造行为委托至 {@link DBCFactory}<br>
- * @implNote 当前该类型无连接保活等行为措施，遂当前的连接保活依赖于各数据库JDBC驱动的实现，若JDBC驱动实现中无连接保活
- * 相关策略，则该无连接保活行为
- * <p>该类型的构造应委托：
+ *
  * <pre>
  *     {@code
- *     Config config = new ConnectionConfig()
- *                 .set...
- *                 .setDsType(DSType...)
- *                 .toConfig();
- *     CloseableDataSource connPool = DataSourceCreators.createConnPool(config, 5);
- *     }
- * </pre>
- * 该类型的使用：
- * <pre>
- *     {@code
- *     // 外侧显式获取连接对象并操作，最后应显式调用close或使用try-with-resource语法糖关闭
+ *     PooledDBC pooled = DBCFactory.build(...).pooled();
+ *     // 外侧显式获取连接对象并操作，
+ *     // 最后应显式调用close或使用try-with-resource关闭，确保归还Conn对象
  *     CompletableFuture.runAsync(() -> {
- *             try (Connection c = connPool.getConnection()){
+ *             try (Connection c = pooled.getConn()){
  *                 // do some...
  *             } catch (Exception e) {
- *                 throw new RuntimeException(e);
+ *                 // do some...
  *             }
  *     });
- *     // 或可直接委托操作至该类型，需给定操作 java.sql.ResultSet 类型的函数
- *     List<Table.Meta> metas = connPool.execQuery("select * from table",
- *                 rs -> new Table.Meta()
- *                         .setName(rs.getString("name"))
- *                         .setSchema(rs.getString("schema"))
- *                         .setComment(rs.getString("comment")));
  *     }
  * </pre>
  *
  * @author baifangkual
- * @see DBC#execQuery(String, RsRowMapping)
- * @see DBC#execQuery(RsMapping, String)
+ * @implNote 当前该类型无连接保活等行为措施，遂当前的连接保活依赖于各数据库JDBC驱动的实现，若JDBC驱动实现中无连接保活
+ * 相关策略，则该无连接保活行为
+ * @see DBC#execQuery(String, FnResultSetRowMapping)
+ * @see DBC#execQuery(FnResultSetMapping, String)
  * @see #close()
- * @see RsMapping
- * @see RsRowMapping
- * @since 2024/7/25
+ * @see FnResultSetMapping
+ * @see FnResultSetRowMapping
+ * @since 2024/7/25 v0.0.7
  */
 public interface PooledDBC extends DBC, Closeable {
 
     /**
-     * 获取一个连接对象，不同的{@link PooledDBC}的该方法的行为应该是不同的
+     * 从连接池中获取一个连接对象
+     * <p>若没有空闲可用连接对象，且连接对象数量已达到 {@link DBCCfgOptions#maxPoolSize}，
+     * 则调用该方法的线程将阻塞直到任意一个连接可用</p>
      *
-     * @return 一个连接对象，实现方应确保该类型的正确性
+     * @return 一个连接对象
      * @throws Exception 当创建或返回{@link Connection} 过程发生异常时
      */
     @Override
@@ -71,6 +58,12 @@ public interface PooledDBC extends DBC, Closeable {
     @Override
     void close() throws Exception;
 
+    /**
+     * 连接池是否已被关闭
+     * <p>已被关闭的连接池不应再使用
+     *
+     * @return true 已被关闭，反之则未被关闭
+     */
     @Override
     boolean isClosed();
 

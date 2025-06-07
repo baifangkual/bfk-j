@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * 连接池中使用的 Conn 代理
  * 代理{@link Connection}对象，当{@link Connection#close()}发生时，将自己返回给原有引用地方，
- * 该应该作为连接池中对象而不是直接使用,当前（20240729）该对象的生命周期与{@link ConnectionPoolDBC}相关<br>
- * 该对象实际是由{@link Poolable}类型实现对象创建的，当前也即{@link ConnectionPoolDBC}
+ * 该应该作为连接池中对象而不是直接使用,当前（20240729）该对象的生命周期与{@link ConnPoolDBC}相关<br>
+ * 该对象实际是由{@link Poolable}类型实现对象创建的，当前也即{@link ConnPoolDBC}
  *
  * @author baifangkual
  * @since 2024/7/26

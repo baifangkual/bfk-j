@@ -7,9 +7,9 @@ import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.trait.SchemaDomainMetaProvider;
-import io.github.baifangkual.jlib.db.util.DefaultMetaSupport;
-import io.github.baifangkual.jlib.db.util.ResultSetConverter;
+import io.github.baifangkual.jlib.db.trait.HasDbAndSchemaMetaProvider;
+import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
+import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
@@ -40,16 +40,16 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
         用户或可将Schema信息放置在other中，这里将改变Config,
         目前的逻辑是一旦在other中设定currentSchema，则复写Config中直接的Schema设置
          */
-        cfg.tryGet(DBCCfgOptions.JDBC_PARAMS_OTHER)
+        cfg.tryGet(DBCCfgOptions.jdbcOtherParams)
                 .filter(o -> o.containsKey(PROP_SCHEMA_KEY))
                 .map(o -> o.get(PROP_SCHEMA_KEY))
-                .ifPresent(schema -> cfg.resetIfNotNull(DBCCfgOptions.SCHEMA, schema));
+                .ifPresent(schema -> cfg.resetIfNotNull(DBCCfgOptions.schema, schema));
     }
 
     @Override
     protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
         /* 因为DataSource设定在表的上一级，所以Config中必须要有Schema信息 */
-        cfg.tryGet(DBCCfgOptions.SCHEMA)
+        cfg.tryGet(DBCCfgOptions.schema)
                 .filter(schema -> !schema.isBlank())
                 .orElseThrow(() -> new IllegalDBCCfgException("psql not found schema"));
     }
@@ -59,19 +59,19 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
         return META_PROVIDER;
     }
 
-    public static class MetaProviderImpl implements SchemaDomainMetaProvider {
+    public static class MetaProviderImpl implements HasDbAndSchemaMetaProvider {
 
 
         @Override
         public List<Table.Meta> tablesMeta(Connection conn, String db, String schema,
                                            Map<String, String> other) throws Exception {
-            return DefaultMetaSupport.tablesMeta(conn, db, schema);
+            return DefaultMetaSupports.tablesMeta(conn, db, schema);
         }
 
         @Override
         public List<Table.ColumnMeta> columnsMeta(Connection conn, String db, String schema,
                                                   String table, Map<String, String> other) throws Exception {
-            return DefaultMetaSupport.simpleColumnsMeta(conn, db, schema, table);
+            return DefaultMetaSupports.simpleColumnsMeta(conn, db, schema, table);
         }
 
         private static final String SELECT_TABLE_TEMPLATE = "SELECT * FROM {} LIMIT {} OFFSET {}";
@@ -85,7 +85,7 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
             //noinspection SqlSourceToSinkFlow
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(sql);) {
-                List<Object[]> rL = ResultSetConverter.rows(rs);
+                List<Object[]> rL = ResultSetc.rows(rs);
                 return new Table.Rows().setRows(rL);
             }
         }
