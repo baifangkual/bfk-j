@@ -13,12 +13,12 @@ import java.util.function.Supplier;
 
 /**
  * <b>配置类</b><br>
- * 存储配置信息，可存储0到n个配置信息，一个配置信息以一个“配置项”的形式表示，一个“配置项”包含一个“配置键”和一个“配置值”，
+ * <p>存储配置信息，可存储0到n个配置信息，一个配置信息以一个“配置项”的形式表示，一个“配置项”包含一个“配置键”和一个“配置值”，
  * 与配置类通过{@link #set(Option, Object)}、{@link #tryGet(Option)}等方式交互的{@link Option}携带的泛型参数描述了一个配置值的类型<br>
  * 一个配置类实体中，不会存在两个或以上的配置项的{@link Option#key()}(“配置键”)相同，
  * 若通过{@link #set(Option, Object)}设置的两个配置项的“配置键”相同，则在设置第二个配置项时将抛出异常{@link OptionKeyDuplicateException}，
- * 而通过{@link #reset(Option, Object)}设置两个配置项的“配置键”相同的配置时，后设置的配置项将覆盖先设置的配置项<br>
- * 通过{@link #tryGet(Option)}或{@link #get(Option)}获取配置值时，将不会使用配置项的默认值({@link Option#defaultValue()})，
+ * 而通过{@link #reset(Option, Object)}设置两个配置项的“配置键”相同的配置时，后设置的配置项将覆盖先设置的配置项
+ * <p>通过{@link #tryGet(Option)}或{@link #get(Option)}获取配置值时，将不会使用配置项的默认值({@link Option#defaultValue()})，
  * 而通过{@link #tryGetOrDefault(Option)}或{@link #getOrDefault(Option)}获取配置值时，若配置类中没有该配置项，则将使用配置项的默认值<br>
  * 该配置类实体状态可变，线程不安全，若需要将该对象用以线程共享变量，则应当使用 {@link #toReadonly()} 方法共享不可变只读Cfg对象<br>
  * 该配置类参考seatunnel.Config、ReadOnlyConfig和flink.Config创建<br>
@@ -26,7 +26,9 @@ import java.util.function.Supplier;
  * 可选择向Jackson实现{@code com.fasterxml.jackson.databind.JsonSerializer}和{@code com.fasterxml.jackson.databind.JsonDeserializer},
  * 或选择使用序列化{@link #toReadonlyMap()}及反序列化{@link #ofMap(Map)} 结果，因为该对象直接保存的键值类型信息存储在{@link Option}中，
  * 而非Cfg本身中，所以通过JSON反序列化的Cfg可能在Get键值时出现类型转换异常{@link ClassCastException},需注意该点,
- * 遂对该类型使用序列化，最好使用java原生的序列化方式<br>
+ * <p>遂对该类型使用序列化，最好使用java原生的序列化方式，该 impl {@link Serializable}，
+ * 但该能否成功序列化取决于内部存储的配置值是否能都序列化
+ * <p>如无说明，方法均不允许传入 {@code null}
  * <pre>
  *     {@code
  *     // 定义“配置项”
@@ -189,6 +191,18 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
     }
 
     /**
+     * 若该配置类内找不到指定的配置项，则设置其
+     *
+     * @param option 配置键
+     * @param value  配置值
+     * @param <T>    配置值类型
+     * @return this
+     */
+    public <T> Cfg setIfNotSet(Option<T> option, T value) {
+        return this.setIf(this.tryGet(option).isEmpty(), option, value);
+    }
+
+    /**
      * 当给定的value不为null，设置配置项，与{@link #set(Option, Object)}方法相比，该方法在给定的value为null时不会抛出异常
      *
      * @param option 配置键，不能为null
@@ -198,7 +212,9 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @throws NullPointerException        当给定的配置键为null时
      * @throws OptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
      * @see #setIf(boolean, Option, Object)
+     * @deprecated 与 {@link #setIfNotSet(Option, Object)} 有歧义，且用处较小
      */
+    @Deprecated(forRemoval = true)
     public <T> Cfg setIfNotNull(Option<T> option, T value) {
         return setIf(value != null, option, value);
     }
@@ -245,7 +261,9 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @return this
      * @throws NullPointerException 当给定的配置键为null
      * @see #resetIf(boolean, Option, Object)
+     * @deprecated 与 {@link #setIfNotSet(Option, Object)} 有歧义，且用处较小
      */
+    @Deprecated(forRemoval = true)
     public <T> Cfg resetIfNotNull(Option<T> option, T value) {
         return resetIf(value != null, option, value);
     }
