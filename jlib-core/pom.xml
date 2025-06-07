@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>bfk-j</artifactId>
-        <version>0.0.7</version>
+        <version>0.1.0</version>
     </parent>
 
     <artifactId>jlib-core</artifactId>

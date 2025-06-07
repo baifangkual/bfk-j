@@ -64,4 +64,10 @@ public interface PooledDBC extends DBC, Closeable {
     @Override
     boolean isClosed();
 
+    /*
+    因为该的线程安全特性，遂可以提供方法签名形如 asyncXXX...
+    可不对外暴露Conn和Rs生命周期等，外界仅提供查询需求如sql和将rs转为ROWS或ROW的函数等
+    后续可追加相关API
+     */
+
 }
