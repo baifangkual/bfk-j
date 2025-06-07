@@ -1,6 +1,6 @@
 package io.github.baifangkual.jlib.db.util;
 
-import io.github.baifangkual.jlib.db.exception.ResultSetMappingFailException;
+import io.github.baifangkual.jlib.db.exception.ResultSetCollectFailException;
 import io.github.baifangkual.jlib.db.exception.ResultSetRowMappingFailException;
 import io.github.baifangkual.jlib.db.func.FnRSRowMapping;
 import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
@@ -59,7 +59,7 @@ public class ResultSetc {
         try {
             return fnRsMap.collectRs2Rows(rs);
         } catch (Exception e) {
-            throw new ResultSetMappingFailException(e.getMessage(), e);
+            throw new ResultSetCollectFailException(e.getMessage(), e);
         }
     }
 

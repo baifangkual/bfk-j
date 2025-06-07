@@ -84,7 +84,7 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
         @Override
         public <ROWS> ROWS tableData(Connection conn, String db, String schema, String table,
                                      Map<String, String> other,
-                                     long pageNo, long pageSize,
+                                     int pageNo, int pageSize,
                                      FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception {
             String sql = Stf.f(SELECT_TABLE_TEMPLATE,
                     SqlSlices.safeAdd(db, schema, table, SqlSlices.DS_MASK),

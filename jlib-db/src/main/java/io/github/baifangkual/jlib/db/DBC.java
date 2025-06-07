@@ -217,7 +217,7 @@ public interface DBC {
      * @param <ROWS>   表示表中数据对象的类型
      * @return 表中符合分页要求的行
      */
-    <ROWS> ROWS tableData(String table, long pageNo, long pageSize,
+    <ROWS> ROWS tableData(String table, int pageNo, int pageSize,
                           FnResultSetCollector<? extends ROWS> fnRsMap);
 
     /**

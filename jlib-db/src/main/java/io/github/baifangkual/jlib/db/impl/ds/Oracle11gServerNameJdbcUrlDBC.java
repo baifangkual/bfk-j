@@ -214,8 +214,8 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
          */
         private static String pageQuery(List<String> tableFullColName,
                                         String rowNumColName,
-                                        long pageNo,
-                                        long pageSize,
+                                        int pageNo,
+                                        int pageSize,
                                         String schema,
                                         String table) {
             if (pageNo < 1 || pageSize < 1) {
@@ -225,8 +225,8 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
             // 左右括起来，防止 select 遇到关键字
             tableFullColName.forEach(cn -> sj.add(SqlSlices.wrapLR(cn, DS_MASK)));
             final String safeFullCols = sj.toString();
-            long betweenLeft = ((pageNo - 1) * pageSize) + 1;
-            long betweenRight = pageNo * pageSize;
+            int betweenLeft = ((pageNo - 1) * pageSize) + 1;
+            int betweenRight = pageNo * pageSize;
             String fullTableName = SqlSlices.safeAdd(null, schema, table, DS_MASK);
             return Stf.f(PAGE_QUERY_TEMPLATE,
                     safeFullCols,
@@ -249,7 +249,7 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
         @Override
         public <ROWS> ROWS tableData(Connection conn, String schema, String table,
                                      Map<String, String> other,
-                                     long pageNo, long pageSize,
+                                     int pageNo, int pageSize,
                                      FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception {
             // 防止列名重名而造成混淆，遂每次重新生成列名
             String rngRowNumCol = "row" + Rng.nextFixLenLarge(20);

@@ -75,7 +75,7 @@ public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
         public <ROWS> ROWS tableData(Connection conn,
                                      String db, String table,
                                      Map<String, String> other,
-                                     long pageNo, long pageSize,
+                                     int pageNo, int pageSize,
                                      FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws SQLException {
             // limit 为 要多少行，即pageSize，offset 为 pageNo
             String sql = Stf.f(SELECT_TABLE_TEMPLATE,

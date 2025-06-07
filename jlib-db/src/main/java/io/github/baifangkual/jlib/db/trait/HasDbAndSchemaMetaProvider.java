@@ -30,7 +30,7 @@ interface HasDbAndSchemaMetaProvider extends MetaProvider {
 
     <ROWS> ROWS tableData(Connection conn, String db, String schema, String table,
                           Map<String, String> other,
-                          long pageNo, long pageSize,
+                          int pageNo, int pageSize,
                           FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception;
 
     private Tup2<String, String> unsafeGetDbAndSchemaFromCfg(Cfg config) {
@@ -53,8 +53,8 @@ interface HasDbAndSchemaMetaProvider extends MetaProvider {
     @Override
     default <ROWS> ROWS tableData(Connection conn, Cfg config,
                                   String table,
-                                  long pageNo,
-                                  long pageSize,
+                                  int pageNo,
+                                  int pageSize,
                                   FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
         try {
             Tup2<String, String> t2 = unsafeGetDbAndSchemaFromCfg(config);

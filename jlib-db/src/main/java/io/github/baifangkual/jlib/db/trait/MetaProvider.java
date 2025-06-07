@@ -53,14 +53,14 @@ public interface MetaProvider {
      * @param conn                 连接对象
      * @param config               配置-内应含有该查询中必要的信息
      * @param table                要查询的表名
-     * @param pageNo               页码-分页参数
-     * @param pageSize             页大小-分页参数
+     * @param pageNo               页码-分页参数 从1开始
+     * @param pageSize             页大小-分页参数 从1开始
      * @param fnResultSetCollector 函数-描述完整读取 {@link ResultSet} 并将其中的数据行转为 {@link ROWS} 的过程
      * @return 表下符合分页的行信息
      * @apiNote 该方法是保守的，因为表中该数据量不确定，遂若表过大，
      * 给定较小的参数分页读取不会造成堆内存溢出
      */
-    <ROWS> ROWS tableData(Connection conn, Cfg config, String table, long pageNo, long pageSize,
+    <ROWS> ROWS tableData(Connection conn, Cfg config, String table, int pageNo, int pageSize,
                           FnResultSetCollector<? extends ROWS> fnResultSetCollector);
 
 
