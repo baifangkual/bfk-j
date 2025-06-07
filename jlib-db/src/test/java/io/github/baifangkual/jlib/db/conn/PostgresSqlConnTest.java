@@ -2,22 +2,17 @@ package io.github.baifangkual.jlib.db.conn;
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.*;
-import io.github.baifangkual.jlib.db.util.PropMapc;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestFactory;
-import org.junit.jupiter.api.TestMethodOrder;
 
 import java.sql.*;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 /**
  * @author baifangkual
  * create time 2024/7/12
  */
-@SuppressWarnings("GrazieInspection")
+@SuppressWarnings({"GrazieInspection", "SpellCheckingInspection"})
 public class PostgresSqlConnTest {
 
     private static final String showDb = """
@@ -35,7 +30,7 @@ public class PostgresSqlConnTest {
 //        String url = "jdbc:postgresql://localhost:32768/test_db";
 //        Properties prop = PropMapc.convert(Map.of(
 //                "user", "postgres",
-//                "password", "123456"
+//                "password", "******"
 //        ));
 //        printResult(url, prop, showDb);
     }
@@ -45,7 +40,7 @@ public class PostgresSqlConnTest {
 //        String url = "jdbc:postgresql://localhost:32768/test_db";
 //        Properties prop = PropMapc.convert(Map.of(
 //                "user", "postgres",
-//                "password", "123456",
+//                "password", "******",
 //                "currentSchema", "test_schema"
 //        ));
 //
@@ -68,12 +63,12 @@ public class PostgresSqlConnTest {
 
     private static Cfg pi5Cfg(){
         return Cfg.newCfg()
-                .set(DBCCfgOptions.user, "postgres")
-                .set(DBCCfgOptions.passwd, "long321")
-                .set(DBCCfgOptions.host, "bfk-pi5.local")
+                .set(DBCCfgOptions.host, "...")
                 .set(DBCCfgOptions.db, "postgres")
                 .set(DBCCfgOptions.schema, "public")
-                .set(DBCCfgOptions.type, DBType.POSTGRESQL);
+                .set(DBCCfgOptions.user, "...")
+                .set(DBCCfgOptions.passwd, "******")
+                .set(DBCCfgOptions.type, DBType.postgresql);
     }
 
     @Test

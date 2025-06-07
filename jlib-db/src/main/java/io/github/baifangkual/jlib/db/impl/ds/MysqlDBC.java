@@ -8,7 +8,7 @@ import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.NoSchemaJustDBMetaProvider;
-import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
+import io.github.baifangkual.jlib.db.util.DefaultJdbcMetaSupports;
 import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
@@ -59,13 +59,13 @@ public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
 
         @Override
         public List<Table.Meta> tablesMeta(Connection conn, String db, Map<String, String> other) throws Exception {
-            return DefaultMetaSupports.tablesMeta(conn, db, null);
+            return DefaultJdbcMetaSupports.tablesMeta(conn, db, null);
         }
 
         @Override
         public List<Table.ColumnMeta> columnsMeta(Connection conn, String db, String table,
                                                   Map<String, String> other) throws Exception {
-            return DefaultMetaSupports.simpleColumnsMeta(conn, db, null, table);
+            return DefaultJdbcMetaSupports.simpleColumnsMeta(conn, db, null, table);
         }
 
         private static final String SELECT_TABLE_TEMPLATE = "SELECT * FROM {} LIMIT {} OFFSET {}";

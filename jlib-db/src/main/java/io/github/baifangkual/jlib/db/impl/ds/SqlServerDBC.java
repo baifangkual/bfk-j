@@ -8,7 +8,7 @@ import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.HasDbAndSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
+import io.github.baifangkual.jlib.db.util.DefaultJdbcMetaSupports;
 import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
@@ -91,7 +91,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
             https://learn.microsoft.com/zh-cn/sql/connect/jdbc/reference/gettables-method-sqlserverdatabasemetadata?view=sql-server-ver16
             MSSQL JDBC getTables实现中 REMARKS列始终为null，后或可从 INFORMATION_SCHEMA.TABLES 中获取
             */
-            return DefaultMetaSupports.tablesMeta(conn, db, schema);
+            return DefaultJdbcMetaSupports.tablesMeta(conn, db, schema);
         }
 
         @Override
@@ -100,7 +100,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
             https://learn.microsoft.com/zh-cn/sql/connect/jdbc/reference/getcolumns-method-sqlserverdatabasemetadata?view=sql-server-ver16
             MSSQL JDBC getColumns实现中 REMARKS列始终为null，后或可从 INFORMATION_SCHEMA.TABLES 中获取
             */
-            return DefaultMetaSupports.simpleColumnsMeta(conn, db, schema, table);
+            return DefaultJdbcMetaSupports.simpleColumnsMeta(conn, db, schema, table);
         }
 
         private static final String QUERY_P = "SELECT * FROM {} ORDER BY (SELECT NULL) OFFSET {} ROWS FETCH NEXT {} ROWS ONLY";

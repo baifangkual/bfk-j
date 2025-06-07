@@ -290,11 +290,10 @@ public class ConnPoolDBC extends AbsDBC
     }
 
     /*
-    todo Cleaner test impl
+    to do Cleaner test impl
         private static final Cleaner CLEANER = Cleaner.create();
         private static final class PooledBDCClean {}
      */
-
 
     @Override
     public void close() throws Exception {
@@ -339,10 +338,21 @@ public class ConnPoolDBC extends AbsDBC
         return metaProvider;
     }
 
+    @SuppressWarnings("CommentedOutCode")
     @Override
     protected void throwOnIllegalCfg(Cfg cfg) throws IllegalDBCCfgException {
-        // this cfg is real dbc cfg, so maybe can't find any pooled conf
-        // so do nothing...
+        /*
+        // 在该类型构建时便校验是否可用，
+        // 因为open标志位构建时默认为true，
+        // 遂该处可认为是防止未经校验便使用之
+        // NO NEED ========
+        // borrow内当队列为空（初始情况）会通过 realDBC 创建连接
+        // realDBC创建过程也会异常，遂这里无需校验
+        try {
+            realDbc.assertConn();
+        } catch (Exception e) {
+            throw new IllegalDBCCfgException(e);
+        }*/
     }
 
     @Override

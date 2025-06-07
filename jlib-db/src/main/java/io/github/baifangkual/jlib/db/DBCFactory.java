@@ -32,9 +32,9 @@ public final class DBCFactory {
                 .toList();
         // 上述当前有驱动，也不代表当前支持，取交集
         Map<String, DBType> driverTRef = Arrays.stream(DBType.values())
-                .filter(t -> t.getDriver() != null)
-                .filter(t -> !t.getDriver().isBlank())
-                .collect(Collectors.toMap(DBType::getDriver, Function.identity()));
+                .filter(t -> t.driver() != null)
+                .filter(t -> !t.driver().isBlank())
+                .collect(Collectors.toMap(DBType::driver, Function.identity()));
         // 计算其
         List<DBType> types = new ArrayList<>();
         for (Map.Entry<String, DBType> e : driverTRef.entrySet()) {
@@ -47,7 +47,7 @@ public final class DBCFactory {
                 types.add(dt);
             } else {
                 if (log.isDebugEnabled()) {
-                    log.debug("数据库: {} 未在类路径找到驱动类，该类型无法使用，需要驱动类: {}", dt, dt.getDriver());
+                    log.debug("数据库: {} 未在类路径找到驱动类，该类型无法使用，需要驱动类: {}", dt, dt.driver());
                 }
             }
 
@@ -77,14 +77,14 @@ public final class DBCFactory {
     }
 
     /**
-     * 根据给定的配置类信息，创建一个某种类型的数据源 {@link DBC} 对象，该对象可返回{@link java.sql.Connection}
+     * 根据给定的配置类信息，创建一个数据库连接器 {@link DBC}
      *
      * @param cfg 连接配置
      * @return {@link DBC}
      */
     public static DBC build(Cfg cfg) throws IllegalDBCCfgException, JdbcConnectionFailException {
         DBType DBType = cfg.get(DBCCfgOptions.type);
-        return DBType.getFnDBCConstructor().apply(cfg);
+        return DBType.fnNewDBC().apply(cfg);
     }
 
 }

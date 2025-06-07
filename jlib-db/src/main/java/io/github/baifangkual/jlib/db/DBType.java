@@ -14,22 +14,21 @@ import java.util.function.Function;
  * @author baifangkual
  * @since 2024/7/10
  */
-@SuppressWarnings("LombokGetterMayBeUsed")
 public enum DBType {
 
-    MYSQL(
+    mysql(
             "com.mysql.cj.jdbc.Driver",
             MysqlDBC::new
     ),
-    POSTGRESQL(
+    postgresql(
             "org.postgresql.Driver",
             PostgresqlDBC::new
     ),
-    ORACLE(
+    oracle11g( // oracle 类型数据库仅在 oracle11g 版本上测试了，遂保守仅支持11g
             "oracle.jdbc.OracleDriver",
             Oracle11gServerNameJdbcUrlDBC::new
     ),
-    SQL_SERVER(
+    sqlServer(
             "com.microsoft.sqlserver.jdbc.SQLServerDriver",
             SqlServerDBC::new
     ),
@@ -42,18 +41,18 @@ public enum DBType {
     /**
      * 数据源 {@link DBC} 构造函数引用
      */
-    private final Function<Cfg, DBC> fnDBCConstructor;
+    private final Function<Cfg, DBC> fnNewDBC;
 
-    DBType(String driver, Function<Cfg, DBC> fnDBCConstructor) {
+    DBType(String driver, Function<Cfg, DBC> fnNewDBC) {
         this.driver = driver;
-        this.fnDBCConstructor = fnDBCConstructor;
+        this.fnNewDBC = fnNewDBC;
     }
 
-    public Function<Cfg, DBC> getFnDBCConstructor() {
-        return fnDBCConstructor;
+    public Function<Cfg, DBC> fnNewDBC() {
+        return fnNewDBC;
     }
 
-    public String getDriver() {
+    public String driver() {
         return driver;
     }
 

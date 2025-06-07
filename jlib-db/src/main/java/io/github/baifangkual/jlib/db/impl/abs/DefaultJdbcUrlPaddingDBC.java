@@ -56,11 +56,12 @@ public abstract class DefaultJdbcUrlPaddingDBC extends JdbcUrlPaddingDBC {
         } else {
             DBType t = type();
             // to do fix me 这里的逻辑为了解耦可用默认枚举.name映射或交由下层，不应该在此定义
+            // option logic... default db type jdbc url prefix
             prefix = switch (t) {
-                case SQL_SERVER -> "sqlserver";
-                case MYSQL -> "mysql";
-                case ORACLE -> "oracle";
-                case POSTGRESQL -> "postgresql";
+                case sqlServer -> "sqlserver";
+                case mysql -> "mysql";
+                case oracle11g -> "oracle";
+                case postgresql -> "postgresql";
                 //noinspection UnnecessaryDefault
                 default -> throw new IllegalStateException("not found database jdbcUrl prefix of type: " + t);
             };

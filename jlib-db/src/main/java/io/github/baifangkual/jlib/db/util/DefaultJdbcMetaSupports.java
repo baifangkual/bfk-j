@@ -1,7 +1,7 @@
 package io.github.baifangkual.jlib.db.util;
 
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.func.FnResultSetRowMapping;
+import io.github.baifangkual.jlib.db.func.FnRSRowCollector;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -15,8 +15,8 @@ import java.util.Objects;
  * @author baifangkual
  * @since 2024/7/16
  */
-public class DefaultMetaSupports {
-    private DefaultMetaSupports() {
+public class DefaultJdbcMetaSupports {
+    private DefaultJdbcMetaSupports() {
         throw new IllegalStateException("Utility class");
     }
 
@@ -140,11 +140,13 @@ public class DefaultMetaSupports {
         DatabaseMetaData metaData = conn.getMetaData();
         try (ResultSet tables = metaData.getTables(db, schema, null, tableTypes);) {
             return ResultSetc.rows(tables,
-                    (rs) -> new Table.Meta()
-                            .setDb(rs.getString(dbColName))
-                            .setSchema(rs.getString(schemaColName))
-                            .setName(rs.getString(tableNameColName))
-                            .setComment(rs.getString(tableCommentColName)));
+                    (rs) -> new Table.Meta(
+                            rs.getString(tableNameColName),
+                            rs.getString(tableCommentColName),
+                            rs.getString(schemaColName),
+                            rs.getString(dbColName)
+                    )
+            );
         }
     }
 
@@ -166,7 +168,7 @@ public class DefaultMetaSupports {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnResultSetRowMapping)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowCollector)}
      *
      * @param conn               连接对象
      * @param db                 数据库名
@@ -191,10 +193,10 @@ public class DefaultMetaSupports {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnResultSetRowMapping)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowCollector)}
      *
      * @param conn                          连接对象
-     * @param db                            数据库名
+     * @param db                            数据库名（部分数据库有该）
      * @param schema                        数据库模式名称（部分数据库有该）
      * @param table                         表名称
      * @param colNameColName                结果集中表示列名称的列
@@ -220,21 +222,22 @@ public class DefaultMetaSupports {
                                                            String colIsAutoincrementFlagColName,
                                                            String colDecimalDigitsColName) throws Exception {
         return simpleColumnsMeta(conn, db, schema, table,
-                (rs) -> new Table.ColumnMeta()
-                        .setName(rs.getString(colNameColName))
-                        .setTypeName(rs.getString(colTypeNameColName))
-                        .setComment(rs.getString(colCommentColName))
-                        .setTypeCode(rs.getInt(colTypeCodeColName))
-                        .setTypeLength(rs.getInt(colLengthColName))
-                        .setNullable(rs.getBoolean(colNullableFlagColName))
-                        .setAutoIncrement(YES.equals(rs.getString(colIsAutoincrementFlagColName)))
-                        .setPrecision(rs.getInt(colDecimalDigitsColName))
+                (rs) -> new Table.ColumnMeta(
+                        rs.getString(colNameColName),
+                        rs.getString(colTypeNameColName),
+                        rs.getInt(colTypeCodeColName),
+                        rs.getInt(colLengthColName),
+                        rs.getBoolean(colNullableFlagColName),
+                        rs.getInt(colDecimalDigitsColName),
+                        YES.equals(rs.getString(colIsAutoincrementFlagColName)),
+                        rs.getString(colCommentColName)
+                )
         );
     }
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnResultSetRowMapping)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowCollector)}
      *
      * @param conn       连接对象
      * @param db         数据库名
@@ -249,7 +252,7 @@ public class DefaultMetaSupports {
                                                     String db,
                                                     String schema,
                                                     String table,
-                                                    FnResultSetRowMapping<? extends ROW> rowMapping) throws Exception {
+                                                    FnRSRowCollector<? extends ROW> rowMapping) throws Exception {
         Objects.requireNonNull(table, "given table is null");
         DatabaseMetaData metaData = conn.getMetaData();
         try (ResultSet colMeta = metaData.getColumns(db, schema, table, null);) {

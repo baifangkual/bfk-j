@@ -1,10 +1,9 @@
 package io.github.baifangkual.jlib.db;
 
-import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.lang.R;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
-import io.github.baifangkual.jlib.db.func.FnResultSetMapping;
-import io.github.baifangkual.jlib.db.func.FnResultSetRowMapping;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
+import io.github.baifangkual.jlib.db.func.FnRSRowCollector;
 import io.github.baifangkual.jlib.db.util.ResultSetc;
 
 import java.sql.Connection;
@@ -13,55 +12,38 @@ import java.sql.Statement;
 import java.util.List;
 
 /**
- * todo doc rewrite ....................
+ * <b>数据库连接器（Database Connector）</b>
+ * <p>不可变对象，该对象被创建出来后，便可以获取数据源的 {@link Connection} 对象
+ * <p>不负责存储和管理 {@link Connection}，仅负责提供，遂也不会持有被自己创建的连接对象的引用,
+ * 若需使用能够管理创建的 {@link Connection} 的 {@link DBC} ,应使用 {@link PooledDBC}
+ * <pre>{@code
+ * Cfg psqlCfg = Cfg.newCfg()
+ *         .set(DBCCfgOptions.host, "...")
+ *         .set(DBCCfgOptions.db, "postgres")
+ *         .set(DBCCfgOptions.schema, "public")
+ *         .set(DBCCfgOptions.user, "...")
+ *         .set(DBCCfgOptions.passwd, "******")
+ *         .set(DBCCfgOptions.type, DBType.postgresql);
+ * DBC dbc = DBCFactory.build(psqlCfg);
+ * }</pre>
  *
  * @author baifangkual
- * create time 2024/7/11
- * <b>数据库连接器（Database Connector）</b>
- * <p>
- * 原本想使用java API的{@link javax.sql.DataSource} 接口，但该接口需要 complie作用域依赖数据源driver实现，
- * 为不耦合驱动器driver，遂使用该类型抽象<br>
- * 数据源实体抽象, 当被创建出来时，应当是不可变对象，该对象被创建出来后，便可以获取一个数据源的Connection对象<br>
- * 所有底层DataSource（关于数据库的）仅描述从{@link Cfg} 对象构建{@link Connection}对象过程，
- * 即该底层实现不负责存储和管理{@link Connection}，仅负责提供,遂也不会持有被自己创建的连接对象的引用，{@link Connection}的管理在他者实现,
- * 若需使用能够管理自己创建的数据源的{@link DBC},应使用{@link PooledDBC}<br>
- * 需明确该类型提供的get方法语义和create方法语义不同，create语义已被删除，目前尚未有create语义<br>
- * 该类型构造方式:
- * <pre>
- *     <b>其一</b>
- *     {@code
- *         ConnectionConfig config = new ConnectionConfig()
- *              .set...
- *              .setDsType(DSType.MYSQL);
- *         DataSource dataSource = DataSourceCreators.create(config);
- *     }
- *     <b>其二</b>
- *     {@code
- *          Config config = Config.of()
- *              .set(ConnConfigOptions.DS_TYPE, DSType.MYSQL)
- *              .reset(...)
- *              .setIf(....);
- *          DataSource datasource = DataSourceCreators.create(config);
- *     }
- *     <b>其三，如果你使用datasource-manager-api-rpc-starter包访问数据源管理服务</b>
- *     {@code
- *          DataSourceInfo dsInfo = DSMClient.query("datasourceid");
- *          DataSource ds = dsInfo.toRuntimeDataSource();
- *          // 或可手动之
- *          Config config = dsInfo.toRuntimeConfig();
- *          DataSource dataSource = DataSourceCreators.create(config);
- *     }
- * </pre>
+ * @since 2024/7/11 v0.0.7
  */
 public interface DBC {
 
-
+    /**
+     * 连接的数据库类型
+     *
+     * @return 数据库类型
+     */
     DBType type();
 
     /**
-     * 检查连接是否可用，与{@link #assertConn()} 相比，该方法在检查失败时将返回{@link Boolean#FALSE}
+     * 检查连接是否可用
      *
-     * @return 布尔值, true为连接可用，false为连接不可用
+     * @return true为可用，反之不可用
+     * @see #assertConn()
      */
     default boolean testConn() {
         try {
@@ -73,17 +55,17 @@ public interface DBC {
     }
 
     /**
-     * 检查该类型数据源的连接是否正常，也即给定的参数能否连接到一个数据源，在数据源服务运行（或数据文件存在）的情况下，
-     * 也即表示给定的参数是否正确，当检查不通过，该方法将抛出异常，
-     * 若希望返回boolean类型表示连接与否，可使用{@link #testConn()}
+     * 断言能连接到数据库（即能够构建 {@link Connection} 并使用）
+     * <p>即给定的参数能连接到数据库，也即表示给定的参数正确，否则抛出异常
      *
      * @throws Exception 当尝试连接数据源失败
+     * @see #testConn()
      */
     void assertConn() throws Exception;
 
     /**
-     * 该类型{@link DBC}的该方法实现将创建一个新的Connection对象，该不负责conn对象的管理和关闭等，
-     * conn使用结束之后的关闭应由调用方负责
+     * 获取一个连接对象
+     * <p>不负责conn对象的管理和关闭等，conn 使用结束之后的关闭应由调用方负责
      *
      * @return {@link Connection}
      * @throws Exception 当创建conn对象过程中发生异常
@@ -91,7 +73,7 @@ public interface DBC {
     Connection getConn() throws Exception;
 
     /**
-     * 尝试获取一个连接对象，获取失败时返回{@link R.Err}载荷异常（获取失败原因）
+     * 尝试获取一个连接对象，获取失败时返回 {@link R.Err} 携带异常（获取失败原因）
      *
      * @return {@code R.Ok(Connection)} | {@code R.Err(Exception)}
      */
@@ -100,17 +82,18 @@ public interface DBC {
     }
 
     /**
-     * 执行sql查询并返回结果，返回的结果将根据给定的{@link FnResultSetRowMapping}函数进行转换,
-     * 与{@link #execQuery(FnResultSetMapping, String)}不同，要求的函数不应负责{@link ResultSet#next()}的调用，
-     * 也因此，该函数{@link FnResultSetRowMapping}应仅从{@link ResultSet}中获取某一行的数据并返回{@link ROW}即可
+     * 执行sql查询并返回结果，返回的结果将根据给定的 {@link FnRSRowCollector} 函数进行转换,
+     * 与 {@link #execQuery(FnResultSetCollector, String)} 不同，要求的函数不应负责 {@link ResultSet#next()} 的调用，
+     * 也因此，该函数 {@link FnRSRowCollector} 应仅从 {@link ResultSet} 中获取某一行的数据并返回 {@link ROW} 即可
      *
      * @param sql      要执行的sql查询语句
-     * @param fnRowMap ResultSet中行的转换方法，该函数不应负责{@link ResultSet#next()}的调用
+     * @param fnRowMap ResultSet中行的转换方法，该函数不应负责 {@link ResultSet#next()} 的调用
      * @param <ROW>    ResultSet中行转换为的行对象
      * @return ResultSet中多个行, 构成了List[ROW...]
-     * @see FnResultSetRowMapping
+     * @see FnRSRowCollector
+     * @see #execQuery(FnResultSetCollector, String)
      */
-    default <ROW> List<ROW> execQuery(String sql, FnResultSetRowMapping<? extends ROW> fnRowMap) {
+    default <ROW> List<ROW> execQuery(String sql, FnRSRowCollector<? extends ROW> fnRowMap) {
         //noinspection SqlSourceToSinkFlow
         try (Connection conn = getConn();
              Statement stat = conn.createStatement();
@@ -122,17 +105,18 @@ public interface DBC {
     }
 
     /**
-     * 执行sql查询并返回结果，返回的结果将根据给定的{@link FnResultSetMapping}函数进行转换，该函数{@link FnResultSetMapping}
-     * 拥有{@link ResultSet}的完全控制权力，遂该函数内应负责显示调用{@link ResultSet#next()}方法，函数将{@link ResultSet}完全
-     * 转为{@link ROWS}类型对象，该结果对象或可包含多行数据
+     * 执行sql查询并返回结果，返回的结果将根据给定的 {@link FnResultSetCollector} 函数进行转换，该函数 {@link FnResultSetCollector}
+     * 拥有 {@link ResultSet} 的完全控制权力，遂该函数内应负责显示调用 {@link ResultSet#next()} 方法，函数将 {@link ResultSet} 完全
+     * 转为 {@link ROWS} 类型对象，该结果对象或可包含多行数据
      *
-     * @param fnRsMap 入参为ResultSet，返回值为{@link ROWS},该函数或应负责{@link ResultSet#next()}的调用
+     * @param fnRsMap 入参为ResultSet，返回值为 {@link ROWS} ,该函数或应负责 {@link ResultSet#next()} 的调用
      * @param sql     要执行的sql查询语句
      * @param <ROWS>  返回值，查询结果
      * @return 查询结果对象
-     * @see FnResultSetMapping
+     * @see FnResultSetCollector
+     * @see #execQuery(String, FnRSRowCollector)
      */
-    default <ROWS> ROWS execQuery(FnResultSetMapping<? extends ROWS> fnRsMap, String sql) {
+    default <ROWS> ROWS execQuery(FnResultSetCollector<? extends ROWS> fnRsMap, String sql) {
         //noinspection SqlSourceToSinkFlow
         try (Connection conn = getConn();
              Statement stat = conn.createStatement();
@@ -168,9 +152,19 @@ public interface DBC {
      * 获取该数据源下所有表的元信息
      *
      * @return 所有表的元信息
+     * @apiNote 这些元信息是通过Jdbc标准Api {@link java.sql.ResultSetMetaData} 获取的，
+     * 返回的值的覆盖情况取决于数据库提供商的实现，部分数据库没有提供所有的元信息，
+     * (比如 Postgresql 的返回不会提供 {@code TABLE_CAT} 信息)
      */
     List<Table.Meta> tablesMeta();
 
+    /**
+     * 获取该数据源系某表的列元信息
+     *
+     * @param table 表名
+     * @return 列元信息
+     * @apiNote 这些元信息是通过Jdbc标准Api {@link java.sql.ResultSetMetaData} 获取的
+     */
     List<Table.ColumnMeta> columnsMeta(String table);
 
     /**

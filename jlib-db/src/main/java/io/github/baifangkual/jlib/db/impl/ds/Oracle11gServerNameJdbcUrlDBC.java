@@ -1,6 +1,7 @@
 package io.github.baifangkual.jlib.db.impl.ds;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
+import io.github.baifangkual.jlib.core.util.Rng;
 import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
@@ -8,15 +9,13 @@ import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.NoDBJustSchemaMetaProvider;
-import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
+import io.github.baifangkual.jlib.db.util.DefaultJdbcMetaSupports;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -150,7 +149,7 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
                                            Map<String, String> other) throws Exception {
             // 经测试，oracle 获取表的元数据 的 行为和 sqlserver类似：都不能获取表的描述
             // TABLE_CAT 始终为 null
-            return DefaultMetaSupports.tablesMeta(conn, null, schema);
+            return DefaultJdbcMetaSupports.tablesMeta(conn, null, schema);
         }
 
         @Override
@@ -158,7 +157,7 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
                                                   Map<String, String> other) throws Exception {
             // REMARKS 始终为 null 获取不到表描述
             // TABLE_CAT 始终为 null
-            return DefaultMetaSupports.simpleColumnsMeta(conn, null, schema, table);
+            return DefaultJdbcMetaSupports.simpleColumnsMeta(conn, null, schema, table);
         }
 
         /**
@@ -169,11 +168,11 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
          * 另外，发现该查询若以 ”;“ 结尾，则Oracle会提示 ORA-00911: 无效字符,
          * 尚不清楚这是oracle jdbc实现的问题还是jdbc设定问题
          */
+        @SuppressWarnings("SpellCheckingInspection")
         private static final String PAGE_QUERY_TEMPLATE = """
                 SELECT * FROM (
                     SELECT e.*, ROWNUM AS "{}" FROM {} e
                 ) WHERE "{}" BETWEEN {} AND {}""";
-        private static final DateTimeFormatter RANDOM_ROW_COL_NAME = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
         private static String pageQuery(String rowNumColName, Long pageNo, Long pageSize, String schema, String table) {
             long betweenLeft = ((pageNo - 1) * pageSize) + 1;
@@ -211,12 +210,12 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
         public Table.Rows tableData(Connection conn, String schema, String table,
                                     Map<String, String> other, Long pageNo, Long pageSize) throws Exception {
             // 防止列名重名而造成混淆，遂每次重新生成列名
-            String rowNumCol = "row" + LocalDateTime.now().format(RANDOM_ROW_COL_NAME);
-            String sql = pageQuery(rowNumCol, pageNo, pageSize, schema, table);
+            String rngRowNumCol = "row" + Rng.nextFixLenLarge(20);
+            String sql = pageQuery(rngRowNumCol, pageNo, pageSize, schema, table);
             //noinspection SqlSourceToSinkFlow
             try (Statement stat = conn.createStatement();
                  ResultSet rs = stat.executeQuery(sql)) {
-                return handlerPageQueryResultSet(rs, rowNumCol);
+                return handlerPageQueryResultSet(rs, rngRowNumCol);
             }
         }
 
@@ -232,7 +231,11 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
          *     <li>IF SQLCODE != -942 THEN 用于检查捕获的异常是否是表不存在的错误代码 -942</li>
          *     <li>如果不是 -942，则重新抛出异常；否则，忽略该异常。</li>
          * </ul>
+         *
+         * @deprecated 删除垃圾代码接口 dropTable，已不支持删除表，
+         * 该 oracle11g 删除表过程 sql 暂存于此
          */
+        @Deprecated(since = "0.0.7")
         private static final String DROP_TABLE_TEMPLATE = """
                 BEGIN
                     EXECUTE IMMEDIATE 'DROP TABLE {}';

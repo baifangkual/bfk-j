@@ -2,8 +2,8 @@ package io.github.baifangkual.jlib.db.util;
 
 import io.github.baifangkual.jlib.db.exception.ResultSetMappingFailException;
 import io.github.baifangkual.jlib.db.exception.ResultSetRowMappingFailException;
-import io.github.baifangkual.jlib.db.func.FnResultSetMapping;
-import io.github.baifangkual.jlib.db.func.FnResultSetRowMapping;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
+import io.github.baifangkual.jlib.db.func.FnRSRowCollector;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -22,21 +22,21 @@ public class ResultSetc {
     }
 
     /**
-     * 调用方给定{@link ResultSet}和操作ResultSet中行的函数{@link FnResultSetRowMapping},返回多行数据，
+     * 调用方给定{@link ResultSet}和操作ResultSet中行的函数{@link FnRSRowCollector},返回多行数据，
      * 该方法不负责调用{@link ResultSet#close()}
      *
      * @param rs         JDBC QUERY查询结果对象,该对象有状态
      * @param rowMapping 描述对{@link ResultSet}中行的操作，因为描述的为对行的操作，
      *                   遂该函数内不应显式调用{@link ResultSet#next()}，除非你有特殊需求（比如跳行读取）
-     * @param <ROW>      通过{@link FnResultSetRowMapping}函数操作行和返回的对应行的结果
+     * @param <ROW>      通过{@link FnRSRowCollector}函数操作行和返回的对应行的结果
      * @return list[ROW...]
      */
     public static <ROW> List<ROW> rows(ResultSet rs,
-                                       FnResultSetRowMapping<? extends ROW> rowMapping) {
+                                       FnRSRowCollector<? extends ROW> rowMapping) {
         try {
             List<ROW> rows = new ArrayList<>();
             while (rs.next()) {
-                rows.add(rowMapping.map(rs));
+                rows.add(rowMapping.collectOneRow(rs));
             }
             return rows;
         } catch (Exception e) {
@@ -45,19 +45,19 @@ public class ResultSetc {
     }
 
     /**
-     * 给定操作整个{@link ResultSet}的函数{@link FnResultSetMapping}和{@link ResultSet},返回通过函数转换而来的结果对象，该方法
-     * 不同于{@link #rows(ResultSet, FnResultSetRowMapping)}方法，要求给定的函数为操作整个{@link ResultSet}的函数，遂要获取多行数据，应
+     * 给定操作整个{@link ResultSet}的函数{@link FnResultSetCollector}和{@link ResultSet},返回通过函数转换而来的结果对象，该方法
+     * 不同于{@link #rows(ResultSet, FnRSRowCollector)}方法，要求给定的函数为操作整个{@link ResultSet}的函数，遂要获取多行数据，应
      * 显式在函数体中调用{@link ResultSet#next()}
      *
      * @param resultSetMapping 操作整个{@link ResultSet}的函数
      * @param rs               JDBC QUERY 结果对象
-     * @param <ROWS>           表示通过{@link FnResultSetMapping}函数操作后返回的结果类型
+     * @param <ROWS>           表示通过{@link FnResultSetCollector}函数操作后返回的结果类型
      * @return ROWS OBJ
      */
-    public static <ROWS> ROWS rows(FnResultSetMapping<? extends ROWS> resultSetMapping,
+    public static <ROWS> ROWS rows(FnResultSetCollector<? extends ROWS> resultSetMapping,
                                    ResultSet rs) {
         try {
-            return resultSetMapping.map(rs);
+            return resultSetMapping.collectRs2Rows(rs);
         } catch (Exception e) {
             throw new ResultSetMappingFailException(e.getMessage(), e);
         }

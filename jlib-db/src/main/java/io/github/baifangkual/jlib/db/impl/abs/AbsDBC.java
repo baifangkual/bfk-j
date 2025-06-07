@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 抽象类，抽象了 dbc 中接收并校验cfg等过程
+ * DBC顶层抽象，描述了DBC接收并校验cfg等过程
  *
  * @author baifangkual
  * @since 2024/7/11
@@ -51,11 +51,6 @@ public abstract class AbsDBC implements DBC {
         return pooled(readonlyCfg().getOrDefault(DBCCfgOptions.maxPoolSize));
     }
 
-    /**
-     * 获取该数据源下所有表的元信息
-     *
-     * @return 所有表的元信息
-     */
     public List<Table.Meta> tablesMeta() {
         MetaProvider metaProvider = metaProvider();
         try (Connection conn = getConn()) {
@@ -75,14 +70,6 @@ public abstract class AbsDBC implements DBC {
         }
     }
 
-    /**
-     * 给定表名，查询表中符合分页要求的行
-     *
-     * @param table    表名
-     * @param pageNo   页码-分页参数-最小值为1
-     * @param pageSize 页大小-分页参数-最小值为1
-     * @return 表中符合分页要求的行
-     */
     public Table.Rows tableData(String table, long pageNo, long pageSize) {
         Objects.requireNonNull(table, "given table is null");
         MetaProvider metaProvider = metaProvider();
@@ -98,12 +85,20 @@ public abstract class AbsDBC implements DBC {
         return dbType;
     }
 
-
+    /**
+     * 当前 {@link DBC} 的配置
+     *
+     * @return 配置
+     */
     public Cfg readonlyCfg() {
         return readonlyCfg;
     }
 
-
+    /**
+     * 当前 {@link DBC} 类型的元数据提供者
+     *
+     * @return 元数据提供者
+     */
     public abstract MetaProvider metaProvider();
 
     /**

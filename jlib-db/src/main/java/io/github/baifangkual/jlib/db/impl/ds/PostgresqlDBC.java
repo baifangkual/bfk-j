@@ -8,7 +8,7 @@ import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.HasDbAndSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
-import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
+import io.github.baifangkual.jlib.db.util.DefaultJdbcMetaSupports;
 import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
@@ -69,13 +69,13 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
                                            Map<String, String> other) throws Exception {
             // pg的jdbc meta 不会返回 TABLE_CAT
             // 即 没有 dbname
-            return DefaultMetaSupports.tablesMeta(conn, db, schema);
+            return DefaultJdbcMetaSupports.tablesMeta(conn, db, schema);
         }
 
         @Override
         public List<Table.ColumnMeta> columnsMeta(Connection conn, String db, String schema,
                                                   String table, Map<String, String> other) throws Exception {
-            return DefaultMetaSupports.simpleColumnsMeta(conn, db, schema, table);
+            return DefaultJdbcMetaSupports.simpleColumnsMeta(conn, db, schema, table);
         }
 
         private static final String SELECT_TABLE_TEMPLATE = "SELECT * FROM {} LIMIT {} OFFSET {}";

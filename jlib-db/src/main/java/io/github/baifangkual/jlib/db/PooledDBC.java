@@ -1,13 +1,13 @@
 package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.trait.Closeable;
-import io.github.baifangkual.jlib.db.func.FnResultSetMapping;
-import io.github.baifangkual.jlib.db.func.FnResultSetRowMapping;
+import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
+import io.github.baifangkual.jlib.db.func.FnRSRowCollector;
 
 import java.sql.Connection;
 
 /**
- * <b>池化的DBC</b>
+ * <b>池化的数据库连接器（Pooled Database Connector）</b>
  * <p>线程安全，能够管理自己生产的 {@link Connection} 对象生命周期，
  * 相对于仅能提供Connection对象的不可变的 {@link DBC} 类型，该类型在生命周期内内部状态将会有变化<br>
  * 该类型的构造过程应如 {@link DBC} 类型一样，将构造行为委托至 {@link DBCFactory}<br>
@@ -30,11 +30,11 @@ import java.sql.Connection;
  * @author baifangkual
  * @implNote 当前该类型无连接保活等行为措施，遂当前的连接保活依赖于各数据库JDBC驱动的实现，若JDBC驱动实现中无连接保活
  * 相关策略，则该无连接保活行为
- * @see DBC#execQuery(String, FnResultSetRowMapping)
- * @see DBC#execQuery(FnResultSetMapping, String)
+ * @see DBC#execQuery(String, FnRSRowCollector)
+ * @see DBC#execQuery(FnResultSetCollector, String)
  * @see #close()
- * @see FnResultSetMapping
- * @see FnResultSetRowMapping
+ * @see FnResultSetCollector
+ * @see FnRSRowCollector
  * @since 2024/7/25 v0.0.7
  */
 public interface PooledDBC extends DBC, Closeable {
