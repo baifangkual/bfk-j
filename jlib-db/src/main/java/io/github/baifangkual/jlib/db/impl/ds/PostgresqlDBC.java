@@ -6,8 +6,8 @@ import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
-import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.HasDbAndSchemaMetaProvider;
+import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
 import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
@@ -29,6 +29,7 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
     private static final MetaProvider META_PROVIDER = new MetaProviderImpl();
 
     private static final String PROP_SCHEMA_KEY = "currentSchema";
+    private static final int DEFAULT_PORT = 5432;
 
     public PostgresqlDBC(Cfg cfg) {
         super(cfg);
@@ -43,7 +44,8 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
         cfg.tryGet(DBCCfgOptions.jdbcOtherParams)
                 .filter(o -> o.containsKey(PROP_SCHEMA_KEY))
                 .map(o -> o.get(PROP_SCHEMA_KEY))
-                .ifPresent(schema -> cfg.resetIfNotNull(DBCCfgOptions.schema, schema));
+                .ifPresent(schema -> cfg.setIfNotSet(DBCCfgOptions.schema, schema));
+        cfg.setIfNotSet(DBCCfgOptions.port, DEFAULT_PORT);
     }
 
     @Override
@@ -65,6 +67,8 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
         @Override
         public List<Table.Meta> tablesMeta(Connection conn, String db, String schema,
                                            Map<String, String> other) throws Exception {
+            // pg的jdbc meta 不会返回 TABLE_CAT
+            // 即 没有 dbname
             return DefaultMetaSupports.tablesMeta(conn, db, schema);
         }
 
@@ -80,7 +84,7 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
         public Table.Rows tableData(Connection conn, String db, String schema, String table,
                                     Map<String, String> other, Long pageNo, Long pageSize) throws Exception {
             String sql = Stf.f(SELECT_TABLE_TEMPLATE,
-                    SqlSlices.safeAdd(db, null, table, SqlSlices.DS_MASK),
+                    SqlSlices.safeAdd(db, schema, table, SqlSlices.DS_MASK),
                     pageSize, (pageNo - 1) * pageSize);
             //noinspection SqlSourceToSinkFlow
             try (Statement stmt = conn.createStatement();

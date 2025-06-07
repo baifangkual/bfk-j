@@ -6,8 +6,8 @@ import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
-import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.HasDbAndSchemaMetaProvider;
+import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
 import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
@@ -59,7 +59,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
         cfg.reset(DBCCfgOptions.jdbcOtherParams, newO);
         // database=... eg:;database=master
         if (newO.containsKey(DB_ON_P)) {
-            cfg.resetIfNotNull(DBCCfgOptions.db, newO.get(DB_ON_P));
+            cfg.setIfNotSet(DBCCfgOptions.db, newO.get(DB_ON_P));
         }
 
     }

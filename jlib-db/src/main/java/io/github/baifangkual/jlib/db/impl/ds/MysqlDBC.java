@@ -6,8 +6,8 @@ import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
-import io.github.baifangkual.jlib.db.trait.NoSchemaJustDBMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
+import io.github.baifangkual.jlib.db.trait.NoSchemaJustDBMetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
 import io.github.baifangkual.jlib.db.util.ResultSetc;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
@@ -28,9 +28,15 @@ import java.util.Map;
 public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
 
     private static final MetaProvider META_PROVIDER = new MetaProviderImpl();
+    private static final int DEFAULT_MYSQL_PORT = 3306;
 
     public MysqlDBC(Cfg cfg) {
         super(cfg);
+    }
+
+    @Override
+    protected void preCheckCfg(Cfg cfg) {
+        cfg.setIfNotSet(DBCCfgOptions.port, DEFAULT_MYSQL_PORT);
     }
 
     @Override

@@ -6,8 +6,8 @@ import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
-import io.github.baifangkual.jlib.db.trait.NoDBJustSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
+import io.github.baifangkual.jlib.db.trait.NoDBJustSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultMetaSupports;
 import io.github.baifangkual.jlib.db.util.SqlSlices;
 
@@ -66,8 +66,7 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
     @Override
     protected void preCheckCfg(Cfg cfg) {
         // 当用户未给定 PORT 则使用oracle 默认端口 1521
-        cfg.resetIf(cfg.tryGet(DBCCfgOptions.port).isEmpty(),
-                DBCCfgOptions.port, DEFAULT_ORACLE_PORT);
+        cfg.setIfNotSet(DBCCfgOptions.port, DEFAULT_ORACLE_PORT);
     }
 
     @Override
