@@ -198,25 +198,9 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      * @param <T>    配置值类型
      * @return this
      */
+    @SuppressWarnings("UnusedReturnValue")
     public <T> Cfg setIfNotSet(Option<T> option, T value) {
         return this.setIf(this.tryGet(option).isEmpty(), option, value);
-    }
-
-    /**
-     * 当给定的value不为null，设置配置项，与{@link #set(Option, Object)}方法相比，该方法在给定的value为null时不会抛出异常
-     *
-     * @param option 配置键，不能为null
-     * @param value  配置值
-     * @param <T>    该键值对存储的配置值的类型
-     * @return this
-     * @throws NullPointerException        当给定的配置键为null时
-     * @throws OptionKeyDuplicateException 当给定的配置键已在当前配置类中设定配置时
-     * @see #setIf(boolean, Option, Object)
-     * @deprecated 与 {@link #setIfNotSet(Option, Object)} 有歧义，且用处较小
-     */
-    @Deprecated(forRemoval = true)
-    public <T> Cfg setIfNotNull(Option<T> option, T value) {
-        return setIf(value != null, option, value);
     }
 
     /**
@@ -250,22 +234,6 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
             reset(option, value);
         }
         return this;
-    }
-
-    /**
-     * 当给定的value不为null，设置配置项，与{@link #reset(Option, Object)}方法相比，该方法在给定的value为null时不会抛出异常
-     *
-     * @param option 配置键, 不能为null
-     * @param value  配置值
-     * @param <T>    该键值对存储的配置值的类型
-     * @return this
-     * @throws NullPointerException 当给定的配置键为null
-     * @see #resetIf(boolean, Option, Object)
-     * @deprecated 与 {@link #setIfNotSet(Option, Object)} 有歧义，且用处较小
-     */
-    @Deprecated(forRemoval = true)
-    public <T> Cfg resetIfNotNull(Option<T> option, T value) {
-        return resetIf(value != null, option, value);
     }
 
     /**
@@ -536,6 +504,7 @@ public class Cfg implements Iter<Tup2<String, Object>>, Serializable {
      *
      * @return 迭代器
      */
+    @SuppressWarnings("NullableProblems")
     @Override
     public Iterator<Tup2<String, Object>> iterator() {
         Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
