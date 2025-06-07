@@ -72,14 +72,26 @@ public abstract class AbsDBC implements DBC {
     }
 
     public <ROWS> ROWS tableData(String table, long pageNo, long pageSize,
-                                 FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
+                                 FnResultSetCollector<? extends ROWS> fnRsMap) {
         Objects.requireNonNull(table, "given table is null");
         MetaProvider metaProvider = metaProvider();
         try (Connection conn = getConn()) {
-            return metaProvider.tableData(conn, readonlyCfg(), table, pageNo, pageSize, fnResultSetCollector);
+            return metaProvider.tableData(conn, readonlyCfg(), table, pageNo, pageSize, fnRsMap);
         } catch (Exception e) {
             throw new DBQueryFailException(e.getMessage(), e);
         }
+    }
+
+    /**
+     * @apiNote 该方法实际是委托至 {@link #tableData(String, long, long, FnResultSetCollector)} 方法并给定分页参数默认值
+     * {@code pageNo = 1L, pageSize = Long.MAX_VALUE}，这可能会对数据库造成一定的计算性能消耗，
+     * 且可能数据库的分页参数并不支持 Long.MAX_VALUE 这么大，遂该方法后续应重写为简单的表查询即可，而不应该委托至分页查询，
+     * 而且 {@code tableData} 系方法参数及返回值已修改，通过 {@link FnResultSetCollector} 函数，外界可自由控制读取行数，
+     * 遂对于原本的分页查询实现 {@link #tableData(String, long, long, FnResultSetCollector)}，可能应做到覆盖
+     */
+    public <ROWS> ROWS tableData(String table,
+                                 FnResultSetCollector<? extends ROWS> fnRsMap) {
+        return tableData(table, 1L, Long.MAX_VALUE, fnRsMap);
     }
 
     @Override

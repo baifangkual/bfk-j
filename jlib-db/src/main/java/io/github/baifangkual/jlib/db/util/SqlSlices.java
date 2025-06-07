@@ -15,11 +15,8 @@ public class SqlSlices {
         throw new UnsupportedOperationException("utility class");
     }
 
-    public static final String C_MASK = ",";
-    public static final String Q_MASK = "?";
     public static final String P_MASK = ".";
     public static final String D_MASK = "`";
-    public static final String W_MASK = " ";
     public static final String DS_MASK = "\"";
 
     /**
@@ -58,17 +55,5 @@ public class SqlSlices {
     public static String wrapLR(String nameRef, String wrapC) {
         return wrapC + nameRef + wrapC;
     }
-
-    /**
-     * 将左右两边字符串拼接，l、r不得为null，中间默认插入空格
-     *
-     * @param l 左字符串
-     * @param r 右字符串
-     * @return l + " " + r
-     */
-    public static String addLR(String l, String r) {
-        return l + W_MASK + r;
-    }
-
 
 }

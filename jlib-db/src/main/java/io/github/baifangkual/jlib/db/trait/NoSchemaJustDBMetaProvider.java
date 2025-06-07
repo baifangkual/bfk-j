@@ -27,7 +27,7 @@ public interface NoSchemaJustDBMetaProvider extends MetaProvider {
     <ROWS> ROWS tableData(Connection conn, String db,
                           String table,
                           Map<String, String> other,
-                          Long pageNo, Long pageSize,
+                          long pageNo, long pageSize,
                           FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception;
 
 
@@ -47,7 +47,7 @@ public interface NoSchemaJustDBMetaProvider extends MetaProvider {
 
     @Override
     default <ROWS> ROWS tableData(Connection conn, Cfg config, String table,
-                                  Long pageNo, Long pageSize,
+                                  long pageNo, long pageSize,
                                   FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
         try {
             final Map<String, String> other = config.getOrDefault(DBCCfgOptions.jdbcOtherParams);

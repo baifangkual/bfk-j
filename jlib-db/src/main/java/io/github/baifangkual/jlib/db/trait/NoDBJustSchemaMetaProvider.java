@@ -28,7 +28,7 @@ public interface NoDBJustSchemaMetaProvider extends MetaProvider {
 
     <ROWS> ROWS tableData(Connection conn, String schema, String table,
                           Map<String, String> other,
-                          Long pageNo, Long pageSize,
+                          long pageNo, long pageSize,
                           FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception;
 
     private Tup2<String, Map<String, String>> unsafeGetSchemaAndOther(Cfg conf) {
@@ -58,7 +58,8 @@ public interface NoDBJustSchemaMetaProvider extends MetaProvider {
     }
 
     @Override
-    default <ROWS> ROWS tableData(Connection conn, Cfg config, String table, Long pageNo, Long pageSize,
+    default <ROWS> ROWS tableData(Connection conn, Cfg config, String table,
+                                  long pageNo, long pageSize,
                                   FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
         try {
             Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);

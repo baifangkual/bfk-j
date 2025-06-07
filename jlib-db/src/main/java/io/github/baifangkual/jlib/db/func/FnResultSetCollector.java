@@ -28,12 +28,13 @@ public interface FnResultSetCollector<ROWS> extends Fn<ResultSet, ROWS> {
     }
 
 
-    static <ROW> FnResultSetCollector<List<ROW>> fnListRowsCollectByRsRowCollector(FnRSRowCollector<ROW> fnRSRowCollector,
-                                                                                   Supplier<? extends List<ROW>> listFactory) {
+    static <ROW> FnResultSetCollector<List<ROW>> fnListRowsCollectByRsRowMapping(FnRSRowMapping<? extends ROW> fnRSRowMapping,
+                                                                                 Supplier<? extends List<ROW>> listFactory) {
         return (rs) -> {
             List<ROW> list = listFactory.get();
+            int index = 0;
             while (rs.next()) {
-                list.add(fnRSRowCollector.collectOneRow(rs));
+                list.add(fnRSRowMapping.collectOneRow(index++, rs));
             }
             return list;
         };

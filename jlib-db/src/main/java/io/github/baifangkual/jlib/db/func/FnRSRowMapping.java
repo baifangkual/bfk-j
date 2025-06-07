@@ -1,7 +1,5 @@
 package io.github.baifangkual.jlib.db.func;
 
-import io.github.baifangkual.jlib.core.func.Fn;
-
 import java.sql.ResultSet;
 
 /**
@@ -13,16 +11,17 @@ import java.sql.ResultSet;
  * @since 2024/7/15
  */
 @FunctionalInterface
-public interface FnRSRowCollector<ROW> extends Fn<ResultSet, ROW> {
+public interface FnRSRowMapping<ROW> {
 
-
-    ROW collectOneRow(ResultSet rs) throws Exception;
-
-
-    @Override
-    default ROW unsafeApply(ResultSet rs) throws Exception {
-        return collectOneRow(rs);
-    }
+    /**
+     * 给定索引（第一行索引为0）和 Rs对象，表示将Rs对象中的某行转为 {@link ROW}
+     *
+     * @param index 索引（第一行索引为0）
+     * @param rs    rs
+     * @return 表示行数据
+     * @throws Exception 转换过程发生异常
+     */
+    ROW collectOneRow(int index, ResultSet rs) throws Exception;
 
 
 }

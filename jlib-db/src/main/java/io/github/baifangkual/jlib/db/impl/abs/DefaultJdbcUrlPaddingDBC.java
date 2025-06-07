@@ -28,7 +28,7 @@ public abstract class DefaultJdbcUrlPaddingDBC extends JdbcUrlPaddingDBC {
 
     @Override
     protected String buildingJdbcUrl(Cfg readonlyCfg) {
-        final String prefix = jdbcUrlPrefix(readonlyCfg);
+        final String prefix = jdbcUrlPrefix();
         /*
         部分数据库连接可不需要db参数，遂这里db可以为null，不设置该
         hive 没有db概念，jdbc API 标准中返回的也仅为schema
@@ -48,7 +48,7 @@ public abstract class DefaultJdbcUrlPaddingDBC extends JdbcUrlPaddingDBC {
         return sb.toString();
     }
 
-    protected String jdbcUrlPrefix(Cfg readonlyCfg) {
+    protected String jdbcUrlPrefix() {
         Optional<String> pOpt = tryGetJdbcUrlPrefix();
         String prefix;
         if (pOpt.isPresent()) {

@@ -1,7 +1,9 @@
 package io.github.baifangkual.jlib.db.conn;
+
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.*;
+import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.DBType;
 import org.junit.jupiter.api.Test;
 
 import java.sql.*;
@@ -61,13 +63,13 @@ public class PostgresSqlConnTest {
 //        printResult(url, prop, allPr2);
     }
 
-    private static Cfg pi5Cfg(){
+    private static Cfg pi5Cfg() {
         return Cfg.newCfg()
-                .set(DBCCfgOptions.host, "...")
+                .set(DBCCfgOptions.host, "bfk-pi5.local")
                 .set(DBCCfgOptions.db, "postgres")
                 .set(DBCCfgOptions.schema, "public")
-                .set(DBCCfgOptions.user, "...")
-                .set(DBCCfgOptions.passwd, "******")
+                .set(DBCCfgOptions.user, "postgres")
+                .set(DBCCfgOptions.passwd, "*")
                 .set(DBCCfgOptions.type, DBType.postgresql);
     }
 
@@ -85,19 +87,104 @@ public class PostgresSqlConnTest {
     }
 
     @Test
-    public void testUsePsqlDbFunc(){
+    public void testUsePsqlDbFunc() {
 //        DBC dbc = DBCFactory.build(pi5Cfg());
 //        List<Table.Meta> metas = dbc.tablesMeta();
 //        metas.forEach(System.out::println);
 //        List<Table.ColumnMeta> testTableMeta = dbc.columnsMeta("test_table");
 //        testTableMeta.forEach(System.out::println);
+//        record Man(int id, String name, int age) {
+//        }
+//        List<Man> manyMan = dbc.tableData("test_table", (rs) -> {
+//            List<Man> manList = new ArrayList<>();
+//            while (rs.next()) {
+//                int id = rs.getInt("id");
+//                String name = rs.getString("name");
+//                int age = rs.getInt("age");
+//                manList.add(new Man(id, name, age));
+//            }
+//            return manList;
+//        });
+//        manyMan.forEach(System.out::println);
+//        List<Indexed<Man>> indexedMan = dbc.execQuery(
+//                "select * from test_table",
+//                LinkedList::new,
+//                (i, rs) -> {
+//                    int id = rs.getInt("id");
+//                    String name = rs.getString("name");
+//                    int age = rs.getInt("age");
+//                    return Indexed.of(i, new Man(id, name, age));
+//                });
+//        indexedMan.forEach(System.out::println);
+//        List<Man> ManyMan2 = dbc.execQuery("select * from test_table",
+//                (rs) -> {
+//                    List<Man> manList = new ArrayList<>();
+//                    while (rs.next()) {
+//                        int id = rs.getInt("id");
+//                        String name = rs.getString("name");
+//                        int age = rs.getInt("age");
+//                        manList.add(new Man(id, name, age));
+//                    }
+//                    return manList;
+//                });
+//        ManyMan2.forEach(System.out::println);
     }
 
     @Test
-    public void testFindAllColumnFromTable(){
-//        DBC dbc = DBCFactory.build(pi5Cfg());
-//        Table.Rows testTable = dbc.tableData("test_table");
-//        testTable.forEach(r -> System.out.println(Arrays.toString(r)));
+    public void testUsePsqlDbFunc2PooledDBC() throws Exception {
+//        record Man(int id, String name, int age) {
+//        }
+//        PooledDBC pooledDbc = DBCFactory.build(pi5Cfg()).pooled(10);
+//        List<CompletableFuture<?>> futures = new ArrayList<>();
+//        // t1
+//        futures.add(CompletableFuture.supplyAsync(pooledDbc::tablesMeta));
+//        // t2
+//        futures.add(CompletableFuture
+//                .supplyAsync(() -> pooledDbc.columnsMeta("test_table")));
+//        // t3
+//        futures.add(CompletableFuture.supplyAsync(() -> {
+//            return pooledDbc.tableData("test_table", (rs) -> {
+//                List<Man> manList = new ArrayList<>();
+//                while (rs.next()) {
+//                    int id = rs.getInt("id");
+//                    String name = rs.getString("name");
+//                    int age = rs.getInt("age");
+//                    manList.add(new Man(id, name, age));
+//                }
+//                return manList;
+//            });
+//        }));
+//        // t4
+//        futures.add(CompletableFuture.supplyAsync(() -> {
+//            return pooledDbc.execQuery(
+//                    "select * from test_table",
+//                    LinkedList::new,
+//                    (i, rs) -> {
+//                        int id = rs.getInt("id");
+//                        String name = rs.getString("name");
+//                        int age = rs.getInt("age");
+//                        return Indexed.of(i, new Man(id, name, age));
+//                    });
+//        }));
+//        // t5
+//        futures.add(CompletableFuture.supplyAsync(() -> {
+//            return pooledDbc.execQuery("select * from test_table",
+//                    (rs) -> {
+//                        List<Man> manList = new ArrayList<>();
+//                        while (rs.next()) {
+//                            int id = rs.getInt("id");
+//                            String name = rs.getString("name");
+//                            int age = rs.getInt("age");
+//                            manList.add(new Man(id, name, age));
+//                        }
+//                        return manList;
+//                    });
+//        }));
+//        List<?> allR = futures.stream()
+//                .map(CompletableFuture::join)
+//                .toList();
+//        allR.forEach(System.out::println);
+//        pooledDbc.close();
     }
 
     public static void printResult(String url, Properties prop, String execOneQuerySql) {

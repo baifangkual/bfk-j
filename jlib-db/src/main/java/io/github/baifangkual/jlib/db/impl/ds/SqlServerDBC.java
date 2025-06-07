@@ -109,7 +109,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
         @Override
         public <ROWS> ROWS tableData(Connection conn, String db, String schema, String table,
                                      Map<String, String> other,
-                                     Long pageNo, Long pageSize,
+                                     long pageNo, long pageSize,
                                      FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception {
             String sql = Stf.f(QUERY_P,
                     SqlSlices.safeAdd(db, schema, table, SqlSlices.DS_MASK),

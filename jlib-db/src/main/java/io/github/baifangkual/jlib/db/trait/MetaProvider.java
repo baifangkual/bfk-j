@@ -60,7 +60,7 @@ public interface MetaProvider {
      * @apiNote 该方法是保守的，因为表中该数据量不确定，遂若表过大，
      * 给定较小的参数分页读取不会造成堆内存溢出
      */
-    <ROWS> ROWS tableData(Connection conn, Cfg config, String table, Long pageNo, Long pageSize,
+    <ROWS> ROWS tableData(Connection conn, Cfg config, String table, long pageNo, long pageSize,
                           FnResultSetCollector<? extends ROWS> fnResultSetCollector);
 
 

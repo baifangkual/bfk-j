@@ -1,7 +1,7 @@
 package io.github.baifangkual.jlib.db.util;
 
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.func.FnRSRowCollector;
+import io.github.baifangkual.jlib.db.func.FnRSRowMapping;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -72,8 +72,8 @@ public class DefaultJdbcMetaSupports {
      * jdbc API 表示列是否为自增的所在列的列名
      */
     public static final String DEF_COL_IS_AUTOINCREMENT = "IS_AUTOINCREMENT";
-    public static final String YES = "YES";
-    public static final String NO = "NO";
+    public static final String YES = "YES"; // IS_AUTOINCREMENT 值
+    public static final String NO = "NO"; // IS_AUTOINCREMENT 值
 
     /**
      * jdbc API表示列类型精度的所在列的列名称
@@ -140,7 +140,7 @@ public class DefaultJdbcMetaSupports {
         DatabaseMetaData metaData = conn.getMetaData();
         try (ResultSet tables = metaData.getTables(db, schema, null, tableTypes);) {
             return ResultSetc.rows(tables,
-                    (rs) -> new Table.Meta(
+                    (i, rs) -> new Table.Meta(
                             rs.getString(tableNameColName),
                             rs.getString(tableCommentColName),
                             rs.getString(schemaColName),
@@ -168,7 +168,7 @@ public class DefaultJdbcMetaSupports {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowCollector)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowMapping)}
      *
      * @param conn               连接对象
      * @param db                 数据库名
@@ -193,7 +193,7 @@ public class DefaultJdbcMetaSupports {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowCollector)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowMapping)}
      *
      * @param conn                          连接对象
      * @param db                            数据库名（部分数据库有该）
@@ -222,7 +222,7 @@ public class DefaultJdbcMetaSupports {
                                                            String colIsAutoincrementFlagColName,
                                                            String colDecimalDigitsColName) throws Exception {
         return simpleColumnsMeta(conn, db, schema, table,
-                (rs) -> new Table.ColumnMeta(
+                (i, rs) -> new Table.ColumnMeta(
                         rs.getString(colNameColName),
                         rs.getString(colTypeNameColName),
                         rs.getInt(colTypeCodeColName),
@@ -237,14 +237,14 @@ public class DefaultJdbcMetaSupports {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowCollector)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowMapping)}
      *
-     * @param conn       连接对象
-     * @param db         数据库名
-     * @param schema     数据库模式名称（部分数据库有该）
-     * @param table      表名称
-     * @param rowMapping 函数，入参是一个状态不断变换(rs.next())的ResultSet，出参则为行对象ROW
-     * @param <ROW>      要转为的行对象的类型
+     * @param conn     连接对象
+     * @param db       数据库名
+     * @param schema   数据库模式名称（部分数据库有该）
+     * @param table    表名称
+     * @param fnRowMap 函数，入参是一个状态不断变换(rs.next())的(index, ResultSet)，出参则为行对象ROW
+     * @param <ROW>    要转为的行对象的类型
      * @return [ROW...]
      * @throws Exception 当给定参数使逻辑运行异常时
      */
@@ -252,11 +252,11 @@ public class DefaultJdbcMetaSupports {
                                                     String db,
                                                     String schema,
                                                     String table,
-                                                    FnRSRowCollector<? extends ROW> rowMapping) throws Exception {
+                                                    FnRSRowMapping<? extends ROW> fnRowMap) throws Exception {
         Objects.requireNonNull(table, "given table is null");
         DatabaseMetaData metaData = conn.getMetaData();
         try (ResultSet colMeta = metaData.getColumns(db, schema, table, null);) {
-            return ResultSetc.rows(colMeta, rowMapping);
+            return ResultSetc.rows(colMeta, fnRowMap);
         }
     }
 

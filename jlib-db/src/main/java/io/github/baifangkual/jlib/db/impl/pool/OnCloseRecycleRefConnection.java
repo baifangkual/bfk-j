@@ -2,10 +2,10 @@ package io.github.baifangkual.jlib.db.impl.pool;
 
 import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.exception.JdbcConnectionFailException;
-import lombok.NonNull;
 
 import java.sql.*;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,8 +31,9 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
     private final AtomicBoolean inUse = new AtomicBoolean(false);
 
     OnCloseRecycleRefConnection(int id,
-                                @NonNull Connection delegate,
-                                @NonNull Poolable<OnCloseRecycleRefConnection> pool) {
+                                Connection delegate,
+                                Poolable<OnCloseRecycleRefConnection> pool) {
+        Objects.requireNonNull(delegate);
         if (delegate instanceof Poolable.Borrowable) {
             throw new IllegalArgumentException("Connection is a recyclable connection");
         }

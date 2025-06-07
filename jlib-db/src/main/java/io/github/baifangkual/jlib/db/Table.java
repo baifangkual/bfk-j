@@ -1,16 +1,5 @@
 package io.github.baifangkual.jlib.db;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
-import lombok.experimental.Accessors;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.function.Function;
-
 /**
  * <b>数据库-表</b>
  * <p>表达数据库中普通表的各项元数据（数据库的各种自有特性表类型不支持表达（视图...等等））
@@ -61,60 +50,5 @@ public class Table {
                              Boolean autoIncrement,
                              String comment) {
     }
-
-    @Setter
-    @Getter
-    @Accessors(chain = true)
-    @ToString
-    @Deprecated(forRemoval = true, since = "0.0.7")
-    public static class Rows implements Iterable<Object[]> {
-        private List<Object[]> rows;
-
-        public List<List<Object>> toList() {
-            return toList(Function.identity());
-        }
-
-        public List<List<String>> toDisplayList() {
-            return toList(String::valueOf);
-        }
-
-        public <T> List<List<T>> toList(Function<Object, ? extends T> fn) {
-            Objects.requireNonNull(fn, "fn is null");
-            List<List<T>> list = new ArrayList<>();
-            for (Object[] row : rows) {
-                List<T> listRow = new ArrayList<>();
-                for (Object col : row) {
-                    listRow.add(fn.apply(col));
-                }
-                list.add(listRow);
-            }
-            return list;
-        }
-
-        @SuppressWarnings("NullableProblems")
-        @Override
-        public Iterator<Object[]> iterator() {
-            // 该无法转变为 indexed，因为查出来的可能不是表里的从头查，
-            // 即这种情况下索引对不上
-            Iterator<Object[]> it = rows.iterator();
-            return new Iterator<>() {
-                @Override
-                public boolean hasNext() {
-                    return it.hasNext();
-                }
-
-                @Override
-                public Object[] next() {
-                    return it.next();
-                }
-
-                @Override
-                public void remove() {
-                    it.remove();
-                }
-            };
-        }
-    }
-
 
 }

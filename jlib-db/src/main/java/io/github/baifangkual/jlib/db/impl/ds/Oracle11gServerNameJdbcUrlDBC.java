@@ -5,6 +5,7 @@ import io.github.baifangkual.jlib.core.util.Rng;
 import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
+import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
 import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
@@ -16,11 +17,10 @@ import io.github.baifangkual.jlib.db.util.SqlSlices;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.StringJoiner;
 
 import static io.github.baifangkual.jlib.db.util.SqlSlices.DS_MASK;
@@ -139,6 +139,31 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
         }
     }
 
+    /**
+     * 因oracle11g分页较为繁琐，遂在不分页的请求中，不使用 {@link io.github.baifangkual.jlib.db.DBC}
+     * 中默认的实现（委托到大分页）
+     *
+     * @implNote 该实现是不好的，因为行为应该被委托至 {@link MetaProvider} 提供，
+     * 而非 {@link io.github.baifangkual.jlib.db.DBC}，
+     * 但暂定此，后续大更改时或同时迁移到对应的 {@link MetaProvider}中
+     */
+    @Override
+    public <ROWS> ROWS tableData(String table,
+                                 FnResultSetCollector<? extends ROWS> fnRsMap) {
+        Objects.requireNonNull(table, "given table is null");
+        final String fullTableName = SqlSlices.safeAdd(null,
+                readonlyCfg().get(DBCCfgOptions.schema), // 已在postCheckCfg转为大写的了
+                table, DS_MASK);
+        //noinspection SqlSourceToSinkFlow,SqlNoDataSourceInspection
+        try (Connection conn = getConn();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT * FROM " + fullTableName)) {
+            return ResultSetc.rows(fnRsMap, rs);
+        } catch (Exception e) {
+            throw new DBQueryFailException(e.getMessage(), e);
+        }
+    }
+
     private static final Oracle11gMetaProvider META_PROVIDER = new Oracle11gMetaProvider();
 
     @Override
@@ -189,8 +214,8 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
          */
         private static String pageQuery(List<String> tableFullColName,
                                         String rowNumColName,
-                                        Long pageNo,
-                                        Long pageSize,
+                                        long pageNo,
+                                        long pageSize,
                                         String schema,
                                         String table) {
             if (pageNo < 1 || pageSize < 1) {
@@ -221,50 +246,20 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
         }
 
 
-        /**
-         * 将分页查询的结果转为 {@link Table.Rows}对象，
-         * 因为oracle 分页查询使用了  {@link #PAGE_QUERY_TEMPLATE} 做模板查询，
-         * 遂查询结果的最后一列的名称应当为 给定的随机数拼接的列名称，该列被忽略
-         *
-         * @deprecated 因 Table.Rows类型打算废弃，该方法无用，已使用
-         */
-        @Deprecated(forRemoval = true)
-        private static Table.Rows handlerPageQueryResultSet(ResultSet rs, String rowNumColName) throws SQLException {
-            int columnCount = rs.getMetaData().getColumnCount();
-            String colName = rs.getMetaData().getColumnName(columnCount);
-            // 最后一列列名总是 rowNumColName，要忽略其
-            if (!colName.equals(rowNumColName)) {
-                throw new SQLException("最后一列列名称不为 " + rowNumColName + "，而是 " + colName);
-            }
-            List<Object[]> rows = new LinkedList<>();
-            while (rs.next()) {
-                // 不取最后一列表示行号的值, 遂Object[] 长度为 colCount - 1
-                Object[] row = new Object[columnCount - 1];
-                // 不取最后一列表示行号的值, 遂 i 取值为 1 - colCount - 1
-                for (int i = 1; i < columnCount; i++) {
-                    row[i - 1] = rs.getObject(i);
-                }
-                rows.add(row);
-            }
-            return new Table.Rows().setRows(rows);
-        }
-
         @Override
         public <ROWS> ROWS tableData(Connection conn, String schema, String table,
-                                     Map<String, String> other, Long pageNo, Long pageSize,
-                                     FnResultSetCollector<? extends ROWS> fnResultSetCollector
-        ) throws Exception {
+                                     Map<String, String> other,
+                                     long pageNo, long pageSize,
+                                     FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception {
             // 防止列名重名而造成混淆，遂每次重新生成列名
             String rngRowNumCol = "row" + Rng.nextFixLenLarge(20);
             List<String> tableFullColName = queryTableFullColName(conn, schema, table);
             String sql = pageQuery(tableFullColName, rngRowNumCol, pageNo, pageSize, schema, table);
-            //noinspection SqlSourceToSinkFlow
             try (Statement stat = conn.createStatement();
                  ResultSet rs = stat.executeQuery(sql)) {
                 return ResultSetc.rows(fnResultSetCollector, rs);
             }
         }
-
 
         /**
          * 在oracle中执行类似于drop table if exists的操作，

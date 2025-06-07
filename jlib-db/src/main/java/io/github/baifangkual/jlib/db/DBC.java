@@ -2,7 +2,7 @@ package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.lang.R;
 import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
-import io.github.baifangkual.jlib.db.func.FnRSRowCollector;
+import io.github.baifangkual.jlib.db.func.FnRSRowMapping;
 import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.util.ResultSetc;
 
@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * <b>数据库连接器（Database Connector）</b>
@@ -82,41 +83,80 @@ public interface DBC {
     }
 
     /**
-     * 执行sql查询并返回结果，返回的结果将根据给定的 {@link FnRSRowCollector} 函数进行转换,
-     * 与 {@link #execQuery(FnResultSetCollector, String)} 不同，要求的函数不应负责 {@link ResultSet#next()} 的调用，
-     * 也因此，该函数 {@link FnRSRowCollector} 应仅从 {@link ResultSet} 中获取某一行的数据并返回 {@link ROW} 即可
+     * 执行sql查询并返回结果
+     * <p>返回的结果将根据给定的 {@link FnRSRowMapping} 函数进行转换,
+     * 与 {@link #execQuery(String, FnResultSetCollector)} 不同，要求的函数不应负责 {@link ResultSet#next()} 的调用，
+     * 也因此，该函数 {@link FnRSRowMapping} 应仅从 {@link ResultSet} 中获取某一行的数据并返回 {@link ROW} 即可，
+     * 方法内部会自动调用 {@code Result.next()}
+     * <p>该方法不会检查sql注入问题
+     * <pre>{@code
+     * record Person(int id, String name, int age) { }
+     * DBC dbc = DBCFactory.build(...);
+     * List<Indexed<Person>> indexedPerson = dbc.execQuery(
+     *         "select id, name, age from person",
+     *         ArrayList::new,
+     *         // no need call rs.next(),
+     *         // or you want to skip some row
+     *         (rowOnRsIndex, rs) -> Indexed.of(
+     *                 rowOnRsIndex, // just on rs index, not person id
+     *                 new Person(rs.getInt("id"),
+     *                         rs.getString("name"),
+     *                         rs.getInt("age")
+     *                 )
+     *         )
+     * );
+     * }</pre>
      *
-     * @param sql      要执行的sql查询语句
-     * @param fnRowMap ResultSet中行的转换方法，该函数不应负责 {@link ResultSet#next()} 的调用
-     * @param <ROW>    ResultSet中行转换为的行对象
+     * @param <ROW>       ResultSet中行转换为的行对象
+     * @param sql         要执行的sql查询语句
+     * @param listFactory 函数-提供一个List，形如 {@code ArrayList::new}
+     * @param fnRowMap    函数-ResultSet中行的转换方法，函数入参为 {@code (int index, ResultSet rs)}，
+     *                    其中 {@code int index} 表示当前rs中的行索引（从0开始），
+     *                    该函数不应负责 {@link ResultSet#next()} 的调用
      * @return ResultSet中多个行, 构成了List[ROW...]
-     * @see FnRSRowCollector
-     * @see #execQuery(FnResultSetCollector, String)
+     * @see FnRSRowMapping
+     * @see #execQuery(String, FnResultSetCollector)
      */
-    default <ROW> List<ROW> execQuery(String sql, FnRSRowCollector<? extends ROW> fnRowMap) {
-        //noinspection SqlSourceToSinkFlow
-        try (Connection conn = getConn();
-             Statement stat = conn.createStatement();
-             ResultSet rs = stat.executeQuery(sql)) {
-            return ResultSetc.rows(rs, fnRowMap);
-        } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
-        }
+    default <ROW> List<ROW> execQuery(String sql, Supplier<? extends List<ROW>> listFactory,
+                                      FnRSRowMapping<? extends ROW> fnRowMap) {
+        return this.execQuery(sql, FnResultSetCollector.fnListRowsCollectByRsRowMapping(fnRowMap, listFactory));
     }
 
     /**
-     * 执行sql查询并返回结果，返回的结果将根据给定的 {@link FnResultSetCollector} 函数进行转换，该函数 {@link FnResultSetCollector}
+     * 执行sql查询并返回结果
+     * <p>返回的结果将根据给定的 {@link FnResultSetCollector} 函数进行转换，该函数 {@link FnResultSetCollector}
      * 拥有 {@link ResultSet} 的完全控制权力，遂该函数内应负责显示调用 {@link ResultSet#next()} 方法，函数将 {@link ResultSet} 完全
      * 转为 {@link ROWS} 类型对象，该结果对象或可包含多行数据
+     * <p>该方法不会检查sql注入问题
+     * <pre>{@code
+     * record Person(int id, String name, int age) { }
+     * DBC dbc = DBCFactory.build(...);
+     * List<Person> person10 = dbc.execQuery(
+     *         "select id, name, age from person",
+     *         (rs) -> {
+     *             List<Person> personFirst10 = new ArrayList<>();
+     *             int count = 0;
+     *             // use FnResultSetCollector should call rs.next()
+     *             // or you just want read one row
+     *             while (count++ < 10 && rs.next()) {
+     *                 Person p = new Person(rs.getInt("id"),
+     *                         rs.getString("name"),
+     *                         rs.getInt("age"));
+     *                 personFirst10.add(p);
+     *             }
+     *             return personFirst10;
+     *         }
+     * );
+     * }</pre>
      *
-     * @param fnRsMap 入参为ResultSet，返回值为 {@link ROWS} ,该函数或应负责 {@link ResultSet#next()} 的调用
-     * @param sql     要执行的sql查询语句
      * @param <ROWS>  返回值，查询结果
+     * @param sql     要执行的sql查询语句
+     * @param fnRsMap 函数-入参为ResultSet，返回值为 {@link ROWS} ,该函数或应负责 {@link ResultSet#next()} 的调用
      * @return 查询结果对象
      * @see FnResultSetCollector
-     * @see #execQuery(String, FnRSRowCollector)
+     * @see #execQuery(String, Supplier, FnRSRowMapping)
      */
-    default <ROWS> ROWS execQuery(FnResultSetCollector<? extends ROWS> fnRsMap, String sql) {
+    default <ROWS> ROWS execQuery(String sql, FnResultSetCollector<? extends ROWS> fnRsMap) {
         //noinspection SqlSourceToSinkFlow
         try (Connection conn = getConn();
              Statement stat = conn.createStatement();
@@ -170,32 +210,25 @@ public interface DBC {
     /**
      * 给定表名，查询表中符合分页要求的行
      *
-     * @param table                表名
-     * @param pageNo               页码-分页参数-最小值为1
-     * @param pageSize             页大小-分页参数-最小值为1
-     * @param fnResultSetCollector 函数-描述完整读取 {@link ResultSet} 并将其中的数据行转为 {@link ROWS} 的过程
-     * @param <ROWS>               表示表中数据对象的类型
+     * @param table    表名
+     * @param pageNo   页码-分页参数-最小值为1
+     * @param pageSize 页大小-分页参数-最小值为1
+     * @param fnRsMap  函数-描述完整读取 {@link ResultSet} 并将其中的数据行转为 {@link ROWS} 的过程
+     * @param <ROWS>   表示表中数据对象的类型
      * @return 表中符合分页要求的行
      */
     <ROWS> ROWS tableData(String table, long pageNo, long pageSize,
-                          FnResultSetCollector<? extends ROWS> fnResultSetCollector);
+                          FnResultSetCollector<? extends ROWS> fnRsMap);
 
     /**
      * 给定表名，查询表中所有行
      *
-     * @param table                表名
-     * @param fnResultSetCollector 函数-描述完整读取 {@link ResultSet} 并将其中的数据行转为 {@link ROWS} 的过程
+     * @param table   表名
+     * @param fnRsMap 函数-描述完整读取 {@link ResultSet} 并将其中的数据行转为 {@link ROWS} 的过程
      * @return 表中所有行
-     * @apiNote 该方法实际是委托至 {@link #tableData(String, long, long, FnResultSetCollector)} 方法并给定分页参数默认值
-     * {@code pageNo = 1L, pageSize = Long.MAX_VALUE}，这可能会对数据库造成一定的计算性能消耗，
-     * 且可能数据库的分页参数并不支持 Long.MAX_VALUE 这么大，遂该方法后续应重写为简单的表查询即可，而不应该委托至分页查询，
-     * 而且 {@code tableData} 系方法参数及返回值已修改，通过 {@link FnResultSetCollector} 函数，外界可自由控制读取行数，
-     * 遂对于原本的分页查询实现 {@link #tableData(String, long, long, FnResultSetCollector)}，可能应做到覆盖
      */
-    default <ROWS> ROWS tableData(String table,
-                                  FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
-        return tableData(table, 1L, Long.MAX_VALUE, fnResultSetCollector);
-    }
+    <ROWS> ROWS tableData(String table,
+                          FnResultSetCollector<? extends ROWS> fnRsMap);
 
 
 }
