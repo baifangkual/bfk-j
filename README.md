@@ -23,13 +23,14 @@
 
 ## 模块简述
 
-* bfk-j 最顶层的模块、父模块，控制各模块间依赖及版本等
+* bfk-j 最顶层的模块、控制各模块间依赖及版本等
     * jlib-core 包含最常用的、核心的可复用代码，涵盖配置类、容器对象、工具类等
     * jlib-vfs 包含虚拟文件系统相关代码
         * jlib-vfs-api 包含虚拟文件系统api接口等相关代码
         * jlib-vfs-impl-ftp 包含对ftp的实现（依赖apache-commons-net）
         * jlib-vfs-impl-smb 包含对smb的实现（依赖smbj）
         * jlib-vfs-impl-minio 包含对minio的实现（依赖minio）
+    * jlib-db 包含部分数据库操作及元数据的相关代码
 
 ## 使用
 
@@ -46,25 +47,31 @@
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>jlib-core</artifactId>
-        <version>0.0.7</version>
+        <version>0.1.0</version>
+    </dependency>
+    <!-- 数据库操作 -->
+    <dependency>
+        <groupId>io.github.baifangkual</groupId>
+        <artifactId>jlib-db</artifactId>
+        <version>0.1.0</version>
     </dependency>
     <!-- ftp 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>jlib-vfs-impl-ftp</artifactId>
-        <version>0.0.7</version>
+        <version>0.1.0</version>
     </dependency>
     <!-- smb 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>jlib-vfs-impl-smb</artifactId>
-        <version>0.0.7</version>
+        <version>0.1.0</version>
     </dependency>
     <!-- minio 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>jlib-vfs-impl-minio</artifactId>
-        <version>0.0.7</version>
+        <version>0.1.0</version>
     </dependency>
 </dependencies>
 ```
