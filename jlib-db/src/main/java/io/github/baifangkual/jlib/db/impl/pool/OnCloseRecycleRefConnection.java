@@ -1,6 +1,7 @@
 package io.github.baifangkual.jlib.db.impl.pool;
 
 import io.github.baifangkual.jlib.core.util.Stf;
+import io.github.baifangkual.jlib.db.exception.CloseConnectionException;
 import io.github.baifangkual.jlib.db.exception.DBConnectException;
 
 import java.sql.*;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 连接池中使用的 Conn 代理
@@ -29,8 +31,8 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
     private final int id;
     private final Connection delegate;
     private final ConnPoolDBC pool;
-    // 多个线程同时共享使用该类型时，无法保证下字段可见性和原子性
-    private boolean inUsed = false;
+    // pool关闭时的超时等待线程若超时会修改该值，为确保原子性与可见性，该改为原子变量
+    private final AtomicBoolean inUsed = new AtomicBoolean(false);
     private boolean isAutoCommit;
     private long lastUsedTimeMillis;
 
@@ -61,11 +63,10 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
      */
     @Override
     public void recycleSelf() {
-        if (inUsed) {
-            inUsed = false;
+        if (inUsed.compareAndSet(true, false)) {
             lastUsedTimeMillis = System.currentTimeMillis(); // 系统调用，归还时更新
             pool.recycle(this);
-        } else throw new IllegalStateException(CLOSED_CONNECTION);
+        } else throw new CloseConnectionException(CLOSED_CONNECTION);
     }
 
     /**
@@ -73,10 +74,9 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
      */
     void borrowBef() {
         // inUse setting
-        if (inUsed) {
-            throw new IllegalStateException(UN_OPEN_CONNECTION);
+        if (!inUsed.compareAndSet(false, true)) {
+            throw new DBConnectException(UN_OPEN_CONNECTION);
         }
-        inUsed = true;
     }
 
     /**
@@ -138,7 +138,7 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
      */
     @Override
     public boolean isClosed() {
-        return !inUsed;
+        return !inUsed.get();
     }
     // proxy ===============================
 

@@ -57,14 +57,31 @@ public class DBCCfgOptions {
             .build();
 
     // ============ POOLED_DBC =====================
-    public static final Cfg.Option<Integer> poolMaxSize = Cfg.Option.of("pool.maxSize")
-            .defaultValue(10)
-            .description("连接池最大连接数")
+    public static final Cfg.Option<Integer> poolMaxSize = Cfg.Option
+            .of("pool.maxSize")
+            .defaultValue(Runtime.getRuntime().availableProcessors())
+            .description("连接池最大连接数, 默认使用当前设备处理器数量")
             .build();
-    public static final Cfg.Option<Duration> poolCheckConnAliveInterval = Cfg.Option.of("pool.CheckAliveConnInterval")
+    public static final Cfg.Option<Duration> poolCheckConnAliveInterval = Cfg.Option
+            .of("pool.CheckAliveConnInterval")
             .<Duration>type()
-            .defaultValue(Duration.ofSeconds(10)) // 一般情况下够用了，过小会导致每次借用时频繁的检查
-            .description("连接池检查连接对象是否可用的时间间隔 (数据库端可能在一定时间后会断开空闲会话，该间隔配置应小于数据库端配置)")
+            .defaultValue(Duration.ofSeconds(60)) // 一般情况下够用了，过小会导致每次借用时频繁的检查
+            .description("连接池检查连接对象是否可用的时间间隔，" +
+                         "(数据库端可能在一定时间后会断开空闲会话，该间隔配置应小于数据库端配置)")
+            .build();
+    public static final Cfg.Option<Duration> poolMaxWaitBorrowInterval = Cfg.Option
+            .of("pool.MaxWaitBorrowInterval")
+            .<Duration>type()
+            .fallbackOf(poolCheckConnAliveInterval)
+            .description("线程等待借用连接对象的最大时间，若等待超时，则等待的线程将抛出异常，" +
+                         "默认值与poolCheckConnAliveInterval一致")
+            .build();
+    public static final Cfg.Option<Duration> poolOnCloseWaitAllConnRecycleInterval = Cfg.Option
+            .of("pool.OnCloseWaitAllConnRecycleInterval")
+            .<Duration>type()
+            .fallbackOf(poolCheckConnAliveInterval)
+            .description("连接池在关闭时等待所有连接对象回收的最大时间，若等待超时，则强制关闭所有当前连接池已回收和借出的连接对象，" +
+                         "默认值与poolCheckConnAliveInterval一致")
             .build();
 
     // ============ POOLED_DBC =====================

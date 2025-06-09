@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.StringJoiner;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -59,6 +58,12 @@ import java.util.stream.Stream;
  * 倘若外侧线程在返回借用时发生异常等情况，这可能会造成一定的问题，遂最好在try-with-resource语法块内使用获取的连接，即可保证调用使用Conn的close<br>
  * 当前实现未有类似于 借用检查器 的实现，遂没有针对连接被借用了而追查借用是否使用超时等机制<br>
  * 当前实现在回收连接对象时没有关闭 {@link Connection#createStatement()} 等机制，这些行为应由外侧调用方完成
+ * <p>该实现目前没有向JMXBean注册监控，且不会启用额外的监控线程，所有的检查等，都是惰性的</p>
+ * <p>该实现在接收到Conn对象借用请求时若当前无空闲Conn对象且Conn对象已达到最大值 {@link DBCCfgOptions#poolMaxSize}，
+ * 则会等待 {@link DBCCfgOptions#poolMaxWaitBorrowInterval} 时间，
+ * 若等待超时仍未获取到可用的Conn对象，则请求借用的线程会抛出异常，依此，若借用了Conn对象后一直没有归还（调用 Connection.close())，
+ * 则可用的Conn会越来越少，直到可用的Conn数量耗尽，若这种情况发生，
+ * 则后续所有的线程的Conn对象的借用请求都会等待 {@link DBCCfgOptions#poolMaxWaitBorrowInterval} 时间后抛出异常，连接池即完全不可用</p>
  * @see DB
  * @see io.github.baifangkual.jlib.db.PooledDB
  * @see PooledDBC
@@ -71,7 +76,7 @@ public class ConnPoolDBC extends BaseDBC
         implements Poolable<OnCloseRecycleRefConnection>, PooledDBC, Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(ConnPoolDBC.class);
-    private static final String CLOSED_MSG = "Poolable<OnCloseRecycleRefConnection> closed";
+    private static final String CLOSED_MSG = "ConnPoolDBC closed";
     private static final AtomicInteger PoolIDGen = new AtomicInteger(0);
 
     private final int instanceId = PoolIDGen.getAndIncrement();
@@ -93,7 +98,12 @@ public class ConnPoolDBC extends BaseDBC
     // 因为DB不会提供MetaProvider，当对ConnPoolDBC使用PooledDB类型引用时，
     // 将不会对外暴露tablesMeta，columnsMeta等由MetaProvider提供的方法
     private final MetaProvider nullableMetaProvider;
+    // 检查间隔
     private final long checkConnAliveIntervalMillis;
+    // 等待借用最大时间
+    private final long poolMaxWaitBorrowIntervalNanos;
+    // 等待关闭最大时间
+    private final long poolOnCloseWaitAllConnRecycleIntervalNanos;
 
     private final BlockingDeque<OnCloseRecycleRefConnection> queue;
     private final BlockingDeque<OnCloseRecycleRefConnection> inUsedQueue;
@@ -119,6 +129,16 @@ public class ConnPoolDBC extends BaseDBC
             throw new IllegalArgumentException("poolCheckConnAliveInterval is negative");
         }
         this.checkConnAliveIntervalMillis = checkDur.toMillis();
+        Duration waitBorrowDur = cfg.getOrDefault(DBCCfgOptions.poolMaxWaitBorrowInterval);
+        if (waitBorrowDur.isNegative()) {
+            throw new IllegalArgumentException("poolMaxWaitBorrowInterval is negative");
+        }
+        this.poolMaxWaitBorrowIntervalNanos = waitBorrowDur.toNanos();
+        Duration onCloseWaitDur = cfg.getOrDefault(DBCCfgOptions.poolOnCloseWaitAllConnRecycleInterval);
+        if (onCloseWaitDur.isNegative()) {
+            throw new IllegalArgumentException("poolOnCloseWaitAllConnRecycleInterval is negative");
+        }
+        this.poolOnCloseWaitAllConnRecycleIntervalNanos = onCloseWaitDur.toNanos();
         if (log.isDebugEnabled()) {
             log.debug("create PooledDBC, maxPoolSize: {}, realDBC:{}", this.maxPoolSize, this.realDB);
         }
@@ -161,6 +181,8 @@ public class ConnPoolDBC extends BaseDBC
         Connection realConn = conn.realConnection();
         try {
             if (realConn.isClosed()) return false;
+            // 3秒超时校验
+            if (!realConn.isValid(3)) return false;
             this.realDB.fnAssertValidConnect().assertIsValid(realConn);
             return true;
         } catch (Exception e) {
@@ -230,8 +252,20 @@ public class ConnPoolDBC extends BaseDBC
                 } else {
                     // 终止条件：1.已经被标记为关闭，由close唤醒
                     // 2.由 recycle唤醒，可以拿
+                    long remainingNanos = this.poolMaxWaitBorrowIntervalNanos;
                     while (open.get() && queue.isEmpty()) {
-                        cdBor.await();
+                        if (remainingNanos <= 0L) {
+                            // 超时仍未拿到可用的，抛出异常
+                            throw new DBConnectException(
+                                    Stf.f("thread '{}' wait for borrow Connection timeout, wait seconds: {}," +
+                                          " pool current Connection: {}, inUsed: {}",
+                                            Thread.currentThread().getName(),
+                                            Duration.ofNanos(this.poolMaxWaitBorrowIntervalNanos).toSeconds(),
+                                            currConnNum.get(),
+                                            inUsedQueue.size())
+                            );
+                        }
+                        remainingNanos = cdBor.awaitNanos(remainingNanos);
                     }
                     // 判断是否已被标记为关闭，若已被标记未关闭，则当前线程抛出异常
                     // 若不是，则直接从 recycle 回收的队列中拿一个
@@ -252,12 +286,13 @@ public class ConnPoolDBC extends BaseDBC
             return ref;
         } catch (InterruptedException e) {
             log.error("线程收到中断，恢复中断信号，由外层处理");
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
+            Thread t = Thread.currentThread();
+            t.interrupt();
+            throw new IllegalStateException("thread: " + t.getName() + " interrupt.", e);
         } catch (Exception e) {
             // 该处的异常是由创建conn时可能产生的，将直接向外侧抛出
-            // Err.throwPanic(e);
-            throw new DBConnectException(e);
+            if (e instanceof RuntimeException rtE) throw rtE;
+            else throw new DBConnectException(e);
         } finally {
             lock.unlock();
         }
@@ -373,11 +408,14 @@ public class ConnPoolDBC extends BaseDBC
             List<OnCloseRecycleRefConnection> allRef = Stream.concat(queue.stream(), inUsedQueue.stream()).toList();
             for (OnCloseRecycleRefConnection refC : allRef) {
                 try {
+                    boolean inUsed = !refC.isClosed();
                     realCloseConn(refC, false);
-                } catch (Exception e) {
-                    if (log.isDebugEnabled()) {
-                        log.error("关闭 {} 对象过程中发生异常", refC.realConnection());
+                    refC.close();
+                    if (inUsed) {
+                        log.warn("Force closed in-use Connection: {}", refC);
                     }
+                } catch (Exception e) {
+                    log.error("err on closing Connection: {}", refC);
                     // 异常原因最后抛出，不打断 for 内逐个关闭 conn的过程
                     onCloseErrs.add(e);
                     // do flag throw true
@@ -423,24 +461,39 @@ public class ConnPoolDBC extends BaseDBC
             if (open.compareAndSet(true, false)) {
                 // 唤醒所有等待拿的线程，因为这里已经被标记为关闭，所以所有要借用的线程抛出异常
                 cdBor.signalAll();
+                long onCloseWaitNanos = this.poolOnCloseWaitAllConnRecycleIntervalNanos;
                 while (queue.size() < currConnNum.get()) {
                     // sleep ...等待所有借用被归还，防止伪唤醒
                     // 这里若唤醒后queue中仍没有全部被归还，则继续等待
-                    // 即该方法内，若3秒内没有任意一个被归还，则强制关闭所有连接，即使外界仍在使用
+                    // 即该方法内，若超时，则强制关闭所有连接，即使外界仍在使用
                     // 若等待期间线程收到中断信号，则不会进行realCloseAll的清理了
-                    if (!cdClo.await(3, TimeUnit.SECONDS)) {
+                    if (onCloseWaitNanos <= 0) {
                         // 如果超时，则跳出循环并清理
+                        log.warn("thread {} call pool.close() wait all Connection recycle timeout," +
+                                 " wait seconds: {}," +
+                                 " pool current Connection: {}," +
+                                 " inUsed: {}, available: {}," +
+                                 " now Force closing in-use Connections",
+                                Thread.currentThread().getName(),
+                                Duration.ofNanos(this.poolOnCloseWaitAllConnRecycleIntervalNanos).toSeconds(),
+                                currConnNum.get(),
+                                inUsedQueue.size(),
+                                queue.size());
                         break;
                     }
+                    onCloseWaitNanos = cdClo.awaitNanos(onCloseWaitNanos);
                 }
                 realCloseAll();
+                // 清理队列，丢弃引用
+                this.inUsedQueue.clear();
+                this.queue.clear();
             } else throw new IllegalStateException(CLOSED_MSG);
         } finally {
             lock.unlock();
         }
         if (log.isDebugEnabled()) {
             final Thread curt = Thread.currentThread();
-            log.debug("closed pool proxy connection, call thread: {}", curt.getName());
+            log.debug("closed pool, call thread: {}", curt.getName());
         }
     }
 

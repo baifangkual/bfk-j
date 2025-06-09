@@ -1,18 +1,28 @@
 package io.github.baifangkual.jlib.db.conn;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
+import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DB;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.DBType;
+import io.github.baifangkual.jlib.db.PooledDB;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Connection;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Vector;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author baifangkual
  * create time 2024/7/12
  */
+@Slf4j
 @SuppressWarnings({"GrazieInspection", "SpellCheckingInspection", "CommentedOutCode"})
 public class PostgresSqlConnTest {
 
@@ -73,6 +83,48 @@ public class PostgresSqlConnTest {
     }
 
     record Man(int id, String name) {
+    }
+
+
+    @Test
+    public void testBorrowAndNoReturn() throws Exception {
+//        DB db = DB.simple("jdbc:postgresql://bfk-pi5.local:5432/postgres",
+//                "postgres",
+//                "*",
+//                null,
+//                DB.FnAssertValidConnect.SELECT_1).assertConnect();
+//        PooledDB pooled = db.pooled(2);
+//        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS");
+//        List<CompletableFuture<Void>> futures = new ArrayList<>();
+//        for (int i = 0; i < 2; i++) {
+//            CompletableFuture<Void> f = CompletableFuture.runAsync(() -> {
+//                String tNmae = Thread.currentThread().getName();
+//                System.out.println(Stf.f("t: {}, start hold conn, now: {}", tNmae, LocalDateTime.now().format(dtf)));
+//                try (Connection conn = pooled.getConn()) {
+//                    System.out.println(Stf.f("t: {}, is hold conn, now: {}, conn: {}", tNmae, LocalDateTime.now().format(dtf), conn));
+//                    // hold and sleep
+//                    TimeUnit.SECONDS.sleep(66);
+//                    System.out.println(Stf.f("t: {}, end   hold conn, now: {}, conn: {}", tNmae, LocalDateTime.now().format(dtf), conn));
+//                } catch (Exception e) {
+//                    log.error("thread: {}, err.", Thread.currentThread().getName(), e);
+//                    throw new RuntimeException(e);
+//                }
+//            });
+//            futures.add(f);
+//        }
+//        //CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+//        System.out.println(Stf.f("start close pooled, now: {}", LocalDateTime.now().format(dtf)));
+//        TimeUnit.SECONDS.sleep(1);
+//        pooled.close();
+//        for (CompletableFuture<Void> future : futures) {
+//            try {
+//                future.join();
+//            } catch (Exception e) {
+//               log.error("thread: {}, err.", Thread.currentThread().getName(), e);
+//            }
+//        }
+//        TimeUnit.SECONDS.sleep(10);
+//        System.out.println(Stf.f("end   close pooled, now: {}", LocalDateTime.now().format(dtf)));
     }
 
     @Test
