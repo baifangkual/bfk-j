@@ -368,7 +368,6 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      *     Tree<Obj> treeObj = Tree.ofRoots(List.of(objs.get(0)),
      *             getChild::get,
      *             Comparator.comparingInt(Obj::id),
-     *             ArrayList::new,
      *             getChild::containsKey,
      *             Predicate.isEqual(null).negate(),
      *             Integer.MAX_VALUE);
@@ -444,7 +443,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
      *                        tree2.root().stream()).toList()).unwrap();
      *     int sum12NCount = sum12Tree.nodeCount()
      *     Assert.eq(tree1.nodeCount() + tree2.nodeCount(), sum12NCount);
-     *     Iterator<T> it = tree1.iterator();
+     *     Iterator<Tree.Node<T>> it = tree1.iterator();
      *     while(it.hasNext()){
      *         it.next();
      *         it.remove();

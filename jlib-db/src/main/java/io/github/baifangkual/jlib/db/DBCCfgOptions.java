@@ -3,6 +3,7 @@ package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 
+import java.time.Duration;
 import java.util.Map;
 
 /**
@@ -56,10 +57,16 @@ public class DBCCfgOptions {
             .build();
 
     // ============ POOLED_DBC =====================
-    public static final Cfg.Option<Integer> maxPoolSize = Cfg.Option.of("conn.pool.maxSize")
+    public static final Cfg.Option<Integer> poolMaxSize = Cfg.Option.of("pool.maxSize")
             .defaultValue(10)
             .description("连接池最大连接数")
             .build();
+    public static final Cfg.Option<Duration> poolCheckConnAliveInterval = Cfg.Option.of("pool.CheckAliveConnInterval")
+            .<Duration>type()
+            .defaultValue(Duration.ofSeconds(10)) // 一般情况下够用了，过小会导致每次借用时频繁的检查
+            .description("连接池检查连接对象是否可用的时间间隔 (数据库端可能在一定时间后会断开空闲会话，该间隔配置应小于数据库端配置)")
+            .build();
+
     // ============ POOLED_DBC =====================
 
 

@@ -1,20 +1,21 @@
 package io.github.baifangkual.jlib.db.impl.pool;
 
 import io.github.baifangkual.jlib.core.util.Stf;
-import io.github.baifangkual.jlib.db.exception.JdbcConnectionFailException;
+import io.github.baifangkual.jlib.db.exception.DBConnectException;
 
 import java.sql.*;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 连接池中使用的 Conn 代理
  * 代理{@link Connection}对象，当{@link Connection#close()}发生时，将自己返回给原有引用地方，
- * 该应该作为连接池中对象而不是直接使用,当前（20240729）该对象的生命周期与{@link ConnPoolDBC}相关<br>
+ * 该应该作为连接池中对象而不是直接使用, 该对象的生命周期与{@link ConnPoolDBC}相关<br>
  * 该对象实际是由{@link Poolable}类型实现对象创建的，当前也即{@link ConnPoolDBC}
+ * <p>多个线程共享使用该对象仍然不是线程安全的，线程应通过 {@link ConnPoolDBC} 获取该类型实例，
+ * 这样的获取方式可以保证不同线程不会持有同一个对象的引用
  *
  * @author baifangkual
  * @since 2024/7/26
@@ -27,12 +28,16 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
 
     private final int id;
     private final Connection delegate;
-    private final Poolable<OnCloseRecycleRefConnection> pool;
-    private final AtomicBoolean inUse = new AtomicBoolean(false);
+    private final ConnPoolDBC pool;
+    // 多个线程同时共享使用该类型时，无法保证下字段可见性和原子性
+    private boolean inUsed = false;
+    private boolean isAutoCommit;
+    private long lastUsedTimeMillis;
 
     OnCloseRecycleRefConnection(int id,
                                 Connection delegate,
-                                Poolable<OnCloseRecycleRefConnection> pool) {
+                                ConnPoolDBC pool,
+                                boolean isAutoCommit) {
         Objects.requireNonNull(delegate);
         if (delegate instanceof Poolable.Borrowable) {
             throw new IllegalArgumentException("Connection is a recyclable connection");
@@ -40,6 +45,15 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
         this.id = id;
         this.delegate = delegate;
         this.pool = pool;
+        this.isAutoCommit = isAutoCommit;
+    }
+
+    boolean proxyIsAutoCommit() {
+        return isAutoCommit;
+    }
+
+    long lastUsedTimeMillis() {
+        return lastUsedTimeMillis;
     }
 
     /**
@@ -47,8 +61,9 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
      */
     @Override
     public void recycleSelf() {
-        // 自己修改状态，第一个线程
-        if (inUse.compareAndSet(true, false)) {
+        if (inUsed) {
+            inUsed = false;
+            lastUsedTimeMillis = System.currentTimeMillis(); // 系统调用，归还时更新
             pool.recycle(this);
         } else throw new IllegalStateException(CLOSED_CONNECTION);
     }
@@ -58,9 +73,10 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
      */
     void borrowBef() {
         // inUse setting
-        if (!inUse.compareAndSet(false, true)) {
+        if (inUsed) {
             throw new IllegalStateException(UN_OPEN_CONNECTION);
         }
+        inUsed = true;
     }
 
     /**
@@ -77,7 +93,7 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
      *
      * @return id for this
      */
-    int getId() {
+    int connId() {
         return id;
     }
 
@@ -91,18 +107,18 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
     public final boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof OnCloseRecycleRefConnection that)) return false;
-        return id == that.id;
+        return id == that.id && this.pool.instanceId() == that.pool.instanceId();
     }
 
     @Override
     public int hashCode() {
-        return id;
+        return Objects.hash(id, pool.instanceId());
     }
 
     @Override
     public String toString() {
         // 该内，不应在调用pool的toString，防止Pool的ToString等因循环引用...
-        return Stf.f("OnCloseRecycleRefConnection[id:{}, ref:{}, inUse:{}]", id, delegate, inUse.get());
+        return Stf.f("OnCloseRecycleRefConnection[id:{}, ref:{}, inUsed:{}]", id, delegate, inUsed);
     }
 
     // proxy ===============================
@@ -122,7 +138,7 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
      */
     @Override
     public boolean isClosed() {
-        return !inUse.get();
+        return !inUsed;
     }
     // proxy ===============================
 
@@ -160,12 +176,13 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
     public void setAutoCommit(boolean autoCommit) throws SQLException {
         if (isClosed()) throw new SQLException(CLOSED_CONNECTION);
         delegate.setAutoCommit(autoCommit);
+        this.isAutoCommit = autoCommit;
     }
 
     @Override
     public boolean getAutoCommit() throws SQLException {
         if (isClosed()) throw new SQLException(CLOSED_CONNECTION);
-        return delegate.getAutoCommit();
+        return this.isAutoCommit; // 无需查看 delegate 的
     }
 
     @Override
@@ -362,13 +379,13 @@ public class OnCloseRecycleRefConnection implements Connection, Poolable.Borrowa
 
     @Override
     public void setClientInfo(String name, String value) throws SQLClientInfoException {
-        if (isClosed()) throw new JdbcConnectionFailException(CLOSED_CONNECTION);
+        if (isClosed()) throw new DBConnectException(CLOSED_CONNECTION);
         delegate.setClientInfo(name, value);
     }
 
     @Override
     public void setClientInfo(Properties properties) throws SQLClientInfoException {
-        if (isClosed()) throw new JdbcConnectionFailException(CLOSED_CONNECTION);
+        if (isClosed()) throw new DBConnectException(CLOSED_CONNECTION);
         delegate.setClientInfo(properties);
     }
 

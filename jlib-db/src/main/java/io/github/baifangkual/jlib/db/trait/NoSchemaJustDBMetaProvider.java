@@ -3,8 +3,8 @@ package io.github.baifangkual.jlib.db.trait;
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
+import io.github.baifangkual.jlib.db.exception.DBQueryException;
+import io.github.baifangkual.jlib.db.ResultSetExtractor;
 
 import java.sql.Connection;
 import java.util.List;
@@ -28,7 +28,7 @@ public interface NoSchemaJustDBMetaProvider extends MetaProvider {
                           String table,
                           Map<String, String> other,
                           int pageNo, int pageSize,
-                          FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception;
+                          ResultSetExtractor<? extends ROWS> resultSetExtractor) throws Exception;
 
 
     private String getDbFromCfg(Cfg config) {
@@ -41,19 +41,19 @@ public interface NoSchemaJustDBMetaProvider extends MetaProvider {
             final Map<String, String> other = config.getOrDefault(DBCCfgOptions.jdbcOtherParams);
             return tablesMeta(conn, getDbFromCfg(config), other);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
     @Override
     default <ROWS> ROWS tableData(Connection conn, Cfg config, String table,
                                   int pageNo, int pageSize,
-                                  FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
+                                  ResultSetExtractor<? extends ROWS> resultSetExtractor) {
         try {
             final Map<String, String> other = config.getOrDefault(DBCCfgOptions.jdbcOtherParams);
-            return tableData(conn, getDbFromCfg(config), table, other, pageNo, pageSize, fnResultSetCollector);
+            return tableData(conn, getDbFromCfg(config), table, other, pageNo, pageSize, resultSetExtractor);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
@@ -63,7 +63,7 @@ public interface NoSchemaJustDBMetaProvider extends MetaProvider {
             final Map<String, String> other = config.getOrDefault(DBCCfgOptions.jdbcOtherParams);
             return columnsMeta(conn, getDbFromCfg(config), table, other);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 

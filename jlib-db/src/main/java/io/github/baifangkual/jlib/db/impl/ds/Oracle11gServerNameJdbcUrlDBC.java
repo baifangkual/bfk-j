@@ -4,11 +4,11 @@ import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Rng;
 import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.ResultSetExtractor;
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
+import io.github.baifangkual.jlib.db.exception.DBQueryException;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
-import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
+import io.github.baifangkual.jlib.db.impl.abs.PrefixSupJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.NoDBJustSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultJdbcMetaSupports;
@@ -32,11 +32,16 @@ import static io.github.baifangkual.jlib.db.util.SqlSlices.DS_MASK;
  * @author baifangkual
  * @since 2024/10/24
  */
-public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
+public class Oracle11gServerNameJdbcUrlDBC extends PrefixSupJdbcUrlPaddingDBC {
 
 
     public Oracle11gServerNameJdbcUrlDBC(Cfg cfg) {
         super(cfg);
+    }
+
+    @Override
+    public FnAssertValidConnect fnAssertValidConnect() {
+        return FnAssertValidConnect.ORACLE_SELECT_1;
     }
 
     private static final String S_COLON = ":";
@@ -45,14 +50,6 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
 
     @Override
     protected String buildingJdbcUrl(Cfg readonlyCfg) {
-        /*
-         * 对两种方式的 支持 sid 和 servername，这两种方式的路径形式不同
-         * jdbc:oracle:thin:@localhost:1521:sid
-         * jdbc:oracle:thin:@localhost:1521/serviceName
-         * ORA-12504, TNS:listener was not given the SERVICE_NAME in CONNECT_DATA
-         * 20250607 废除对Sid的支持，因Sid正逐步被弃用，仅支持serviceName,
-         * 即 jdbc:oracle:thin:@//localhost:1521/serviceName
-         */
         final String db = readonlyCfg.get(DBCCfgOptions.db);
         //noinspection StringBufferReplaceableByString
         return new StringBuilder()
@@ -124,20 +121,8 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
 
     }
 
-    @SuppressWarnings("SqlNoDataSourceInspection")
-    private static final String CHECK_CONN_SQL = "SELECT 1 FROM DUAL";
+    public static final String SQL_ORACLE_SELECT_1 = "SELECT 1 FROM DUAL";
 
-    @Override
-    public void assertConn() throws Exception {
-        try (Connection conn = getConn();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(CHECK_CONN_SQL)) {
-            while (rs.next()) {
-                int i = rs.getInt(1);
-                if (i == 1) return;
-            }
-        }
-    }
 
     /**
      * 因oracle11g分页较为繁琐，遂在不分页的请求中，不使用 {@link io.github.baifangkual.jlib.db.DBC}
@@ -149,7 +134,7 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
      */
     @Override
     public <ROWS> ROWS tableData(String table,
-                                 FnResultSetCollector<? extends ROWS> fnRsMap) {
+                                 ResultSetExtractor<? extends ROWS> rsExtractor) {
         Objects.requireNonNull(table, "given table is null");
         final String fullTableName = SqlSlices.safeAdd(null,
                 readonlyCfg().get(DBCCfgOptions.schema), // 已在postCheckCfg转为大写的了
@@ -158,9 +143,9 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
         try (Connection conn = getConn();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT * FROM " + fullTableName)) {
-            return ResultSetc.rows(fnRsMap, rs);
+            return ResultSetc.rows(rsExtractor, rs);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
@@ -250,14 +235,14 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
         public <ROWS> ROWS tableData(Connection conn, String schema, String table,
                                      Map<String, String> other,
                                      int pageNo, int pageSize,
-                                     FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception {
+                                     ResultSetExtractor<? extends ROWS> resultSetExtractor) throws Exception {
             // 防止列名重名而造成混淆，遂每次重新生成列名
             String rngRowNumCol = "row" + Rng.nextFixLenLarge(20);
             List<String> tableFullColName = queryTableFullColName(conn, schema, table);
             String sql = pageQuery(tableFullColName, rngRowNumCol, pageNo, pageSize, schema, table);
             try (Statement stat = conn.createStatement();
                  ResultSet rs = stat.executeQuery(sql)) {
-                return ResultSetc.rows(fnResultSetCollector, rs);
+                return ResultSetc.rows(resultSetExtractor, rs);
             }
         }
 
@@ -273,7 +258,7 @@ public class Oracle11gServerNameJdbcUrlDBC extends DefaultJdbcUrlPaddingDBC {
          *     <li>如果不是 -942，则重新抛出异常；否则，忽略该异常。</li>
          * </ul>
          *
-         * @deprecated 删除垃圾代码接口 dropTable，已不支持删除表，
+         * @deprecated 删除接口 dropTable，已不支持删除表，
          * 该 oracle11g 删除表过程 sql 暂存于此
          */
         @Deprecated(since = "0.0.7")

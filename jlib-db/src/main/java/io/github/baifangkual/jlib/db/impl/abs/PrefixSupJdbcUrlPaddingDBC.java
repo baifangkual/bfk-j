@@ -15,16 +15,18 @@ import java.util.Optional;
  * @author baifangkual
  * @since 2024/7/12
  */
-public abstract class DefaultJdbcUrlPaddingDBC extends JdbcUrlPaddingDBC {
+public abstract class PrefixSupJdbcUrlPaddingDBC extends TypedJdbcUrlPaddingDBC {
 
     private static final String HEADER = "jdbc:";
     private static final String SL = "/";
     private static final String MP = ":";
     private static final String S1 = "://";
 
-    public DefaultJdbcUrlPaddingDBC(Cfg connCfg) {
+
+    public PrefixSupJdbcUrlPaddingDBC(Cfg connCfg) {
         super(connCfg);
     }
+
 
     @Override
     protected String buildingJdbcUrl(Cfg readonlyCfg) {
@@ -67,7 +69,7 @@ public abstract class DefaultJdbcUrlPaddingDBC extends JdbcUrlPaddingDBC {
             };
         }
         Err.realIf(prefix.isBlank(), IllegalStateException::new,
-                "datasource type: {} jdbc url prefix undefined", type());
+                "DBType: {} jdbc url prefix undefined", type());
         return prefix.startsWith(HEADER) ? prefix : HEADER + prefix;
     }
 

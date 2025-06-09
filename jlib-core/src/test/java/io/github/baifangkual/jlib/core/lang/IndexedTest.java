@@ -47,7 +47,7 @@ public class IndexedTest {
                 .limit(1000)
                 .forEach(i -> {
                     Assertions.assertEquals(i.index(),  i.value());
-                    System.out.println(i);
+                    //System.out.println(i);
                 });
     }
 
@@ -61,7 +61,7 @@ public class IndexedTest {
                 .limit(1000)
                 .forEach(i -> {
                     Assertions.assertEquals(i.index(),  i.value());
-                    System.out.println(i);
+                    //System.out.println(i);
                 });
     }
 }

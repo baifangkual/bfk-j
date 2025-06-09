@@ -7,19 +7,19 @@ package io.github.baifangkual.jlib.db.exception;
  * @author baifangkual
  * @since 2024/7/15
  */
-public class DBQueryFailException extends IllegalStateException {
-    public DBQueryFailException() {
+public class DBQueryException extends IllegalStateException {
+    public DBQueryException() {
     }
 
-    public DBQueryFailException(String message) {
+    public DBQueryException(String message) {
         super(message);
     }
 
-    public DBQueryFailException(String message, Throwable cause) {
+    public DBQueryException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public DBQueryFailException(Throwable cause) {
+    public DBQueryException(Throwable cause) {
         super(cause);
     }
 

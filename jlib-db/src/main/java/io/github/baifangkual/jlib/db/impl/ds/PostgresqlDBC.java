@@ -5,8 +5,8 @@ import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
-import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
+import io.github.baifangkual.jlib.db.ResultSetExtractor;
+import io.github.baifangkual.jlib.db.impl.abs.PrefixSupJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.HasDbAndSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultJdbcMetaSupports;
@@ -25,7 +25,7 @@ import java.util.Map;
  * @author baifangkual
  * @since 2024/7/12
  */
-public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
+public class PostgresqlDBC extends PrefixSupJdbcUrlPaddingDBC {
 
     private static final MetaProvider META_PROVIDER = new MetaProviderImpl();
 
@@ -34,6 +34,11 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
 
     public PostgresqlDBC(Cfg cfg) {
         super(cfg);
+    }
+
+    @Override
+    public FnAssertValidConnect fnAssertValidConnect() {
+        return FnAssertValidConnect.SELECT_1;
     }
 
     @Override
@@ -85,14 +90,14 @@ public class PostgresqlDBC extends DefaultJdbcUrlPaddingDBC {
         public <ROWS> ROWS tableData(Connection conn, String db, String schema, String table,
                                      Map<String, String> other,
                                      int pageNo, int pageSize,
-                                     FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception {
+                                     ResultSetExtractor<? extends ROWS> resultSetExtractor) throws Exception {
             String sql = Stf.f(SELECT_TABLE_TEMPLATE,
                     SqlSlices.safeAdd(db, schema, table, SqlSlices.DS_MASK),
                     pageSize, (pageNo - 1) * pageSize);
             //noinspection SqlSourceToSinkFlow
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(sql);) {
-                return ResultSetc.rows(fnResultSetCollector, rs);
+                return ResultSetc.rows(resultSetExtractor, rs);
             }
         }
 

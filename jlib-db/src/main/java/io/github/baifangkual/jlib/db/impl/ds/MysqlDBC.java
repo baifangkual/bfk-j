@@ -5,8 +5,8 @@ import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
-import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
+import io.github.baifangkual.jlib.db.ResultSetExtractor;
+import io.github.baifangkual.jlib.db.impl.abs.PrefixSupJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.trait.NoSchemaJustDBMetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultJdbcMetaSupports;
@@ -26,13 +26,18 @@ import java.util.Map;
  * @author baifangkual
  * @since 2024/7/11
  */
-public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
+public class MysqlDBC extends PrefixSupJdbcUrlPaddingDBC {
 
     private static final MetaProvider META_PROVIDER = new MetaProviderImpl();
     private static final int DEFAULT_MYSQL_PORT = 3306;
 
     public MysqlDBC(Cfg cfg) {
         super(cfg);
+    }
+
+    @Override
+    public FnAssertValidConnect fnAssertValidConnect() {
+        return FnAssertValidConnect.SELECT_1;
     }
 
     @Override
@@ -76,7 +81,7 @@ public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
                                      String db, String table,
                                      Map<String, String> other,
                                      int pageNo, int pageSize,
-                                     FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws SQLException {
+                                     ResultSetExtractor<? extends ROWS> resultSetExtractor) throws SQLException {
             // limit 为 要多少行，即pageSize，offset 为 pageNo
             String sql = Stf.f(SELECT_TABLE_TEMPLATE,
                     SqlSlices.safeAdd(db, null, table, SqlSlices.D_MASK),
@@ -84,7 +89,7 @@ public class MysqlDBC extends DefaultJdbcUrlPaddingDBC {
             //noinspection SqlSourceToSinkFlow
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(sql)) {
-                return ResultSetc.rows(fnResultSetCollector, rs);
+                return ResultSetc.rows(resultSetExtractor, rs);
             }
         }
 

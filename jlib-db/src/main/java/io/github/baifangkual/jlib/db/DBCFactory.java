@@ -2,7 +2,7 @@ package io.github.baifangkual.jlib.db;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.exception.JdbcConnectionFailException;
+import io.github.baifangkual.jlib.db.exception.DBConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +82,7 @@ public final class DBCFactory {
      * @param cfg 连接配置
      * @return {@link DBC}
      */
-    public static DBC build(Cfg cfg) throws IllegalDBCCfgException, JdbcConnectionFailException {
+    public static DBC build(Cfg cfg) throws IllegalDBCCfgException, DBConnectException {
         DBType DBType = cfg.get(DBCCfgOptions.type);
         return DBType.fnNewDBC().apply(cfg);
     }

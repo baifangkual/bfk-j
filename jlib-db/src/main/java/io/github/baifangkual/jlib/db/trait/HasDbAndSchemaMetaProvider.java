@@ -4,8 +4,8 @@ import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.lang.Tup2;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
+import io.github.baifangkual.jlib.db.exception.DBQueryException;
+import io.github.baifangkual.jlib.db.ResultSetExtractor;
 
 import java.sql.Connection;
 import java.util.List;
@@ -31,7 +31,7 @@ interface HasDbAndSchemaMetaProvider extends MetaProvider {
     <ROWS> ROWS tableData(Connection conn, String db, String schema, String table,
                           Map<String, String> other,
                           int pageNo, int pageSize,
-                          FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception;
+                          ResultSetExtractor<? extends ROWS> resultSetExtractor) throws Exception;
 
     private Tup2<String, String> unsafeGetDbAndSchemaFromCfg(Cfg config) {
         final String db = config.get(DBCCfgOptions.db);
@@ -46,7 +46,7 @@ interface HasDbAndSchemaMetaProvider extends MetaProvider {
             final Map<String, String> o = config.getOrDefault(DBCCfgOptions.jdbcOtherParams);
             return tablesMeta(conn, t2.l(), t2.r(), o);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
@@ -55,13 +55,13 @@ interface HasDbAndSchemaMetaProvider extends MetaProvider {
                                   String table,
                                   int pageNo,
                                   int pageSize,
-                                  FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
+                                  ResultSetExtractor<? extends ROWS> resultSetExtractor) {
         try {
             Tup2<String, String> t2 = unsafeGetDbAndSchemaFromCfg(config);
             final Map<String, String> other = config.getOrDefault(DBCCfgOptions.jdbcOtherParams);
-            return tableData(conn, t2.l(), t2.r(), table, other, pageNo, pageSize, fnResultSetCollector);
+            return tableData(conn, t2.l(), t2.r(), table, other, pageNo, pageSize, resultSetExtractor);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
@@ -72,7 +72,7 @@ interface HasDbAndSchemaMetaProvider extends MetaProvider {
             final Map<String, String> other = config.getOrDefault(DBCCfgOptions.jdbcOtherParams);
             return columnsMeta(conn, t2.l(), t2.r(), table, other);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 

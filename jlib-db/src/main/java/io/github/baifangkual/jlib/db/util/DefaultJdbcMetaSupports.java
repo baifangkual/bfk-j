@@ -1,7 +1,7 @@
 package io.github.baifangkual.jlib.db.util;
 
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.func.FnRSRowMapping;
+import io.github.baifangkual.jlib.db.RSRowMapping;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -168,7 +168,7 @@ public class DefaultJdbcMetaSupports {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowMapping)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, RSRowMapping)}
      *
      * @param conn               连接对象
      * @param db                 数据库名
@@ -193,7 +193,7 @@ public class DefaultJdbcMetaSupports {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowMapping)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, RSRowMapping)}
      *
      * @param conn                          连接对象
      * @param db                            数据库名（部分数据库有该）
@@ -237,7 +237,7 @@ public class DefaultJdbcMetaSupports {
 
     /**
      * 给定conn连接对象，给定各项参数，返回某表的列的元数据，仅提供基础元数据，
-     * 复杂转换请用{@link ResultSetc#rows(ResultSet, FnRSRowMapping)}
+     * 复杂转换请用{@link ResultSetc#rows(ResultSet, RSRowMapping)}
      *
      * @param conn     连接对象
      * @param db       数据库名
@@ -252,7 +252,7 @@ public class DefaultJdbcMetaSupports {
                                                     String db,
                                                     String schema,
                                                     String table,
-                                                    FnRSRowMapping<? extends ROW> fnRowMap) throws Exception {
+                                                    RSRowMapping<? extends ROW> fnRowMap) throws Exception {
         Objects.requireNonNull(table, "given table is null");
         DatabaseMetaData metaData = conn.getMetaData();
         try (ResultSet colMeta = metaData.getColumns(db, schema, table, null);) {

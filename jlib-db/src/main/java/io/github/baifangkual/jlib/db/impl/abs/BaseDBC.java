@@ -3,9 +3,8 @@ package io.github.baifangkual.jlib.db.impl.abs;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.db.*;
-import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
+import io.github.baifangkual.jlib.db.exception.DBQueryException;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
 import io.github.baifangkual.jlib.db.impl.pool.ConnPoolDBC;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 
@@ -19,10 +18,9 @@ import java.util.Objects;
  * @author baifangkual
  * @since 2024/7/11
  */
-public abstract class AbsDBC implements DBC {
+public abstract class BaseDBC implements DBC {
 
     private final Cfg readonlyCfg;
-    private final DBType dbType;
 
     /**
      * 该构造或可应为所有实现的父类，该类规范构造的生命周期过程，pre -> check -> post,
@@ -31,16 +29,28 @@ public abstract class AbsDBC implements DBC {
      *
      * @param cfg 数据源连接配置，具体配置查看{@link DBCCfgOptions}
      */
-    public AbsDBC(Cfg cfg) {
+    public BaseDBC(Cfg cfg) {
         Objects.requireNonNull(cfg);
         /* 不应改变外界传递的对象 只复制浅引用 */
         final Cfg cf = Cfg.ofMap(cfg.toReadonlyMap());
         preCheckCfg(cf);
         throwOnIllegalCfg(cf);
         postCheckCfg(cf);
-        this.dbType = cf.get(DBCCfgOptions.type);
         this.readonlyCfg = cf.toReadonly();
     }
+
+
+
+    /**
+     * 返回该 DBC 的 jdbcUrl（额外参数不在url中体现）
+     *
+     * @return jdbcUrl
+     */
+    public abstract String jdbcUrl();
+
+
+    @Override
+    public abstract FnAssertValidConnect fnAssertValidConnect();
 
     @Override
     public PooledDBC pooled(int maxPoolSize) {
@@ -49,7 +59,7 @@ public abstract class AbsDBC implements DBC {
 
     @Override
     public PooledDBC pooled() {
-        return pooled(readonlyCfg().getOrDefault(DBCCfgOptions.maxPoolSize));
+        return pooled(readonlyCfg().getOrDefault(DBCCfgOptions.poolMaxSize));
     }
 
     public List<Table.Meta> tablesMeta() {
@@ -57,7 +67,7 @@ public abstract class AbsDBC implements DBC {
         try (Connection conn = getConn()) {
             return metaProvider.tablesMeta(conn, readonlyCfg());
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
@@ -67,38 +77,32 @@ public abstract class AbsDBC implements DBC {
         try (Connection conn = getConn()) {
             return metaProvider.columnsMeta(conn, readonlyCfg(), table);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
     public <ROWS> ROWS tableData(String table, int pageNo, int pageSize,
-                                 FnResultSetCollector<? extends ROWS> fnRsMap) {
+                                 ResultSetExtractor<? extends ROWS> rsExtractor) {
         Objects.requireNonNull(table, "given table is null");
         MetaProvider metaProvider = metaProvider();
         try (Connection conn = getConn()) {
-            return metaProvider.tableData(conn, readonlyCfg(), table, pageNo, pageSize, fnRsMap);
+            return metaProvider.tableData(conn, readonlyCfg(), table, pageNo, pageSize, rsExtractor);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
     /**
-     * @apiNote 该方法实际是委托至 {@link #tableData(String, int, int, FnResultSetCollector)} 方法并给定分页参数默认值
+     * @apiNote 该方法实际是委托至 {@link #tableData(String, int, int, ResultSetExtractor)} 方法并给定分页参数默认值
      * {@code pageNo = 1, pageSize = Integer.MAX_VALUE}，这可能会对数据库造成一定的计算性能消耗，
      * 且可能数据库的分页参数并不支持 Integer.MAX_VALUE 这么大，遂该方法后续应重写为简单的表查询即可，而不应该委托至分页查询，
-     * 而且 {@code tableData} 系方法参数及返回值已修改，通过 {@link FnResultSetCollector} 函数，外界可自由控制读取行数，
-     * 遂对于原本的分页查询实现 {@link #tableData(String, int, int, FnResultSetCollector)}，可能应做到覆盖
+     * 而且 {@code tableData} 系方法参数及返回值已修改，通过 {@link ResultSetExtractor} 函数，外界可自由控制读取行数，
+     * 遂对于原本的分页查询实现 {@link #tableData(String, int, int, ResultSetExtractor)}，可能应做到覆盖
      */
     public <ROWS> ROWS tableData(String table,
-                                 FnResultSetCollector<? extends ROWS> fnRsMap) {
-        return tableData(table, 1, Integer.MAX_VALUE, fnRsMap);
+                                 ResultSetExtractor<? extends ROWS> rsExtractor) {
+        return tableData(table, 1, Integer.MAX_VALUE, rsExtractor);
     }
-
-    @Override
-    public DBType type() {
-        return dbType;
-    }
-
     /**
      * 当前 {@link DBC} 的配置
      *

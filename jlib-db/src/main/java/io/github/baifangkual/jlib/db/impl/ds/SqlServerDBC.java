@@ -3,10 +3,10 @@ package io.github.baifangkual.jlib.db.impl.ds;
 import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.util.Stf;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
+import io.github.baifangkual.jlib.db.ResultSetExtractor;
 import io.github.baifangkual.jlib.db.Table;
 import io.github.baifangkual.jlib.db.exception.IllegalDBCCfgException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
-import io.github.baifangkual.jlib.db.impl.abs.DefaultJdbcUrlPaddingDBC;
+import io.github.baifangkual.jlib.db.impl.abs.PrefixSupJdbcUrlPaddingDBC;
 import io.github.baifangkual.jlib.db.trait.HasDbAndSchemaMetaProvider;
 import io.github.baifangkual.jlib.db.trait.MetaProvider;
 import io.github.baifangkual.jlib.db.util.DefaultJdbcMetaSupports;
@@ -26,7 +26,7 @@ import java.util.Map;
  * @author baifangkual
  * @since 2024/7/19
  */
-public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
+public class SqlServerDBC extends PrefixSupJdbcUrlPaddingDBC {
 
     private final static MetaProvider META_PROVIDER = new MeteProviderImpl();
     /*
@@ -44,6 +44,11 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
 
     public SqlServerDBC(Cfg cfg) {
         super(cfg);
+    }
+
+    @Override
+    public FnAssertValidConnect fnAssertValidConnect() {
+        return FnAssertValidConnect.SELECT_1;
     }
 
     @Override
@@ -110,7 +115,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
         public <ROWS> ROWS tableData(Connection conn, String db, String schema, String table,
                                      Map<String, String> other,
                                      int pageNo, int pageSize,
-                                     FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception {
+                                     ResultSetExtractor<? extends ROWS> resultSetExtractor) throws Exception {
             String sql = Stf.f(QUERY_P,
                     SqlSlices.safeAdd(db, schema, table, SqlSlices.DS_MASK),
                     (pageNo - 1) * pageSize,
@@ -118,7 +123,7 @@ public class SqlServerDBC extends DefaultJdbcUrlPaddingDBC {
             //noinspection SqlSourceToSinkFlow
             try (Statement stat = conn.createStatement();
                  ResultSet rs = stat.executeQuery(sql)) {
-                return ResultSetc.rows(fnResultSetCollector, rs);
+                return ResultSetc.rows(resultSetExtractor, rs);
             }
         }
 

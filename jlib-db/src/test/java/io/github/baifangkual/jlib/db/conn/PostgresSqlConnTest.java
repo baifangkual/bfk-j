@@ -1,20 +1,19 @@
 package io.github.baifangkual.jlib.db.conn;
 
 import io.github.baifangkual.jlib.core.conf.Cfg;
-import io.github.baifangkual.jlib.core.util.Stf;
+import io.github.baifangkual.jlib.db.DB;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.DBType;
 import org.junit.jupiter.api.Test;
 
-import java.sql.*;
-import java.util.Arrays;
-import java.util.Properties;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * @author baifangkual
  * create time 2024/7/12
  */
-@SuppressWarnings({"GrazieInspection", "SpellCheckingInspection"})
+@SuppressWarnings({"GrazieInspection", "SpellCheckingInspection", "CommentedOutCode"})
 public class PostgresSqlConnTest {
 
     private static final String showDb = """
@@ -73,6 +72,61 @@ public class PostgresSqlConnTest {
                 .set(DBCCfgOptions.type, DBType.postgresql);
     }
 
+    record Man(int id, String name) {
+    }
+
+    @Test
+    public void testStreamableResult() {
+//        DB db = DB.simple("jdbc:postgresql://bfk-pi5.local:5432/postgres",
+//                "postgres",
+//                "*",
+//                null,
+//                DB.FnAssertValidConnect.SELECT_1).assertConnect();
+//        try (Stream<Man> personStream = db.execQuery(
+//                        "select * from test_table",
+//                        (rowNum, rs) -> new Man(
+//                                rs.getInt("id"),
+//                                rs.getString("name")
+//                        )
+//                )
+//                .limit(10)) {
+//            List<Man> p10 = personStream.toList();
+//            p10.forEach(System.out::println);
+//        }
+    }
+
+
+    @Test
+    public void testPsqlDBConnect() throws Exception {
+//        PooledDB db = DB.simple("jdbc:postgresql://bfk-pi5.local:5432/postgres",
+//                "postgres",
+//                "*",
+//                null,
+//                DB.FnAssertValidConnect.SELECT_1).assertConnect().pooled(10);
+//        List<Indexed<Man>> indexedMan = db.execQuery(
+//                "select * from test_table",
+//                LinkedList::new,
+//                (i, rs) -> {
+//                    int id = rs.getInt("id");
+//                    String name = rs.getString("name");
+//                    return Indexed.of(i, new Man(id, name));
+//                });
+//        indexedMan.forEach(System.out::println);
+//        List<Man> ManyMan2 = db.execQuery("select * from test_table",
+//                (rs) -> {
+//                    List<Man> manList = new ArrayList<>();
+//                    while (rs.next()) {
+//                        int id = rs.getInt("id");
+//                        String name = rs.getString("name");
+//                        manList.add(new Man(id, name));
+//                    }
+//                    return manList;
+//                });
+//        ManyMan2.forEach(System.out::println);
+//        db.close();
+
+    }
+
     @Test
     public void testPsqlDatasourceImpl() {
 //        DBC dbc = DBCFactory.build(pi5Cfg());
@@ -86,22 +140,20 @@ public class PostgresSqlConnTest {
 //        printResult(conn, allPr2);
     }
 
+
     @Test
-    public void testUsePsqlDbFunc() {
-//        DBC dbc = DBCFactory.build(pi5Cfg());
+    public void testUsePsqlDbFunc() throws Exception {
+//        PooledDBC dbc = DBCFactory.build(pi5Cfg()).assertConnect().pooled();
 //        List<Table.Meta> metas = dbc.tablesMeta();
 //        metas.forEach(System.out::println);
 //        List<Table.ColumnMeta> testTableMeta = dbc.columnsMeta("test_table");
 //        testTableMeta.forEach(System.out::println);
-//        record Man(int id, String name, int age) {
-//        }
 //        List<Man> manyMan = dbc.tableData("test_table", (rs) -> {
 //            List<Man> manList = new ArrayList<>();
 //            while (rs.next()) {
 //                int id = rs.getInt("id");
 //                String name = rs.getString("name");
-//                int age = rs.getInt("age");
-//                manList.add(new Man(id, name, age));
+//                manList.add(new Man(id, name));
 //            }
 //            return manList;
 //        });
@@ -112,8 +164,7 @@ public class PostgresSqlConnTest {
 //                (i, rs) -> {
 //                    int id = rs.getInt("id");
 //                    String name = rs.getString("name");
-//                    int age = rs.getInt("age");
-//                    return Indexed.of(i, new Man(id, name, age));
+//                    return Indexed.of(i, new Man(id, name));
 //                });
 //        indexedMan.forEach(System.out::println);
 //        List<Man> ManyMan2 = dbc.execQuery("select * from test_table",
@@ -122,12 +173,12 @@ public class PostgresSqlConnTest {
 //                    while (rs.next()) {
 //                        int id = rs.getInt("id");
 //                        String name = rs.getString("name");
-//                        int age = rs.getInt("age");
-//                        manList.add(new Man(id, name, age));
+//                        manList.add(new Man(id, name));
 //                    }
 //                    return manList;
 //                });
 //        ManyMan2.forEach(System.out::println);
+//        dbc.close();
     }
 
     @Test
@@ -187,38 +238,38 @@ public class PostgresSqlConnTest {
 //        pooledDbc.close();
     }
 
-    public static void printResult(String url, Properties prop, String execOneQuerySql) {
-        try (final Connection connection = DriverManager.getConnection(url, prop)) {
-            printResult(connection, execOneQuerySql);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static void printResult(final Connection conn, String execOneQuerySql) {
-        //noinspection SqlSourceToSinkFlow
-        try (Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(execOneQuerySql)) {
-            ResultSetMetaData metaData = rs.getMetaData();
-            int columnCount = metaData.getColumnCount();
-            System.out.println(Stf.f("columnCount: {}", columnCount));
-
-            String[] colNames = new String[columnCount];
-            for (int i = 0; i < columnCount; i++) {
-                colNames[i] = metaData.getColumnName(i + 1);
-            }
-            System.out.println(Stf.f("columnNames: {}", Arrays.toString(colNames)));
-            while (rs.next()) {
-                Object[] row = new Object[columnCount];
-                for (int i = 0; i < columnCount; i++) {
-                    row[i] = rs.getObject(i + 1);
-                }
-                System.out.println(Arrays.toString(row));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
+//    public static void printResult(String url, Properties prop, String execOneQuerySql) {
+//        try (final Connection connection = DriverManager.getConnection(url, prop)) {
+//            printResult(connection, execOneQuerySql);
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+//
+//    public static void printResult(final Connection conn, String execOneQuerySql) {
+//        //noinspection SqlSourceToSinkFlow
+//        try (Statement st = conn.createStatement();
+//             ResultSet rs = st.executeQuery(execOneQuerySql)) {
+//            ResultSetMetaData metaData = rs.getMetaData();
+//            int columnCount = metaData.getColumnCount();
+//            System.out.println(Stf.f("columnCount: {}", columnCount));
+//
+//            String[] colNames = new String[columnCount];
+//            for (int i = 0; i < columnCount; i++) {
+//                colNames[i] = metaData.getColumnName(i + 1);
+//            }
+//            System.out.println(Stf.f("columnNames: {}", Arrays.toString(colNames)));
+//            while (rs.next()) {
+//                Object[] row = new Object[columnCount];
+//                for (int i = 0; i < columnCount; i++) {
+//                    row[i] = rs.getObject(i + 1);
+//                }
+//                System.out.println(Arrays.toString(row));
+//            }
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
 
 
 }

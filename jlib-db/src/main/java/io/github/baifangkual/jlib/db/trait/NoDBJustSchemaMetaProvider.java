@@ -4,8 +4,8 @@ import io.github.baifangkual.jlib.core.conf.Cfg;
 import io.github.baifangkual.jlib.core.lang.Tup2;
 import io.github.baifangkual.jlib.db.DBCCfgOptions;
 import io.github.baifangkual.jlib.db.Table;
-import io.github.baifangkual.jlib.db.exception.DBQueryFailException;
-import io.github.baifangkual.jlib.db.func.FnResultSetCollector;
+import io.github.baifangkual.jlib.db.exception.DBQueryException;
+import io.github.baifangkual.jlib.db.ResultSetExtractor;
 
 import java.sql.Connection;
 import java.util.List;
@@ -29,7 +29,7 @@ public interface NoDBJustSchemaMetaProvider extends MetaProvider {
     <ROWS> ROWS tableData(Connection conn, String schema, String table,
                           Map<String, String> other,
                           int pageNo, int pageSize,
-                          FnResultSetCollector<? extends ROWS> fnResultSetCollector) throws Exception;
+                          ResultSetExtractor<? extends ROWS> resultSetExtractor) throws Exception;
 
     private Tup2<String, Map<String, String>> unsafeGetSchemaAndOther(Cfg conf) {
         Map<String, String> other = conf.getOrDefault(DBCCfgOptions.jdbcOtherParams);
@@ -43,7 +43,7 @@ public interface NoDBJustSchemaMetaProvider extends MetaProvider {
             Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);
             return this.tablesMeta(conn, t2.l(), t2.r());
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
@@ -53,19 +53,19 @@ public interface NoDBJustSchemaMetaProvider extends MetaProvider {
             Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);
             return this.columnsMeta(conn, t2.l(), table, t2.r());
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
     @Override
     default <ROWS> ROWS tableData(Connection conn, Cfg config, String table,
                                   int pageNo, int pageSize,
-                                  FnResultSetCollector<? extends ROWS> fnResultSetCollector) {
+                                  ResultSetExtractor<? extends ROWS> resultSetExtractor) {
         try {
             Tup2<String, Map<String, String>> t2 = unsafeGetSchemaAndOther(config);
-            return this.tableData(conn, t2.l(), table, t2.r(), pageNo, pageSize, fnResultSetCollector);
+            return this.tableData(conn, t2.l(), table, t2.r(), pageNo, pageSize, resultSetExtractor);
         } catch (Exception e) {
-            throw new DBQueryFailException(e.getMessage(), e);
+            throw new DBQueryException(e.getMessage(), e);
         }
     }
 
