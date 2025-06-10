@@ -7,10 +7,39 @@
 ## 使用
 
 ```java
-// 构建或从他处转换至参数对象
-Cfg cfg = Cfg.of("...");
-// 构建 虚拟文件系统
-VFS vfs = VFSFactory.of(vfsType).build(cfg);
+import io.github.baifangkual.jlib.core.conf.Cfg;
+import io.github.baifangkual.jlib.vfs.VFS;
+import io.github.baifangkual.jlib.vfs.VFile;
+import io.github.baifangkual.jlib.vfs.VPath;
+
+public void foo() {
+    // 构建或从他处转换至参数对象
+    Cfg cfg = Cfg.of("...");
+    // 构建 虚拟文件系统
+    // VFS 使用完后需关闭
+    VFS vfs = VFSFactory.of(vfsType)
+            .orElseThrow().build(cfg);
+    // 获取根 “虚拟目录实例” "/"
+    VPath root = vfs.root();
+    // 表示可能存在的目录 “/foo”
+    VPath pFoo = root.join("foo");
+    // 表示可能存在的目录 “/foo/bar/foo”
+    VPath pf2 = pFoo.join("/bar/foo");
+    // 回退到上一级可能存在的目录 “/foo/bar”
+    VPath pFooBar = pf2.back();
+    // 尝试获取该目录所在的文件实体，
+    // 若返回 Option.empty() 表示该位置没有一个实际存在的文件实体
+    VFile fooBar = pFooBar.toFile().orElseThrow();
+    // 若为文件夹，可以树形式展开该文件实体
+    if (fooBar.isDirectory()) {
+        // 该树记录了fooBar文件夹中所有存在的文件实体
+        Tree<VFile> fooBarTree = fooBar.tree();
+        // do some...
+    }
+    // 该操作将 /foo/bar 及其所有内部文件拷贝到 /bar/foo 
+    fooBar.copyTo(root.join("/bar/foo"));
+    // 更多API请查看各实体（VPath VFile VFS）说明...
+}
 ```
 
 VFS、VPath、VFile的关系和操作等，查看相应的类文档：
@@ -75,6 +104,3 @@ VFS、VPath、VFile的关系和操作等，查看相应的类文档：
 * minio的“文件夹”概念，minio无所谓文件夹概念，仅有前缀，其SDK API
   listObjects方法要求给定查询前缀，此前缀确实是真前缀，因为给定 'abc/de' 甚至能查询出 'abc/def'
 * minio的文件夹行为策略弄成可选项，给定默认选项，不同选项文件夹行为不同
-
----
-最后编辑于20250517，bfk
