@@ -218,7 +218,7 @@ public final class Tree<T> implements Iter<Tree.Node<T>> {
 
     @Override
     public Stream<Node<T>> stream() {
-        return into(LinkedList::new).stream();
+        return collect(LinkedList::new).stream();
     }
 
     /**

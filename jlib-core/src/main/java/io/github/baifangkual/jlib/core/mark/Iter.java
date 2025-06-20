@@ -15,7 +15,7 @@ import java.util.stream.StreamSupport;
  * 因该接口继承自 {@link Iterable}，遂可以使用语法糖 {@code for-each}<br>
  *
  * @author baifangkual
- * @see #into(Supplier)
+ * @see #collect(Supplier)
  * @see #stream()
  * @see #parallelStream()
  * @see #toIndexedSpliterator(Spliterator, Indexed.FnBuildIndexed)
@@ -24,8 +24,7 @@ import java.util.stream.StreamSupport;
 public interface Iter<T> extends Iterable<T> {
 
     /**
-     * 迭代器<br>
-     * 多次调用该方法返回的迭代器并非同一个迭代器
+     * 返回一个新的迭代器
      *
      * @return 迭代器
      */
@@ -33,43 +32,114 @@ public interface Iter<T> extends Iterable<T> {
     @SuppressWarnings("NullableProblems")
     Iterator<T> iterator();
 
+    /**
+     * 返回一个新的带索引的迭代器
+     * <p>索引值为其被迭代到的顺序，从 {@code 0} 开始</p>
+     *
+     * @param fnIndexed  带索引类型的构造器
+     * @param <IndexedT> 带索引类型
+     * @return 带索引的迭代器
+     */
+    default <IndexedT> Iterator<IndexedT> indexedIterator(Indexed.FnBuildIndexed<? super T, ? extends IndexedT> fnIndexed) {
+        return IndexedIter.of(iterator(), fnIndexed);
+    }
+
+    /**
+     * 返回一个新的带索引的迭代器
+     * <p>索引值为其被迭代到的顺序，从 {@code 0} 开始</p>
+     *
+     * @return 带索引的迭代器
+     */
+    default Iterator<Indexed<T>> indexedIterator() {
+        return indexedIterator(Indexed.FnBuildIndexed.fnBuildIndexed());
+    }
+
+    /**
+     * 返回一个新的转换类型的迭代器
+     * <pre>{@code
+     * Line<String> line = Line.of("1", "2");
+     * Iterator<String> sIt = line.iterator();
+     * Iterator<Long> lIt = line.mappedIterator(Long::valueOf);
+     * }</pre>
+     *
+     * @param fnMapping 函数-负责将 {@code T} 转为 {@code E}
+     * @param <E>       迭代器中元素类型
+     * @return 迭代器
+     */
+    default <E> Iterator<E> mappedIterator(Function<? super T, ? extends E> fnMapping) {
+        return MappedIter.of(iterator(), fnMapping);
+    }
+
+    /**
+     * 返回一个新的可拆分的迭代器 {@link Iterable#spliterator()}
+     * <p>该方法默认委托给 {@link Iterable#spliterator()} ，该被委托的方法是低效的 (未报告 {@code SIZED})，
+     * 实现类中元素若较多，应重写该方法，或委托至经过特化的 java.List
+     *
+     * @return {@link Spliterator}
+     * @apiNote 按照 {@link Spliterator} 一般约定，不应在多个线程间共享同一实例
+     * @see Iterable#spliterator()
+     */
+    @Override
+    default Spliterator<T> spliterator() {
+        return Iterable.super.spliterator();
+    }
+
+    /**
+     * 返回一个新的可拆分的带索引的迭代器 {@link Iterable#spliterator()}
+     * <p>索引值为其被迭代到的顺序，从 {@code 0} 开始</p>
+     * <p>该方法默认委托给 {@link Iterable#spliterator()} ，该被委托的方法是低效的 (未报告 {@code SIZED})，
+     * 实现类中元素若较多，应重写 {@link Iter#spliterator()}，或委托至经过特化的 java.List
+     *
+     * @param fnIndexed  带索引类型的构造器
+     * @param <IndexedT> 带索引类型
+     * @return {@link Spliterator}
+     * @apiNote 按照 {@link Spliterator} 一般约定，不应在多个线程间共享同一实例
+     */
+    default <IndexedT> Spliterator<IndexedT> indexedSpliterator(Indexed.FnBuildIndexed<? super T, ? extends IndexedT> fnIndexed) {
+        return Iter.toIndexedSpliterator(spliterator(), fnIndexed);
+    }
+
+    /**
+     * 返回一个新的可拆分的带索引的迭代器 {@link Iterable#spliterator()}
+     * <p>索引值为其被迭代到的顺序，从 {@code 0} 开始</p>
+     * <p>该方法默认委托给 {@link Iterable#spliterator()} ，该被委托的方法是低效的 (未报告 {@code SIZED})，
+     * 实现类中元素若较多，应重写 {@link Iter#spliterator()}，或委托至经过特化的 java.List
+     *
+     * @return {@link Spliterator}
+     * @apiNote 按照 {@link Spliterator} 一般约定，不应在多个线程间共享同一实例
+     */
+    default Spliterator<Indexed<T>> indexedSpliterator() {
+        return indexedSpliterator(Indexed.FnBuildIndexed.fnBuildIndexed());
+    }
+
 
     /**
      * 将元素收集到指定集合
      * <p>“指定集合” 是函数提供的集合</p>
      * <pre>{@code
-     * List<Long> list = Line.of(1L, 2L).into(ArrayList::new);
-     * Set<Long> set = Line.of(1L, 2L).into(HashSet::new);
+     * List<Long> list = Line.of(1L, 2L).collect(ArrayList::new);
+     * Set<Long> set = Line.of(1L, 2L).collect(HashSet::new);
      * }</pre>
      *
-     * @param fnGetCollect 集合提供函数
+     * @param fnCollect 集合提供函数
      * @return 集合
      * @throws NullPointerException 当给定的函数为空，或该类型返回的迭代器为空，或给定函数返回的集合实例为空时
      * @apiNote 因为该方法将元素收集到函数提供的集合中，遂函数生成的集合必须是可写的。
      * <p>除非该类型提供的迭代器会修改当前实例状态，否则该方法不会修改当前实例，仅会将当前实例中元素引用收集到指定集合</p>
      */
-    default <Collect extends Collection<? super T>> Collect into(Supplier<Collect> fnGetCollect) {
-        Objects.requireNonNull(fnGetCollect);
-        Iterator<T> it = iterator();
-        Objects.requireNonNull(it, "The Iterable.iterator() returned a null iterator");
-        Collect collector = fnGetCollect.get();
-        Objects.requireNonNull(collector, "fnGetCollect.get() returned a null collect");
-        while (it.hasNext()) {
-            T t = it.next();
-            collector.add(t);
-        }
-        return collector;
+    default <Collect extends Collection<? super T>> Collect collect(Supplier<Collect> fnCollect) {
+        return Iter.collect(this, fnCollect);
     }
 
     /**
      * 返回{@link Stream}
      *
      * @return Stream
-     * @apiNote 该默认方法会返回委托给List的流，若实现类中元素较少，应覆盖该实现已
+     * @apiNote 该默认方法会返回委托给 List 的流，若实现类中元素较少，应覆盖该实现已
      * 避免构建中间List的开销
      */
     default Stream<T> stream() {
-        return into(ArrayList::new).stream();
+        return collect(ArrayList::new).stream();
     }
 
     /**
@@ -155,21 +225,40 @@ public interface Iter<T> extends Iterable<T> {
         return toStream(it, false);
     }
 
-
-    // static fn ----------------------------------------------------------
+    /**
+     * 消费迭代器，将迭代器中元素收集到指定集合
+     * <p>“指定集合” 是函数提供的集合</p>
+     *
+     * @param fnCollect 集合构造器 (eg {@code ArrayList::new})
+     * @return 集合
+     * @throws NullPointerException 当给定的函数为空，或迭代器为空，或给定函数返回的集合实例为空时
+     * @apiNote 因为该方法将元素收集到函数提供的集合中，遂函数生成的集合必须是可写的
+     */
+    static <T, Collect extends Collection<? super T>> Collect collect(Iterator<T> it, Supplier<Collect> fnCollect) {
+        Objects.requireNonNull(it, "it(iterator) is a null");
+        Objects.requireNonNull(fnCollect);
+        Collect collector = fnCollect.get();
+        Objects.requireNonNull(collector, "fnCollect.get() returned a null collect");
+        while (it.hasNext()) {
+            T t = it.next();
+            collector.add(t);
+        }
+        return collector;
+    }
 
     /**
-     * 返回用于遍历和分区源元素的对象{@link Spliterator}<br>
-     * 该方法默认委托给{@link Iterable#spliterator()}，该被委托的方法是低效的，
-     * 实现类中元素若较多，应重写该方法，或委托至经过特化的java.List
+     * 从可迭代对象中创建一个迭代器，消费该迭代器，将其中元素收集到指定集合
+     * <p>“指定集合” 是函数提供的集合</p>
      *
-     * @return {@link Spliterator}
-     * @see Iterable#spliterator()
+     * @param fnCollect 集合构造器 (eg {@code ArrayList::new})
+     * @return 集合
+     * @throws NullPointerException 当给定的函数为空，或给定可迭代对象为空，或给定函数返回的集合实例为空时
+     * @apiNote 因为该方法将元素收集到函数提供的集合中，遂函数生成的集合必须是可写的
      */
-    @Override
-    default Spliterator<T> spliterator() {
-        return Iterable.super.spliterator();
+    static <T, Collect extends Collection<? super T>> Collect collect(Iterable<T> itb, Supplier<Collect> fnCollect) {
+        return collect(Objects.requireNonNull(itb).iterator(), fnCollect);
     }
+
 
     /**
      * 将给定 "带元素的" {@link Spliterator} 包装为 “带索引元素的” {@link Spliterator}
