@@ -47,31 +47,31 @@
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>jlib-core</artifactId>
-        <version>0.1.1</version>
+        <version>0.1.2</version>
     </dependency>
     <!-- 数据库操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>jlib-db</artifactId>
-        <version>0.1.1</version>
+        <version>0.1.2</version>
     </dependency>
     <!-- ftp 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>jlib-vfs-impl-ftp</artifactId>
-        <version>0.1.1</version>
+        <version>0.1.2</version>
     </dependency>
     <!-- smb 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>jlib-vfs-impl-smb</artifactId>
-        <version>0.1.1</version>
+        <version>0.1.2</version>
     </dependency>
     <!-- minio 操作 -->
     <dependency>
         <groupId>io.github.baifangkual</groupId>
         <artifactId>jlib-vfs-impl-minio</artifactId>
-        <version>0.1.1</version>
+        <version>0.1.2</version>
     </dependency>
 </dependencies>
 ```
