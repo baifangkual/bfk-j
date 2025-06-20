@@ -49,6 +49,20 @@
             <artifactId>slf4j-api</artifactId>
             <version>${reversion.slf4j-api}</version>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${reversion.jupiter-api}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- 本地文件系统 vfs impl spi -->
+        <dependency>
+            <groupId>com.google.auto.service</groupId>
+            <artifactId>auto-service</artifactId>
+            <version>${reversion.auto-service}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <build>

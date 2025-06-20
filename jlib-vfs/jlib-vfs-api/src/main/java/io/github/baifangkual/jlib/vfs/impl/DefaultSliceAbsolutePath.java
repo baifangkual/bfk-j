@@ -51,6 +51,7 @@ public class DefaultSliceAbsolutePath implements VPath {
         return path.split(PATH_SEPARATOR);
     }
 
+    @SuppressWarnings("SameParameterValue")
     private static String[] slice(String[] tp, int begin, int end) {
         int len = tp.length;
         if (end < 0) {
@@ -83,7 +84,7 @@ public class DefaultSliceAbsolutePath implements VPath {
     @Override
     public VPath join(String relativePath) {
         if (relativePath == null || relativePath.isBlank()) {
-            throw new IllegalVPathException("path is null or empty");
+            throw new IllegalVPathException("path is join null or empty");
         }
         if (!relativePath.contains(PATH_SEPARATOR)) {
             String[] range = new String[this.pathSlice.length + 1];

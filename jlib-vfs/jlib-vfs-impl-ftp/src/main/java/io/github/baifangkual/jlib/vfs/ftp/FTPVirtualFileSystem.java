@@ -52,9 +52,11 @@ public class FTPVirtualFileSystem extends AbstractVirtualFileSystem implements V
 
     private final AtomicBoolean closed = new AtomicBoolean(true);
     private final FTPClient mainControlCli;
+    @SuppressWarnings("FieldCanBeLocal")
     private final String workingDirectory;
     private final VPath root;
     // FTP服务器 支持的命令列表
+    @SuppressWarnings("FieldCanBeLocal")
     private final List<String> supportCMDs;
     private final boolean supportMLST;
     private final int transformQueueMaxSize;
