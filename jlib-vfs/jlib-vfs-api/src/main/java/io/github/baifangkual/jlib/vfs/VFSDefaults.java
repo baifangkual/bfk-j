@@ -17,6 +17,15 @@ public class VFSDefaults {
     }
 
     /**
+     * todo 20250624 impl XXXCfgOptions option: auto_close
+     *      use jdk.CleanUp or finalize
+     *      虽然 jdk 的 CleanUp 行为 和 Refence<T> 的背后实现
+     *      比较丑陋，但还是可以提供一个选项用以控制 auto_close
+     *      这适用于 VFS 和 DBC
+     *      后续闲时可实现该
+     */
+
+    /**
      * 缓冲区大小(单位字节），组成 buffer array，因为 minio 的 buffer size 要求（大于5MIB小于5GIB）该缓冲区的设定不宜太小
      * 同样因为硬件限制，该缓冲区不宜太大，若要设定小于5MIB的缓冲区，可以将minio缓冲区单独设定，以防止其流错误，
      * 但这样会使不同vfs的拷贝状态流大小不匹配，
