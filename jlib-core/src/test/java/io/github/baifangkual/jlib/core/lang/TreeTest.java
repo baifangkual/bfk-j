@@ -1128,7 +1128,8 @@ public class TreeTest {
 
     @Test
     public void test28() {
-        Tree<Integer> tree = genBigTree(1000, 2000, 1, 10).r();
+
+        Tree<Integer> tree = genBigTree(1000, 1001, 1, 10).r();
         Iterator<Tree.Node<Integer>> iter = tree.iterator();
         Tree<Integer> self = tree.pruneRoot(0);
         Assertions.assertSame(tree, self);
@@ -1137,8 +1138,11 @@ public class TreeTest {
         Assertions.assertThrows(ConcurrentModificationException.class, iter::remove);
         Iterator<Tree.Node<Integer>> itAfter = self.iterator();
         Assertions.assertThrows(IllegalStateException.class, itAfter::remove);
-        Assertions.assertDoesNotThrow(itAfter::next);
-        Assertions.assertDoesNotThrow(itAfter::remove);
+        if (!self.isEmpty()) { // fix test 上面生成的genBigTree可能只有一个根，被剪掉后，为空树，则itAfter直接next会报错
+            Assertions.assertDoesNotThrow(itAfter::next);
+            Assertions.assertDoesNotThrow(itAfter::remove);
+        }
+
     }
 
     @Test
@@ -1149,7 +1153,7 @@ public class TreeTest {
         int befNodeCount = tree.nodeCount();
         int befRtCount = tree.rootCount();
         boolean doPrune = false;
-        if (!root.isLeaf()){
+        if (!root.isLeaf()) {
             for (Tree.Node<Integer> cnode : root.childNode()) {
                 Assertions.assertFalse(cnode.isPruned());
             }
