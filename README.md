@@ -25,12 +25,12 @@
 
 * bfk-j 最顶层的模块、控制各模块间依赖及版本等
     * jlib-core 包含最常用的、核心的可复用代码，涵盖配置类、容器对象、工具类等
-    * [jlib-vfs](https://github.com/baifangkual/bfk-j/blob/main/jlib-vfs/README.md) 包含虚拟文件系统相关代码
+    * [jlib-vfs](./jlib-vfs/README.md) 包含虚拟文件系统相关代码
         * jlib-vfs-api 包含虚拟文件系统api接口等相关代码
         * jlib-vfs-impl-ftp 包含对ftp的实现（依赖apache-commons-net）
         * jlib-vfs-impl-smb 包含对smb的实现（依赖smbj）
         * jlib-vfs-impl-minio 包含对minio的实现（依赖minio）
-    * [jlib-db](https://github.com/baifangkual/bfk-j/blob/main/jlib-db/README.md) 包含部分数据库操作及元数据的相关代码
+    * [jlib-db](./jlib-db/README.md) 包含部分数据库操作及元数据的相关代码
 
 ## 使用
 
@@ -76,8 +76,11 @@
 </dependencies>
 ```
 
----
-
 ## License
 
-[Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+Copyright (c) baifangkual
+
+[MIT] OR [Apache-2.0]
+
+[MIT]: ./LICENSE-MIT
+[Apache-2.0]: ./LICENSE-APACHE
